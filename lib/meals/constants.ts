@@ -1,6 +1,13 @@
 import type { MealType } from "@/db/schema";
 
-export const MEAL_TYPES: MealType[] = ["breakfast", "lunch", "snack", "dinner", "evening"];
+export const MEAL_TYPES: MealType[] = [
+  "breakfast",
+  "lunch",
+  "snack",
+  "dinner",
+  "evening",
+  "smoke",
+];
 
 export const MEAL_LABELS: Record<MealType, string> = {
   breakfast: "Frokost",
@@ -8,4 +15,5 @@ export const MEAL_LABELS: Record<MealType, string> = {
   snack: "Mellommåltid",
   dinner: "Middag",
   evening: "Kvelds",
+  smoke: "Røk på en smell",
 };

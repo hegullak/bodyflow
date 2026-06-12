@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import type { FoodProductSummary } from "@/lib/foods/types";
-import { detectEanFromImageFile, isBarcodeImageDetectionSupported } from "@/lib/foods/barcode-from-image";
+import { detectEanFromImageFile } from "@/lib/foods/barcode-from-image";
 import { saveCustomFoodAction } from "@/lib/actions/custom-food";
 import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label } from "@/components/ui/field";
@@ -186,11 +186,6 @@ export function FoodScanWizard({
             capture="environment"
             onChange={(e) => handleBarcodeFile(e.target.files?.[0] ?? null)}
           />
-          {!isBarcodeImageDetectionSupported() ? (
-            <p className="text-xs text-[var(--color-muted-foreground)]">
-              Strekkode fra bilde støttes ikke her — skriv EAN manuelt under.
-            </p>
-          ) : null}
           <Label htmlFor="ean-scan">EAN</Label>
           <Input
             id="ean-scan"

@@ -102,6 +102,8 @@ export const mealTypeEnum = pgEnum("meal_type", [
 
   "evening",
 
+  "smoke",
+
 ]);
 
 

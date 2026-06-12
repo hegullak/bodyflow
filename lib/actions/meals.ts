@@ -151,6 +151,7 @@ export async function getMealsGroupedByType(
     snack: items.filter((i) => i.mealType === "snack"),
     dinner: items.filter((i) => i.mealType === "dinner"),
     evening: items.filter((i) => i.mealType === "evening"),
+    smoke: items.filter((i) => i.mealType === "smoke"),
   };
   const totalKcal = Math.round(items.reduce((sum, item) => sum + item.caloriesKcal, 0));
   return { items, byMeal, totalKcal };

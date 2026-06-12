@@ -64,6 +64,13 @@
       "when": 1781260000000,
       "tag": "0008_reminder_engine",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1781265000000,
+      "tag": "0009_meal_type_smoke",
+      "breakpoints": true
     }
   ]
 }

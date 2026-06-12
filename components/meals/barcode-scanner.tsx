@@ -1,119 +1,131 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useEffect, useRef, useState } from "react";
+import {
+  cameraErrorMessage,
+  isLiveBarcodeScanSupported,
+  requestCameraStream,
+  startLiveBarcodeScan,
+  type LiveBarcodeScanner,
+} from "@/lib/foods/barcode-detect";
 
-type BarcodeDetectorLike = {
-  detect: (source: ImageBitmapSource) => Promise<Array<{ rawValue: string }>>;
-};
-
-type BarcodeDetectorConstructor = new (options?: {
-  formats?: string[];
-}) => BarcodeDetectorLike;
-
-function getBarcodeDetector(): BarcodeDetectorConstructor | null {
-  if (typeof window === "undefined") return null;
-  return (window as Window & { BarcodeDetector?: BarcodeDetectorConstructor }).BarcodeDetector ?? null;
-}
-
-export function BarcodeScanner({
+function CameraView({
+  stream,
   onDetected,
   onError,
 }: {
+  stream: MediaStream;
   onDetected: (ean: string) => void;
   onError?: (message: string) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const [active, setActive] = useState(false);
-  const supported = useMemo(
-    () => typeof window !== "undefined" && Boolean(getBarcodeDetector()),
-    [],
+  const scannerRef = useRef<LiveBarcodeScanner | null>(null);
+  const onDetectedRef = useRef(onDetected);
+  const onErrorRef = useRef(onError);
+  const [status, setStatus] = useState<"starting" | "live">("starting");
+
+  useEffect(() => {
+    onDetectedRef.current = onDetected;
+  }, [onDetected]);
+
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const stopScanner = () => {
+      scannerRef.current?.stop();
+      scannerRef.current = null;
+    };
+
+    const attach = async () => {
+      try {
+        const video = videoRef.current;
+        if (!video || cancelled) return;
+
+        video.srcObject = stream;
+        video.setAttribute("playsinline", "true");
+        video.muted = true;
+        await video.play();
+
+        if (cancelled) return;
+
+        scannerRef.current = await startLiveBarcodeScan(video, stream, (ean) => {
+          stopScanner();
+          onDetectedRef.current(ean);
+        });
+
+        if (!cancelled) setStatus("live");
+      } catch (error) {
+        if (!cancelled) onErrorRef.current?.(cameraErrorMessage(error));
+      }
+    };
+
+    void attach();
+
+    return () => {
+      cancelled = true;
+      stopScanner();
+    };
+  }, [stream]);
+
+  return (
+    <div className="relative overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-border)] bg-black">
+      <video ref={videoRef} className="aspect-[4/3] w-full object-cover" playsInline muted />
+      {status === "starting" ? (
+        <p className="absolute inset-x-0 bottom-0 bg-black/50 py-1 text-center text-[10px] text-white">
+          Starter kamera…
+        </p>
+      ) : null}
+    </div>
   );
+}
 
-  const stopCamera = useCallback(() => {
-    streamRef.current?.getTracks().forEach((track) => track.stop());
-    streamRef.current = null;
-    setActive(false);
-  }, []);
-
-  useEffect(() => () => stopCamera(), [stopCamera]);
-
-  const startCamera = useCallback(async () => {
-    const Detector = getBarcodeDetector();
-    if (!Detector) {
-      onError?.("Barcode scanning is not supported in this browser.");
-      return;
-    }
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" } },
-        audio: false,
-      });
-      streamRef.current = stream;
-      const video = videoRef.current;
-      if (!video) return;
-      video.srcObject = stream;
-      await video.play();
-      setActive(true);
-
-      const detector = new Detector({
-        formats: ["ean_13", "ean_8", "upc_a", "upc_e"],
-      });
-
-      let cancelled = false;
-      const scan = async () => {
-        if (cancelled || !videoRef.current) return;
-        try {
-          const codes = await detector.detect(videoRef.current);
-          const ean = codes[0]?.rawValue?.replace(/\D/g, "");
-          if (ean) {
-            stopCamera();
-            onDetected(ean);
-            return;
-          }
-        } catch {
-          // ignore frame errors
-        }
-        if (!cancelled) requestAnimationFrame(scan);
-      };
-      requestAnimationFrame(scan);
-
-      return () => {
-        cancelled = true;
-      };
-    } catch {
-      onError?.("Could not access the camera. Check permissions or enter EAN manually.");
-      stopCamera();
-    }
-  }, [onDetected, onError, stopCamera]);
+export function BarcodeScanner({
+  stream,
+  onDetected,
+  onError,
+  onRetry,
+}: {
+  stream: MediaStream | null;
+  onDetected: (ean: string) => void;
+  onError?: (message: string) => void;
+  onRetry?: () => void;
+}) {
+  const supported = isLiveBarcodeScanSupported();
 
   if (!supported) {
     return (
       <p className="text-xs text-[var(--color-muted-foreground)]">
-        Strekkodeskanning støttes ikke i denne nettleseren (prøv Safari/Chrome på telefon). Du kan
-        skrive inn EAN-koden manuelt under.
+        Kamera krever HTTPS og tillatelse. Skriv inn EAN manuelt under.
+      </p>
+    );
+  }
+
+  if (!stream) {
+    return (
+      <p className="text-xs text-[var(--color-muted-foreground)]">
+        Starter kamera…
       </p>
     );
   }
 
   return (
     <div className="space-y-2">
-      <div className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-border)] bg-black/5">
-        <video ref={videoRef} className="aspect-[4/3] w-full object-cover" playsInline muted />
-      </div>
-      <div className="flex gap-2">
-        {!active ? (
-          <Button type="button" variant="secondary" size="sm" className="flex-1" onClick={startCamera}>
-            Start kamera
-          </Button>
-        ) : (
-          <Button type="button" variant="outline" size="sm" className="flex-1" onClick={stopCamera}>
-            Stopp kamera
-          </Button>
-        )}
-      </div>
+      <CameraView stream={stream} onDetected={onDetected} onError={onError} />
+      {onRetry ? (
+        <button
+          type="button"
+          className="w-full text-center text-[10px] text-[var(--color-muted-foreground)] underline-offset-2 hover:underline"
+          onClick={onRetry}
+        >
+          Kamera problemer? Prøv igjen
+        </button>
+      ) : null}
     </div>
   );
 }
+
+export { cameraErrorMessage, requestCameraStream };

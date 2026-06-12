@@ -1,14 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import type { MealType } from "@/db/schema";
 import { addMealItemAction } from "@/lib/actions/meals";
 import type { FoodProductSummary } from "@/lib/foods/types";
 import { calculateCaloriesFromGrams } from "@/lib/kassal/nutrition";
-import { BarcodeScanner } from "@/components/meals/barcode-scanner";
+import {
+  BarcodeScanner,
+  cameraErrorMessage,
+  requestCameraStream,
+} from "@/components/meals/barcode-scanner";
 import { FoodScanWizard } from "@/components/meals/food-scan-wizard";
 import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label } from "@/components/ui/field";
+import { Camera, ScanBarcode, Search, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type Mode = "search" | "scan" | "photo";
 
@@ -70,7 +76,42 @@ export function ProductPicker({
   const [eanNotFound, setEanNotFound] = useState(false);
   const [photoInitialEan, setPhotoInitialEan] = useState<string | undefined>();
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [pending, startTransition] = useTransition();
+
+  const stopCameraStream = useCallback(() => {
+    setCameraStream((current) => {
+      current?.getTracks().forEach((track) => track.stop());
+      return null;
+    });
+  }, []);
+
+  const activateScanMode = useCallback(async () => {
+    setLookupError(null);
+    stopCameraStream();
+    try {
+      const stream = await requestCameraStream();
+      setCameraStream(stream);
+      setMode("scan");
+    } catch (error) {
+      setMode("scan");
+      setLookupError(cameraErrorMessage(error));
+    }
+  }, [stopCameraStream]);
+
+  const switchMode = useCallback(
+    (id: Mode) => {
+      if (id === "scan") {
+        void activateScanMode();
+        return;
+      }
+      stopCameraStream();
+      setMode(id);
+    },
+    [activateScanMode, stopCameraStream],
+  );
+
+  useEffect(() => () => stopCameraStream(), [stopCameraStream]);
 
   function openCustomAdd(ean?: string) {
     setPhotoInitialEan(ean);
@@ -173,57 +214,64 @@ export function ProductPicker({
     });
   }
 
+  const modeTabs: Array<{ id: Mode; label: string; icon: typeof Search }> = [
+    { id: "search", label: "Søk", icon: Search },
+    { id: "scan", label: "Strekkode", icon: ScanBarcode },
+    { id: "photo", label: "Bilde", icon: Camera },
+  ];
+
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
-      <div className="max-h-[90dvh] w-full max-w-[640px] overflow-y-auto rounded-t-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-lg sm:rounded-[var(--radius-lg)]">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <h3 className="text-base font-semibold">Legg til produkt</h3>
-          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-            Lukk
-          </Button>
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
+      <div className="flex max-h-[min(88dvh,100%)] w-full max-w-[640px] flex-col overflow-hidden rounded-t-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-card)] shadow-lg sm:max-h-[90dvh] sm:rounded-[var(--radius-lg)]">
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[var(--color-border)] px-3 py-2">
+          {!selected ? (
+            <div className="flex gap-0.5">
+              {modeTabs.map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  type="button"
+                  aria-label={label}
+                  aria-current={mode === id ? "true" : undefined}
+                  onClick={() => switchMode(id)}
+                  className={cn(
+                    "flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] transition-colors",
+                    mode === id
+                      ? "bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
+                      : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]",
+                  )}
+                >
+                  <Icon className="h-5 w-5" />
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="h-10" />
+          )}
+          <button
+            type="button"
+            aria-label="Lukk"
+            onClick={onClose}
+            className="ml-auto flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         {!selected ? (
           <>
-            <div className="mb-3 grid grid-cols-3 gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant={mode === "search" ? "default" : "outline"}
-                onClick={() => setMode("search")}
-              >
-                Søk
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={mode === "scan" ? "default" : "outline"}
-                onClick={() => setMode("scan")}
-              >
-                Strekkode
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={mode === "photo" ? "default" : "outline"}
-                onClick={() => setMode("photo")}
-              >
-                Bilde
-              </Button>
-            </div>
-
             {mode === "search" ? (
               <div className="space-y-2">
-                <Label htmlFor="product-search">Produktnavn</Label>
                 <Input
                   id="product-search"
                   value={query}
                   onChange={(e) => handleQueryChange(e.target.value)}
-                  placeholder="F.eks. havregryn eller yoghurt"
-                  autoFocus
+                  placeholder="Søk produkt…"
+                  autoComplete="off"
+                  enterKeyHint="search"
                 />
                 {searchError ? <p className="text-xs text-[#9a5b45]">{searchError}</p> : null}
-                <ul className="max-h-52 space-y-2 overflow-y-auto">
+                <ul className="max-h-[min(40dvh,16rem)] space-y-2 overflow-y-auto">
                   {groupResults(results).map((group) => (
                     <li key={group.title}>
                       <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
@@ -267,30 +315,35 @@ export function ProductPicker({
                 </ul>
               </div>
             ) : mode === "scan" ? (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <BarcodeScanner
+                  stream={cameraStream}
                   onDetected={lookupEan}
                   onError={(message) => setLookupError(message)}
+                  onRetry={() => void activateScanMode()}
                 />
-                <div>
-                  <Label htmlFor="ean-manual">EAN / strekkode</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="ean-manual"
-                      inputMode="numeric"
-                      value={eanInput}
-                      onChange={(e) => setEanInput(e.target.value)}
-                      placeholder="7039010019811"
-                    />
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => lookupEan(eanInput)}
-                    >
-                      Slå opp
-                    </Button>
-                  </div>
+                <div className="flex gap-2">
+                  <Input
+                    id="ean-manual"
+                    inputMode="numeric"
+                    value={eanInput}
+                    onChange={(e) => setEanInput(e.target.value)}
+                    placeholder="EAN"
+                    className="min-w-0 flex-1"
+                    enterKeyHint="go"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void lookupEan(eanInput);
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={() => lookupEan(eanInput)}
+                  >
+                    OK
+                  </Button>
                 </div>
                 {lookupError ? (
                   <div className="space-y-2">
@@ -373,6 +426,7 @@ export function ProductPicker({
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );
