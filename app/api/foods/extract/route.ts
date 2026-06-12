@@ -3,6 +3,11 @@ import { requireUserId } from "@/lib/auth/current-user";
 import { lookupFoodByEan } from "@/lib/foods/catalog";
 import { getFoodCustomPrefixId } from "@/lib/foods/prefix";
 import { extractFoodLabelFromImage } from "@/lib/foods/vision-extract";
+import { logger } from "@/lib/logger";
+import { isRateLimited } from "@/lib/rate-limit";
+
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const EXTRACT_RATE_LIMIT = 5;
 
 async function fileToDataUrl(file: File): Promise<string> {
   const buffer = Buffer.from(await file.arrayBuffer());
@@ -11,7 +16,11 @@ async function fileToDataUrl(file: File): Promise<string> {
 }
 
 export async function POST(req: Request) {
-  await requireUserId();
+  const userId = await requireUserId();
+
+  if (isRateLimited(`extract:${userId}`, EXTRACT_RATE_LIMIT)) {
+    return NextResponse.json({ error: "Too many requests. Try again in a minute." }, { status: 429 });
+  }
 
   if (!getFoodCustomPrefixId()) {
     return NextResponse.json(
@@ -27,6 +36,10 @@ export async function POST(req: Request) {
 
   if (!(nutritionImage instanceof File)) {
     return NextResponse.json({ error: "nutritionImage is required." }, { status: 400 });
+  }
+
+  if (nutritionImage.size > MAX_IMAGE_BYTES) {
+    return NextResponse.json({ error: "Image is too large (max 10 MB)." }, { status: 413 });
   }
 
   if (eanHint) {
@@ -58,11 +71,11 @@ export async function POST(req: Request) {
       },
     });
   } catch (error) {
+    logger.error("FoodExtract", "Label extraction failed", {
+      reason: error instanceof Error ? error.message : "unknown",
+    });
     return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Extraction failed.",
-        prefixId: getFoodCustomPrefixId(),
-      },
+      { error: "Could not extract label data.", prefixId: getFoodCustomPrefixId() },
       { status: 422 },
     );
   }

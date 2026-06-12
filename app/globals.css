@@ -1,23 +1,150 @@
 @import "tailwindcss";
 
-@theme {
-  --color-background: #f7f9f8;
-  --color-foreground: #1a2e28;
-  --color-muted: #eef3f1;
-  --color-muted-foreground: #5c7269;
-  --color-card: #ffffff;
-  --color-card-foreground: #1a2e28;
-  --color-border: #d8e4df;
-  --color-primary: #3d8b7a;
-  --color-primary-foreground: #f7f9f8;
-  --color-accent: #e8f3ef;
-  --color-accent-foreground: #1f4f44;
-  --color-ring: #7ab8a8;
-  --radius-sm: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 1rem;
-  --font-sans: "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+/* ─── Dark mode and golden variant (class-based) ───────────────────────────── */
+@custom-variant dark (&:where(.dark, .dark *));
+@custom-variant golden (&:where(.golden, .golden *));
+
+/* ─── Tailwind theme — maps utilities to echo CSS custom properties ──────────
+   Uses @theme inline so Tailwind generates var() references, not static hex.
+   This means bg-card, text-text2 etc. respond to theme changes automatically. */
+@theme inline {
+  /* Backward-compatible aliases for existing components */
+  --color-background:         var(--bg);
+  --color-foreground:         var(--text1);
+  --color-muted:              var(--bg2);
+  --color-muted-foreground:   var(--text2);
+  --color-card:               var(--card);
+  --color-card-foreground:    var(--text1);
+  --color-border:             var(--border);
+  --color-primary:            var(--accent);
+  --color-primary-foreground: var(--bg);
+  --color-accent:             var(--accent-light);
+  --color-accent-foreground:  var(--text1);
+  --color-ring:               var(--accent);
+
+  /* Echo tokens as Tailwind utilities (bg-bg2, text-text1, border-border etc.) */
+  --color-bg:           var(--bg);
+  --color-bg2:          var(--bg2);
+  --color-card2:        var(--card2);
+  --color-text1:        var(--text1);
+  --color-text2:        var(--text2);
+  --color-text3:        var(--text3);
+  --color-echo-accent:  var(--accent);
+  --color-accent-light: var(--accent-light);
+  --color-green:        var(--green);
+  --color-green-light:  var(--green-light);
+  --color-amber:        var(--amber);
+  --color-amber-light:  var(--amber-light);
+  --color-red:          var(--red);
+  --color-red-light:    var(--red-light);
+  --color-sage:         var(--sage);
+  --color-sage-light:   var(--sage-light);
+  --color-dusk:         var(--dusk);
+  --color-dusk-light:   var(--dusk-light);
+  --color-blue:         var(--blue);
+  --color-blue-light:   var(--blue-light);
+  --color-gold:         var(--gold);
+  --color-gold-light:   var(--gold-light);
+
+  --radius-sm: 0.75rem;
+  --radius-md: 1.25rem;
+  --radius-lg: 1.5rem;
 }
+
+/* ─── Sand (light) ──────────────────────────────────────────────────────────
+   Warm grey — applied when neither .dark nor .golden is set on <html>.    */
+:root {
+  --bg:           #D7D3CA;
+  --bg2:          #CDC8BD;
+  --card:         #CFCABF;
+  --card2:        #C8C2B6;
+  --border:       rgba(0, 0, 0, 0.10);
+  --text1:        #2A2620;
+  --text2:        #5E574B;
+  --text3:        #8C8578;
+  --accent:       #3E7FA6;
+  --accent-light: #D3E1EC;
+  --green:        #3E7A5E;
+  --green-light:  #D4E3D9;
+  --amber:        #8F6C1E;
+  --amber-light:  #EBE1CC;
+  --red:          #A44545;
+  --red-light:    #ECD9D9;
+  --sage:         #466B55;
+  --sage-light:   #D6E1D8;
+  --dusk:         #57506F;
+  --dusk-light:   #DDD8E6;
+  --blue:         #356B8C;
+  --blue-light:   #D3E1EC;
+  --gold:         #8F7A2C;
+  --gold-light:   #EBE1CC;
+
+  --font-heading: var(--font-lora), Georgia, serif;
+  --font-body:    var(--font-dm-sans), system-ui, sans-serif;
+  --font-sans:    var(--font-dm-sans), system-ui, sans-serif;
+}
+
+/* ─── Slate (dark) ──────────────────────────────────────────────────────────
+   Cool blue-grey — the default dark theme. Applied via .dark on <html>.   */
+.dark {
+  color-scheme: dark;
+  --bg:           #1A1E26;
+  --bg2:          #141720;
+  --card:         #222838;
+  --card2:        #1C2030;
+  --border:       rgba(255, 255, 255, 0.10);
+  --text1:        #EEF0F5;
+  --text2:        #8E97AD;
+  --text3:        #7A8CAD;
+  --accent:       #7EB8D4;
+  --accent-light: #1E3040;
+  --green:        #7DD4A8;
+  --green-light:  #1A3028;
+  --amber:        #D4A87D;
+  --amber-light:  #2A2010;
+  --red:          #D47D7D;
+  --red-light:    #301818;
+  --sage:         #7DB89A;
+  --sage-light:   #182820;
+  --dusk:         #9D8DC0;
+  --dusk-light:   #201830;
+  --blue:         #9CCAE0;
+  --blue-light:   #2A3C55;
+  --gold:         #D4BA7A;
+  --gold-light:   #3A2A16;
+}
+
+/* ─── Golden (dark) ─────────────────────────────────────────────────────────
+   Deep warm amber — applied via .golden on <html>.                        */
+.golden {
+  color-scheme: dark;
+  --bg:           #0E0C0A;
+  --bg2:          #0B0906;
+  --card:         #181410;
+  --card2:        #221E18;
+  --border:       rgba(255, 220, 140, 0.10);
+  --text1:        #F5F0E8;
+  --text2:        #B8A882;
+  --text3:        #6E5E40;
+  --accent:       #F59E0B;
+  --accent-light: rgba(245, 158,  11, 0.14);
+  --green:        #84CC16;
+  --green-light:  rgba(132, 204,  22, 0.14);
+  --amber:        #FBBF24;
+  --amber-light:  rgba(251, 191,  36, 0.14);
+  --red:          #F87171;
+  --red-light:    rgba(248, 113, 113, 0.14);
+  --sage:         #A3A352;
+  --sage-light:   rgba(163, 163,  82, 0.14);
+  --dusk:         #C4A882;
+  --dusk-light:   rgba(196, 168, 130, 0.14);
+  --blue:         #60A5FA;
+  --blue-light:   rgba( 96, 165, 250, 0.12);
+  --gold:         #F59E0B;
+  --gold-light:   rgba(245, 158,  11, 0.14);
+}
+
+/* ─── Base styles ─────────────────────────────────────────────────────────── */
 
 * {
   box-sizing: border-box;
@@ -30,10 +157,14 @@ body {
 
 body {
   margin: 0;
-  background: var(--color-background);
-  color: var(--color-foreground);
-  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text1);
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-heading);
 }
 
 a {
@@ -41,13 +172,15 @@ a {
   text-decoration: none;
 }
 
+/* ─── Layout utilities ───────────────────────────────────────────────────── */
+
 .app-shell {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
   max-width: 640px;
   margin: 0 auto;
-  padding-bottom: calc(3.5rem + env(safe-area-inset-bottom));
+  padding-bottom: calc(6rem + env(safe-area-inset-bottom));
 }
 
 .app-header {
@@ -59,20 +192,20 @@ a {
 
 .app-content {
   flex: 1;
-  padding: 0.625rem 0.875rem 0.75rem;
+  padding: 0.5rem 0.875rem 0.75rem;
 }
 
 .page-title {
   font-size: 1.25rem;
   font-weight: 600;
   letter-spacing: -0.02em;
-  margin: 0;
+  margin: 0 0 0.75rem;
   line-height: 1.2;
 }
 
 .page-subtitle {
   margin: 0.125rem 0 0.625rem;
-  color: var(--color-muted-foreground);
+  color: var(--text2);
   font-size: 0.8125rem;
   line-height: 1.35;
 }
@@ -111,8 +244,12 @@ a {
   gap: 0.5rem;
 }
 
+.form-grid-2 > * {
+  min-width: 0;
+}
+
 .section-divider {
   margin: 0.625rem 0;
   border: 0;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--border);
 }

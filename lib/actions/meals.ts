@@ -1,13 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { dailyBodyLogs, mealLogItems, type MealType } from "@/db/schema";
 import { requireUserId } from "@/lib/auth/current-user";
 import { scopeBy } from "@/lib/auth/scope";
+import { writeAuditLog } from "@/lib/audit/log";
 import { buildMealCalories } from "@/lib/kassal/client";
 import { resolveFoodProduct } from "@/lib/foods/catalog";
+import { logger } from "@/lib/logger";
 import { addMealItemSchema } from "@/lib/validation/meal-item";
 import { type ActionResult, flattenZodErrors } from "./types";
 
@@ -18,7 +20,13 @@ async function syncDailyCaloriesFromMeals(userId: string, logDate: string) {
       total: sql<number>`coalesce(sum(${mealLogItems.caloriesKcal}), 0)`,
     })
     .from(mealLogItems)
-    .where(and(eq(mealLogItems.userId, userId), eq(mealLogItems.logDate, logDate)));
+    .where(
+      and(
+        eq(mealLogItems.userId, userId),
+        eq(mealLogItems.logDate, logDate),
+        isNull(mealLogItems.deletedAt),
+      ),
+    );
 
   const total = Math.round(Number(row?.total ?? 0));
 
@@ -73,19 +81,29 @@ export async function addMealItemAction(
     const caloriesKcal = buildMealCalories(food.kcalPer100g, parsed.data.quantityGrams);
     const db = getDb();
 
-    await db.insert(mealLogItems).values({
-      userId,
-      logDate: parsed.data.logDate,
-      mealType: parsed.data.mealType,
-      foodProductId: food.id,
-      kassalProductId: food.source === "kassal" ? Number(food.externalId) : null,
-      ean: food.ean,
-      productName: food.name,
-      brand: food.brand,
-      quantityGrams: parsed.data.quantityGrams,
-      kcalPer100g: food.kcalPer100g,
-      caloriesKcal,
-      updatedAt: new Date(),
+    const [inserted] = await db
+      .insert(mealLogItems)
+      .values({
+        userId,
+        logDate: parsed.data.logDate,
+        mealType: parsed.data.mealType,
+        foodProductId: food.id,
+        kassalProductId: food.source === "kassal" ? Number(food.externalId) : null,
+        ean: food.ean,
+        productName: food.name,
+        brand: food.brand,
+        quantityGrams: parsed.data.quantityGrams,
+        kcalPer100g: food.kcalPer100g,
+        caloriesKcal,
+        updatedAt: new Date(),
+      })
+      .returning({ id: mealLogItems.id });
+
+    await writeAuditLog({
+      entityType: "meal_log_item",
+      entityId: inserted.id,
+      action: "create",
+      changedBy: userId,
     });
 
     await syncDailyCaloriesFromMeals(userId, parsed.data.logDate);
@@ -95,10 +113,10 @@ export async function addMealItemAction(
     revalidatePath("/check-in");
     return { ok: true, data: undefined };
   } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : "Could not add meal item.",
-    };
+    logger.error("Meals", "addMealItemAction failed", {
+      reason: error instanceof Error ? error.message : "unknown",
+    });
+    return { ok: false, error: "Could not add meal item. Please try again." };
   }
 }
 
@@ -107,13 +125,15 @@ export async function removeMealItemAction(itemId: string, logDate: string): Pro
   const db = getDb();
 
   const deleted = await db
-    .delete(mealLogItems)
+    .update(mealLogItems)
+    .set({ deletedAt: new Date(), updatedAt: new Date() })
     .where(
       scopeBy(
         mealLogItems.userId,
         userId,
         eq(mealLogItems.id, itemId),
         eq(mealLogItems.logDate, logDate),
+        isNull(mealLogItems.deletedAt),
       ),
     )
     .returning({ id: mealLogItems.id });
@@ -121,6 +141,13 @@ export async function removeMealItemAction(itemId: string, logDate: string): Pro
   if (!deleted.length) {
     return { ok: false, error: "Item not found." };
   }
+
+  await writeAuditLog({
+    entityType: "meal_log_item",
+    entityId: deleted[0].id,
+    action: "delete",
+    changedBy: userId,
+  });
 
   await syncDailyCaloriesFromMeals(userId, logDate);
 
@@ -133,7 +160,11 @@ export async function removeMealItemAction(itemId: string, logDate: string): Pro
 export async function getMealItemsForDate(userId: string, logDate: string) {
   const db = getDb();
   return db.query.mealLogItems.findMany({
-    where: and(eq(mealLogItems.userId, userId), eq(mealLogItems.logDate, logDate)),
+    where: and(
+      eq(mealLogItems.userId, userId),
+      eq(mealLogItems.logDate, logDate),
+      isNull(mealLogItems.deletedAt),
+    ),
     orderBy: (items, { asc }) => [asc(items.mealType), asc(items.createdAt)],
   });
 }

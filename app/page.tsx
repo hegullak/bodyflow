@@ -92,7 +92,7 @@ export default async function HomePage({
             <SignInButton mode="redirect" forceRedirectUrl="/dashboard">
               <button
                 type="button"
-                className="inline-flex h-10 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white px-4 text-sm font-medium"
+                className="inline-flex h-10 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] px-4 text-sm font-medium"
               >
                 Sign in
               </button>

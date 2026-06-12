@@ -48,11 +48,11 @@ export function getWithingsWebhookUrl(): string | null {
 
   if (isWithingsWebhookSecretRequired()) {
     if (!secret) return null;
-    return `${base}/api/integrations/withings/webhook/${secret}`;
+    return `${base}/api/integrations/withings/webhook?s=${encodeURIComponent(secret)}`;
   }
 
   if (secret) {
-    return `${base}/api/integrations/withings/webhook/${secret}`;
+    return `${base}/api/integrations/withings/webhook?s=${encodeURIComponent(secret)}`;
   }
 
   return `${base}/api/integrations/withings/webhook`;

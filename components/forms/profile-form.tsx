@@ -42,25 +42,17 @@ export function ProfileForm({ profile }: { profile: UserProfile | null }) {
 
       <div className="form-grid-2">
         <div>
-          <Label htmlFor="birthYear">Birth year</Label>
+          <Label htmlFor="birthYear">Fødselsår</Label>
           <Input
             id="birthYear"
             name="birthYear"
             type="number"
             inputMode="numeric"
-            placeholder="1990"
+            placeholder="1976"
             defaultValue={profile?.birthYear ?? ""}
           />
         </div>
-        <div>
-          <Label htmlFor="birthDate">Birth date</Label>
-          <Input
-            id="birthDate"
-            name="birthDate"
-            type="date"
-            defaultValue={profile?.birthDate ?? ""}
-          />
-        </div>
+        <div />
       </div>
 
       <div className="form-grid-2">
@@ -116,17 +108,18 @@ export function ProfileForm({ profile }: { profile: UserProfile | null }) {
             defaultValue={profile?.targetWeightKg ?? ""}
           />
         </div>
-        <div>
-          <Label htmlFor="preferredUnits">Units</Label>
-          <Select
-            id="preferredUnits"
-            name="preferredUnits"
-            defaultValue={profile?.preferredUnits ?? "metric"}
-          >
-            <option value="metric">Metric</option>
-            <option value="imperial">Imperial</option>
-          </Select>
-        </div>
+      </div>
+
+      <div>
+        <Label htmlFor="preferredUnits">Units</Label>
+        <Select
+          id="preferredUnits"
+          name="preferredUnits"
+          defaultValue={profile?.preferredUnits ?? "metric"}
+        >
+          <option value="metric">Metric</option>
+          <option value="imperial">Imperial</option>
+        </Select>
       </div>
 
       {state?.ok === false && !state.fieldErrors ? (

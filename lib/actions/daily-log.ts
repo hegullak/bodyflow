@@ -6,6 +6,7 @@ import { getDb } from "@/db/client";
 import { dailyBodyLogs } from "@/db/schema";
 import { requireUserId } from "@/lib/auth/current-user";
 import { scopeBy } from "@/lib/auth/scope";
+import { writeAuditLog } from "@/lib/audit/log";
 import { dailyLogFormSchema } from "@/lib/validation/daily-log";
 import { type ActionResult, flattenZodErrors } from "./types";
 
@@ -68,13 +69,21 @@ export async function upsertDailyLogAction(
     conflictSet.weightSource = "manual";
   }
 
-  await db
+  const [upserted] = await db
     .insert(dailyBodyLogs)
     .values(values)
     .onConflictDoUpdate({
       target: [dailyBodyLogs.userId, dailyBodyLogs.logDate],
       set: conflictSet,
-    });
+    })
+    .returning({ id: dailyBodyLogs.id });
+
+  await writeAuditLog({
+    entityType: "daily_body_log",
+    entityId: upserted.id,
+    action: "update",
+    changedBy: userId,
+  });
 
   revalidatePath("/dashboard");
   revalidatePath("/check-in");

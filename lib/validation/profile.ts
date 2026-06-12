@@ -6,11 +6,6 @@ export const profileFormSchema = z.object({
     (value) => (value === "" || value == null ? undefined : value),
     z.coerce.number().int().min(1900).max(new Date().getFullYear()).optional(),
   ),
-  birthDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional()
-    .or(z.literal("").transform(() => undefined)),
   heightCm: z.coerce.number().positive().max(300),
   activityLevel: z.enum(["sedentary", "light", "moderate", "active", "very_active"]),
   goal: z.enum(["fat_loss", "maintenance", "muscle_gain"]),

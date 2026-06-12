@@ -182,6 +182,8 @@ export const dailyBodyLogs = pgTable(
 
     note: text("note"),
 
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -219,6 +221,8 @@ export const bodyMeasurements = pgTable(
     hipCm: real("hip_cm"),
 
     note: text("note"),
+
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
 
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 
@@ -319,6 +323,8 @@ export const mealLogItems = pgTable(
     kcalPer100g: real("kcal_per_100g").notNull(),
 
     caloriesKcal: real("calories_kcal").notNull(),
+
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
 
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 

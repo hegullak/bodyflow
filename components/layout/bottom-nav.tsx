@@ -17,23 +17,23 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-[var(--color-border)] bg-[var(--color-card)]/95 backdrop-blur">
-      <div className="mx-auto flex max-w-[640px] items-stretch justify-around px-1 pb-[env(safe-area-inset-bottom)]">
-        {tabs.map(({ href, label, icon: Icon }) => {
+    <nav className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-[2rem] border border-[var(--border)] bg-[var(--card)]/95 shadow-2xl backdrop-blur-md">
+      <div className="flex items-center gap-1 px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        {tabs.map(({ href, icon: Icon }) => {
           const active = pathname === href;
           return (
             <Link
               key={href}
               href={href}
               className={cn(
-                "flex min-h-12 flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors sm:text-xs",
+                "flex items-center justify-center transition-colors rounded-xl px-4 py-1.5",
                 active
-                  ? "text-[var(--color-primary)]"
-                  : "text-[var(--color-muted-foreground)]",
+                  ? "text-[var(--accent)]"
+                  : "text-[var(--text3)] hover:text-[var(--text2)]",
               )}
+              title={href}
             >
-              <Icon className="h-4 w-4" />
-              {label}
+              <Icon className="h-6 w-6" strokeWidth={1.5} />
             </Link>
           );
         })}

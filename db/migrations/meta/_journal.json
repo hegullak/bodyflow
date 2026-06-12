@@ -71,6 +71,13 @@
       "when": 1781265000000,
       "tag": "0009_meal_type_smoke",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1781380000000,
+      "tag": "0010_soft_delete",
+      "breakpoints": true
     }
   ]
 }

@@ -8,13 +8,10 @@ export const dailyLogFormSchema = z.object({
     .max(500)
     .optional()
     .or(z.literal("").transform(() => undefined)),
-  calorieIntake: z.coerce
-    .number()
-    .int()
-    .min(0)
-    .max(20000)
-    .optional()
-    .or(z.literal("").transform(() => undefined)),
+  calorieIntake: z.preprocess(
+    (value) => (value === "" || value == null ? undefined : value),
+    z.coerce.number().int().min(0).max(20000).optional(),
+  ),
   note: z.string().max(1000).optional().or(z.literal("").transform(() => undefined)),
 });
 

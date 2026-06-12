@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { upsertCustomFoodProduct } from "@/lib/foods/catalog";
 import { requireFoodCustomPrefixId } from "@/lib/foods/prefix";
+import { logger } from "@/lib/logger";
 import { type ActionResult, flattenZodErrors } from "./types";
 
 const saveCustomFoodSchema = z.object({
@@ -29,11 +30,8 @@ export async function saveCustomFoodAction(
 ): Promise<ActionResult<{ foodProductId: string; name: string; kcalPer100g: number }>> {
   try {
     requireFoodCustomPrefixId();
-  } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : "Custom prefix is not configured.",
-    };
+  } catch {
+    return { ok: false, error: "Custom food saving is not configured." };
   }
 
   const parsed = saveCustomFoodSchema.safeParse({
@@ -64,9 +62,9 @@ export async function saveCustomFoodAction(
       },
     };
   } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : "Could not save custom food.",
-    };
+    logger.error("CustomFood", "saveCustomFoodAction failed", {
+      reason: error instanceof Error ? error.message : "unknown",
+    });
+    return { ok: false, error: "Could not save food. Please try again." };
   }
 }

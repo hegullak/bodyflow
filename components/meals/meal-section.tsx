@@ -30,7 +30,7 @@ export function MealSection({
   }
 
   return (
-    <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white p-3">
+    <section className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
         <div>
           <h3 className="text-sm font-semibold">{MEAL_LABELS[mealType]}</h3>
@@ -48,7 +48,7 @@ export function MealSection({
           {items.map((item) => (
             <li
               key={item.id}
-              className="flex items-start justify-between gap-2 rounded-[var(--radius-sm)] bg-[var(--color-muted)]/60 px-2 py-1.5"
+              className="flex items-start justify-between gap-2 rounded-[var(--radius-sm)] bg-[var(--card2)] px-2 py-1.5"
             >
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{item.productName}</p>

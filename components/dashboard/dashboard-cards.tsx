@@ -17,7 +17,7 @@ function formatBalance(value: number | null): string {
 
 export function DashboardCards({ data }: { data: DashboardData }) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-2.5">
       {!data.profileComplete ? (
         <Card className="border-[var(--color-primary)]/30 bg-[var(--color-accent)]">
           <CardTitle>Complete your profile</CardTitle>
@@ -79,7 +79,7 @@ export function DashboardCards({ data }: { data: DashboardData }) {
         </CardHint>
       </Card>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2.5">
         <Card>
           <CardTitle>BMI</CardTitle>
           <CardValue>{formatNumber(data.bmi)}</CardValue>
