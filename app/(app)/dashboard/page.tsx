@@ -4,11 +4,15 @@ import { Card } from "@/components/ui/card";
 import { getDailyLogForDate } from "@/lib/actions/daily-log";
 import { requireUserId } from "@/lib/auth/current-user";
 import { getDashboardData } from "@/lib/queries/dashboard";
+import { syncWithingsForUser } from "@/lib/withings/sync";
 import { todayIsoDate } from "@/lib/utils";
 
 export default async function DashboardPage() {
   const userId = await requireUserId();
   const today = todayIsoDate();
+
+  await syncWithingsForUser(userId);
+
   const [data, todayLog] = await Promise.all([
     getDashboardData(userId),
     getDailyLogForDate(userId, today),

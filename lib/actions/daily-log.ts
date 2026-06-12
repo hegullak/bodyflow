@@ -45,22 +45,35 @@ export async function upsertDailyLogAction(
     userId,
     logDate: parsed.data.logDate,
     weightKg: parsed.data.weightKg ?? null,
+    weightSource: parsed.data.weightKg != null ? ("manual" as const) : null,
     calorieIntake: parsed.data.calorieIntake ?? null,
     note: parsed.data.note ?? null,
     updatedAt: new Date(),
   };
+
+  const conflictSet: {
+    calorieIntake: number | null;
+    note: string | null;
+    updatedAt: Date;
+    weightKg?: number | null;
+    weightSource?: "manual" | null;
+  } = {
+    calorieIntake: values.calorieIntake,
+    note: values.note,
+    updatedAt: values.updatedAt,
+  };
+
+  if (parsed.data.weightKg != null) {
+    conflictSet.weightKg = values.weightKg;
+    conflictSet.weightSource = "manual";
+  }
 
   await db
     .insert(dailyBodyLogs)
     .values(values)
     .onConflictDoUpdate({
       target: [dailyBodyLogs.userId, dailyBodyLogs.logDate],
-      set: {
-        weightKg: values.weightKg,
-        calorieIntake: values.calorieIntake,
-        note: values.note,
-        updatedAt: values.updatedAt,
-      },
+      set: conflictSet,
     });
 
   revalidatePath("/dashboard");

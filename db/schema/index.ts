@@ -1,4 +1,5 @@
 import {
+  boolean,
   date,
   index,
   integer,
@@ -39,6 +40,8 @@ export const goalEnum = pgEnum("goal", ["fat_loss", "maintenance", "muscle_gain"
 
 export const preferredUnitsEnum = pgEnum("preferred_units", ["metric", "imperial"]);
 
+export const weightSourceEnum = pgEnum("weight_source", ["manual", "withings"]);
+
 export const userProfiles = pgTable(
   "user_profiles",
   {
@@ -66,6 +69,7 @@ export const dailyBodyLogs = pgTable(
     userId: text("user_id").notNull(),
     logDate: date("log_date").notNull(),
     weightKg: real("weight_kg"),
+    weightSource: weightSourceEnum("weight_source"),
     calorieIntake: integer("calorie_intake"),
     note: text("note"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -95,6 +99,28 @@ export const bodyMeasurements = pgTable(
   ],
 );
 
+export const withingsConnections = pgTable(
+  "withings_connections",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull().unique(),
+    withingsUserId: text("withings_user_id").notNull(),
+    accessToken: text("access_token").notNull(),
+    refreshToken: text("refresh_token").notNull(),
+    tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true }),
+    scope: text("scope"),
+    lastSyncAt: timestamp("last_sync_at", { withTimezone: true }),
+    lastWithingsUpdate: integer("last_withings_update"),
+    webhookSubscribed: boolean("webhook_subscribed").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("withings_connections_user_idx").on(t.userId),
+    uniqueIndex("withings_connections_withings_user_unique").on(t.withingsUserId),
+  ],
+);
+
 export type UserProfile = typeof userProfiles.$inferSelect;
 export type NewUserProfile = typeof userProfiles.$inferInsert;
 export type DailyBodyLog = typeof dailyBodyLogs.$inferSelect;
@@ -106,3 +132,6 @@ export type Sex = (typeof sexEnum.enumValues)[number];
 export type ActivityLevel = (typeof activityLevelEnum.enumValues)[number];
 export type Goal = (typeof goalEnum.enumValues)[number];
 export type PreferredUnits = (typeof preferredUnitsEnum.enumValues)[number];
+export type WeightSource = (typeof weightSourceEnum.enumValues)[number];
+export type WithingsConnection = typeof withingsConnections.$inferSelect;
+export type NewWithingsConnection = typeof withingsConnections.$inferInsert;

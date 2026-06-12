@@ -7,6 +7,8 @@ const isPublicRoute = createRouteMatcher([
   "/sign-up(.*)",
   "/manifest.webmanifest",
   "/api/health(.*)",
+  "/api/integrations/withings/callback",
+  "/api/integrations/withings/webhook",
 ]);
 
 const isApiRoute = createRouteMatcher(["/api/(.*)"]);
@@ -28,6 +30,6 @@ export const config = {
   matcher: [
     "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
     "/(api|trpc)(.*)",
-    "/__clerk/(.*)",
+    "/__clerk/:path*",
   ],
 };

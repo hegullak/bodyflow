@@ -25,6 +25,7 @@ Matches the user's recommended stack and conventions from sibling projects (echo
 ### Consequences
 
 - Requires Clerk and Neon environment variables before running against a real database
+- Clerk application: `app_3F1YgZupaC522xCiwUnzuAqMFsn` (bodyflow-only users, not shared with other apps)
 - History views and measurements UI are deferred to follow-up issues
 
 ## ADR-0002: Git branch strategy
@@ -50,7 +51,7 @@ The project needs separate environments for experimentation, integration, and pr
 ## ADR-0003: Withings API integration (planned)
 
 Date: 2026-06-12
-Status: Proposed
+Status: Accepted
 
 ### Context
 
@@ -80,4 +81,4 @@ Documented in [Withings API reference for AI agents](https://developer.withings.
 - New tables: `withings_connections` (tokens, userid, last sync)
 - New routes: OAuth callback, webhook handler (public in `proxy.ts`)
 - Env vars: `WITHINGS_CLIENT_ID`, `WITHINGS_CLIENT_SECRET`, `WITHINGS_REDIRECT_URI`
-- Follow-up: implement on `sandbox` after MVP history slice
+- Implemented on `sandbox`: OAuth connect, background sync on dashboard, webhook handler

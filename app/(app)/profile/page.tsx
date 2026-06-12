@@ -1,11 +1,21 @@
 import { ProfileForm } from "@/components/forms/profile-form";
+import { WithingsCard } from "@/components/integrations/withings-card";
 import { Card } from "@/components/ui/card";
 import { getProfileForUser } from "@/lib/actions/profile";
 import { requireUserId } from "@/lib/auth/current-user";
+import { getWithingsConnection } from "@/lib/withings/sync";
 
-export default async function ProfilePage() {
+export default async function ProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ withings?: string }>;
+}) {
   const userId = await requireUserId();
-  const profile = await getProfileForUser(userId);
+  const params = await searchParams;
+  const [profile, withingsConnection] = await Promise.all([
+    getProfileForUser(userId),
+    getWithingsConnection(userId),
+  ]);
 
   return (
     <div>
@@ -17,6 +27,8 @@ export default async function ProfilePage() {
       <Card>
         <ProfileForm profile={profile} />
       </Card>
+
+      <WithingsCard connection={withingsConnection} status={params.withings} />
     </div>
   );
 }
