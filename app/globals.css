@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #f7f9f8;
+  --color-foreground: #1a2e28;
+  --color-muted: #eef3f1;
+  --color-muted-foreground: #5c7269;
+  --color-card: #ffffff;
+  --color-card-foreground: #1a2e28;
+  --color-border: #d8e4df;
+  --color-primary: #3d8b7a;
+  --color-primary-foreground: #f7f9f8;
+  --color-accent: #e8f3ef;
+  --color-accent-foreground: #1f4f44;
+  --color-ring: #7ab8a8;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --font-sans: "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.app-shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  max-width: 640px;
+  margin: 0 auto;
+  padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
+}
+
+.app-content {
+  flex: 1;
+  padding: 1rem 1rem 2rem;
+}
+
+.page-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.25rem;
+}
+
+.page-subtitle {
+  margin: 0 0 1.25rem;
+  color: var(--color-muted-foreground);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}

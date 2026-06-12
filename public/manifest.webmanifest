@@ -1,0 +1,11 @@
+{
+  "name": "bodyflow",
+  "short_name": "bodyflow",
+  "description": "Private personal body and calorie tracking",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#f7f9f8",
+  "theme_color": "#3d8b7a",
+  "orientation": "portrait-primary",
+  "icons": []
+}
