@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3010",
+    "ngrok": "powershell -ExecutionPolicy Bypass -File ./scripts/ngrok-mobile.ps1",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -14,6 +15,8 @@
     "db:migrate": "tsx db/migrate.ts",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
+    "db:seed-measurements": "tsx db/seed-measurements.ts",
+    "db:seed-matvaretabellen": "tsx db/seed-matvaretabellen.ts",
     "check": "npm run lint && npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {
@@ -27,6 +30,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "tailwind-merge": "^3.6.0",
+    "tesseract.js": "^7.0.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {

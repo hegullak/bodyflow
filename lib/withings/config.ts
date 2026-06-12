@@ -7,7 +7,7 @@ export function getWithingsConfig() {
   const clientSecret = process.env.WITHINGS_CLIENT_SECRET;
   const redirectUri =
     process.env.WITHINGS_REDIRECT_URI ??
-    `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/integrations/withings/callback`;
+    `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3010"}/api/integrations/withings/callback`;
 
   if (!clientId || !clientSecret) {
     return null;
@@ -29,7 +29,7 @@ export function isWithingsConfigured(): boolean {
 }
 
 export function getWithingsWebhookUrl(): string {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3010";
   return `${base}/api/integrations/withings/webhook`;
 }
 

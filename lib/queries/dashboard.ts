@@ -71,7 +71,8 @@ export async function getDashboardData(userId: string, referenceDate = new Date(
 
   const avgWeight7d = rollingAverage7Day(weightEntries, referenceDate);
   const avgCalories7d = rollingAverage7Day(calorieEntries, referenceDate);
-  const calorieBalance = calculateCalorieBalance(todayLog?.calorieIntake, tdee);
+  const calorieReference = profile?.dailyCalorieTarget ?? tdee;
+  const calorieBalance = calculateCalorieBalance(todayLog?.calorieIntake, calorieReference);
 
   const weightTrend = weightEntries
     .slice(0, 7)
@@ -89,6 +90,8 @@ export async function getDashboardData(userId: string, referenceDate = new Date(
     normalRange,
     bmr,
     tdee,
+    dailyCalorieTarget: profile?.dailyCalorieTarget ?? null,
+    calorieReference,
     todayCalories: todayLog?.calorieIntake ?? null,
     calorieBalance,
     avgWeight7d,

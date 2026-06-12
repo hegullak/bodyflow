@@ -1,0 +1,1 @@
+ALTER TABLE "bodyflow"."user_profiles" ADD COLUMN "daily_calorie_target" integer;

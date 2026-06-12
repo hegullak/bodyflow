@@ -1,6 +1,8 @@
 import { ProfileForm } from "@/components/forms/profile-form";
 import { WithingsCard } from "@/components/integrations/withings-card";
 import { Card } from "@/components/ui/card";
+import { ReminderSettingsForm } from "@/components/reminders/reminder-settings-form";
+import { getReminderForUser } from "@/lib/actions/reminders";
 import { getProfileForUser } from "@/lib/actions/profile";
 import { requireUserId } from "@/lib/auth/current-user";
 import { getWithingsConnection } from "@/lib/withings/sync";
@@ -12,23 +14,24 @@ export default async function ProfilePage({
 }) {
   const userId = await requireUserId();
   const params = await searchParams;
-  const [profile, withingsConnection] = await Promise.all([
+  const [profile, withingsConnection, weighInReminder] = await Promise.all([
     getProfileForUser(userId),
     getWithingsConnection(userId),
+    getReminderForUser(userId, "weigh_in"),
   ]);
 
   return (
     <div>
       <h1 className="page-title">Profile</h1>
-      <p className="page-subtitle">
-        Used for BMI, BMR, and TDEE calculations. Your data stays private.
-      </p>
+      <p className="page-subtitle">For BMI, BMR and TDEE. Private by default.</p>
 
-      <Card>
+      <Card className="card-compact">
         <ProfileForm profile={profile} />
+        <hr className="section-divider" />
+        <WithingsCard connection={withingsConnection} status={params.withings} embedded />
+        <hr className="section-divider" />
+        <ReminderSettingsForm reminderType="weigh_in" reminder={weighInReminder} />
       </Card>
-
-      <WithingsCard connection={withingsConnection} status={params.withings} />
     </div>
   );
 }

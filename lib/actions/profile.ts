@@ -21,6 +21,7 @@ export async function upsertProfileAction(
     activityLevel: formData.get("activityLevel"),
     goal: formData.get("goal"),
     targetWeightKg: formData.get("targetWeightKg") ?? "",
+    dailyCalorieTarget: formData.get("dailyCalorieTarget") ?? "",
     preferredUnits: formData.get("preferredUnits"),
     notes: formData.get("notes") ?? "",
   });
@@ -43,6 +44,7 @@ export async function upsertProfileAction(
     activityLevel: parsed.data.activityLevel,
     goal: parsed.data.goal,
     targetWeightKg: parsed.data.targetWeightKg ?? null,
+    dailyCalorieTarget: parsed.data.dailyCalorieTarget ?? null,
     preferredUnits: parsed.data.preferredUnits,
     notes: parsed.data.notes ?? null,
     updatedAt: new Date(),
@@ -61,6 +63,7 @@ export async function upsertProfileAction(
         activityLevel: values.activityLevel,
         goal: values.goal,
         targetWeightKg: values.targetWeightKg,
+        dailyCalorieTarget: values.dailyCalorieTarget,
         preferredUnits: values.preferredUnits,
         notes: values.notes,
         updatedAt: values.updatedAt,

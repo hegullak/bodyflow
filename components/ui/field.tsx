@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes } from "react";
+import { forwardRef, type InputHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
 export function Label({ className, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) {
@@ -10,17 +10,20 @@ export function Label({ className, ...props }: React.LabelHTMLAttributes<HTMLLab
   );
 }
 
-export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <input
-      className={cn(
-        "flex h-10 w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white px-3 text-sm outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-ring)]/40",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
+export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
+  function Input({ className, ...props }, ref) {
+    return (
+      <input
+        ref={ref}
+        className={cn(
+          "flex h-10 w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white px-3 text-sm outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-ring)]/40",
+          className,
+        )}
+        {...props}
+      />
+    );
+  },
+);
 
 export function Select({ className, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (

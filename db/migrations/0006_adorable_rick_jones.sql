@@ -1,0 +1,1 @@
+ALTER TYPE "bodyflow"."food_source" ADD VALUE 'custom';

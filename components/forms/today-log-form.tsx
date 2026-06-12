@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import type { DailyBodyLog } from "@/db/schema";
 import { upsertDailyLogAction } from "@/lib/actions/daily-log";
 import { Button } from "@/components/ui/button";
@@ -9,11 +9,22 @@ import { FieldError, Input, Label, Textarea } from "@/components/ui/field";
 export function TodayLogForm({
   logDate,
   todayLog,
+  calorieTarget,
+  focusWeight = false,
 }: {
   logDate: string;
   todayLog: DailyBodyLog | null;
+  calorieTarget?: number | null;
+  focusWeight?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(upsertDailyLogAction, null);
+  const weightRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!focusWeight) return;
+    document.getElementById("weight-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    weightRef.current?.focus();
+  }, [focusWeight]);
 
   return (
     <form action={formAction} className="space-y-4">
@@ -22,6 +33,7 @@ export function TodayLogForm({
       <div>
         <Label htmlFor="weightKg">Weight (kg)</Label>
         <Input
+          ref={weightRef}
           id="weightKg"
           name="weightKg"
           type="number"
@@ -40,7 +52,7 @@ export function TodayLogForm({
           name="calorieIntake"
           type="number"
           inputMode="numeric"
-          placeholder="2100"
+          placeholder={calorieTarget != null ? String(calorieTarget) : "2100"}
           defaultValue={todayLog?.calorieIntake ?? ""}
         />
         <FieldError

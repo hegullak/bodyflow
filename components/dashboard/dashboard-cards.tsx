@@ -79,7 +79,14 @@ export function DashboardCards({ data }: { data: DashboardData }) {
         <Card>
           <CardTitle>Today&apos;s calories</CardTitle>
           <CardValue>{formatNumber(data.todayCalories, " kcal")}</CardValue>
-          <CardHint>{formatBalance(data.calorieBalance)}</CardHint>
+          <CardHint>
+            {formatBalance(data.calorieBalance)}
+            {data.dailyCalorieTarget != null
+              ? ` · ${data.dailyCalorieTarget} kcal target`
+              : data.tdee != null
+                ? " · vs TDEE"
+                : ""}
+          </CardHint>
         </Card>
 
         <Card>

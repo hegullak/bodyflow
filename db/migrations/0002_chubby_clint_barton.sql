@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "body_measurements_user_date_unique" ON "bodyflow"."body_measurements" USING btree ("user_id","measured_on");

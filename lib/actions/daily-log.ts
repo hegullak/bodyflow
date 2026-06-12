@@ -77,6 +77,8 @@ export async function upsertDailyLogAction(
     });
 
   revalidatePath("/dashboard");
+  revalidatePath("/check-in");
+  revalidatePath("/statistics");
   return { ok: true, data: undefined };
 }
 

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { buildAppUrl } from "@/lib/app-url";
 import { exchangeAuthorizationCode } from "@/lib/withings/api";
 import { isWithingsConfigured } from "@/lib/withings/config";
 import { verifyWithingsOAuthState } from "@/lib/withings/oauth-state";
@@ -6,7 +7,7 @@ import { saveWithingsConnection, syncWithingsForUser } from "@/lib/withings/sync
 
 export async function GET(request: Request) {
   if (!isWithingsConfigured()) {
-    return NextResponse.redirect(new URL("/profile?withings=not_configured", request.url));
+    return NextResponse.redirect(buildAppUrl(request, "/?withings=not_configured"));
   }
 
   const url = new URL(request.url);
@@ -15,16 +16,16 @@ export async function GET(request: Request) {
   const error = url.searchParams.get("error");
 
   if (error) {
-    return NextResponse.redirect(new URL(`/profile?withings=denied`, request.url));
+    return NextResponse.redirect(buildAppUrl(request, "/?withings=denied"));
   }
 
   if (!code || !state) {
-    return NextResponse.redirect(new URL("/profile?withings=invalid", request.url));
+    return NextResponse.redirect(buildAppUrl(request, "/?withings=invalid"));
   }
 
   const userId = verifyWithingsOAuthState(state);
   if (!userId) {
-    return NextResponse.redirect(new URL("/profile?withings=invalid_state", request.url));
+    return NextResponse.redirect(buildAppUrl(request, "/?withings=invalid_state"));
   }
 
   try {
@@ -39,8 +40,10 @@ export async function GET(request: Request) {
     });
 
     await syncWithingsForUser(userId, { force: true });
-    return NextResponse.redirect(new URL("/profile?withings=connected", request.url));
+    // Land on public home first to avoid Clerk session-refresh loops on protected routes
+    // immediately after the external OAuth redirect.
+    return NextResponse.redirect(buildAppUrl(request, "/?withings=connected"));
   } catch {
-    return NextResponse.redirect(new URL("/profile?withings=error", request.url));
+    return NextResponse.redirect(buildAppUrl(request, "/?withings=error"));
   }
 }

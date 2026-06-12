@@ -7,9 +7,32 @@ import {
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 
-export default async function HomePage() {
+const withingsMessages: Record<string, string> = {
+  connected: "Withings connected. Sign in to see synced weight on your dashboard.",
+  denied: "Withings connection was cancelled.",
+  error: "Could not connect Withings. Try again from Profile.",
+  invalid: "Withings returned an invalid response.",
+  invalid_state: "Withings session expired. Try connecting again.",
+  not_configured: "Withings is not configured on the server.",
+};
+
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ withings?: string }>;
+}) {
   const { userId } = await auth();
-  if (userId) redirect("/dashboard");
+  const params = await searchParams;
+
+  if (userId) {
+    redirect(
+      params.withings === "connected"
+        ? "/dashboard?withings=connected"
+        : "/dashboard",
+    );
+  }
+
+  const withingsMessage = params.withings ? withingsMessages[params.withings] : null;
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -47,6 +70,17 @@ export default async function HomePage() {
             A calm personal cockpit for weight, measurements, and daily calories. No social
             features, no meal database — just your data.
           </p>
+          {withingsMessage ? (
+            <p
+              className={`mt-4 text-sm ${
+                params.withings === "connected"
+                  ? "text-[var(--color-primary)]"
+                  : "text-[#9a5b45]"
+              }`}
+            >
+              {withingsMessage}
+            </p>
+          ) : null}
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
             <SignUpButton mode="redirect" forceRedirectUrl="/dashboard">
               <button
