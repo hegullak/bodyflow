@@ -1,3 +1,9 @@
+import {
+  getWithingsWebhookSecret,
+  isWithingsWebhookSecretRequired,
+} from "./webhook-auth";
+import { isWithingsOAuthStateConfigured } from "./oauth-state";
+
 const WITHINGS_API_BASE = "https://wbsapi.withings.net";
 const WITHINGS_OAUTH_AUTHORIZE =
   "https://account.withings.com/oauth2_user/authorize2";
@@ -29,11 +35,28 @@ export function isWithingsTokenEncryptionConfigured(): boolean {
 }
 
 export function isWithingsConfigured(): boolean {
-  return getWithingsConfig() !== null && isWithingsTokenEncryptionConfigured();
+  return (
+    getWithingsConfig() !== null &&
+    isWithingsTokenEncryptionConfigured() &&
+    isWithingsOAuthStateConfigured()
+  );
 }
 
 export function getWithingsWebhookUrl(): string {
   const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3010";
+  const secret = getWithingsWebhookSecret();
+
+  if (isWithingsWebhookSecretRequired()) {
+    if (!secret) {
+      throw new Error("WITHINGS_WEBHOOK_SECRET is required for public webhook URLs.");
+    }
+    return `${base}/api/integrations/withings/webhook/${secret}`;
+  }
+
+  if (secret) {
+    return `${base}/api/integrations/withings/webhook/${secret}`;
+  }
+
   return `${base}/api/integrations/withings/webhook`;
 }
 

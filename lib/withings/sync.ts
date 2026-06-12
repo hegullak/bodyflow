@@ -5,12 +5,10 @@ import { scopeBy } from "@/lib/auth/scope";
 import { logger } from "@/lib/logger";
 import {
   fetchMeasurements,
-  refreshAccessToken,
   subscribeToBodyMetrics,
   WithingsApiError,
 } from "./api";
 import {
-  decryptConnectionTokens,
   encryptTokensForStorage,
   type WithingsConnectionSecrets,
 } from "./connection-secrets";
@@ -21,6 +19,7 @@ import {
   WITHINGS_SYNC_INTERVAL_MS,
 } from "./config";
 import { decodeWeightKg, unixToIsoDate, type WithingsMeasureGroup } from "./measurements";
+import { ensureFreshTokens } from "./token-refresh";
 
 export async function getWithingsConnection(userId: string) {
   const db = getDb();
@@ -38,36 +37,6 @@ export async function getWithingsConnectionByWithingsUserId(withingsUserId: stri
       where: eq(withingsConnections.withingsUserId, withingsUserId),
     })) ?? null
   );
-}
-
-async function ensureFreshTokens(connection: WithingsConnection): Promise<WithingsConnectionSecrets> {
-  const secrets = decryptConnectionTokens(connection);
-  const expiresAt = connection.tokenExpiresAt?.getTime() ?? 0;
-  const needsRefresh = expiresAt - Date.now() < 5 * 60 * 1000;
-
-  if (!needsRefresh) return secrets;
-
-  const tokens = await refreshAccessToken(secrets.refreshToken);
-  const db = getDb();
-  const tokenExpiresAt = new Date(Date.now() + tokens.expires_in * 1000);
-  const encrypted = encryptTokensForStorage({
-    accessToken: tokens.access_token,
-    refreshToken: tokens.refresh_token,
-  });
-
-  const [updated] = await db
-    .update(withingsConnections)
-    .set({
-      accessToken: encrypted.accessToken,
-      refreshToken: encrypted.refreshToken,
-      tokenExpiresAt,
-      scope: tokens.scope,
-      updatedAt: new Date(),
-    })
-    .where(eq(withingsConnections.id, connection.id))
-    .returning();
-
-  return decryptConnectionTokens(updated);
 }
 
 async function ensureWebhookSubscription(secrets: WithingsConnectionSecrets): Promise<void> {

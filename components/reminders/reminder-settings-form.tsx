@@ -16,7 +16,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/field";
 
-export function ReminderSettingsForm({
+function readNotificationPermission(): NotificationPermission | "unsupported" {
+  if (!("Notification" in window)) return "unsupported";
+  return Notification.permission;
+}
+
+function ReminderSettingsFormInner({
   reminderType,
   reminder,
 }: {
@@ -25,18 +30,8 @@ export function ReminderSettingsForm({
 }) {
   const definition = REMINDER_DEFINITIONS[reminderType];
   const [state, formAction, pending] = useActionState(upsertReminderAction, null);
-  const [permission, setPermission] = useState<NotificationPermission | "unsupported">(
-    "default",
-  );
+  const [permission, setPermission] = useState(readNotificationPermission);
   const [timezone, setTimezone] = useState(reminder?.timezone ?? getDefaultTimezone());
-
-  useEffect(() => {
-    if (typeof window === "undefined" || !("Notification" in window)) {
-      setPermission("unsupported");
-      return;
-    }
-    setPermission(Notification.permission);
-  }, []);
 
   useEffect(() => {
     if (state?.ok) {
@@ -52,7 +47,6 @@ export function ReminderSettingsForm({
   const selectedWeekdays = new Set(reminder?.weekdays ?? [1, 3, 5]);
 
   return (
-    <ClientOnly fallback={<div className="min-h-48" aria-busy="true" />}>
     <form action={formAction} className="form-compact">
       <input type="hidden" name="reminderType" value={reminderType} />
       <input type="hidden" name="timezone" value={timezone} />
@@ -136,6 +130,19 @@ export function ReminderSettingsForm({
         {pending ? "Saving..." : "Save reminder"}
       </Button>
     </form>
+  );
+}
+
+export function ReminderSettingsForm({
+  reminderType,
+  reminder,
+}: {
+  reminderType: "weigh_in";
+  reminder: Reminder | null;
+}) {
+  return (
+    <ClientOnly fallback={<div className="min-h-48" aria-busy="true" />}>
+      <ReminderSettingsFormInner reminderType={reminderType} reminder={reminder} />
     </ClientOnly>
   );
 }

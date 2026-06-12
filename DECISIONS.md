@@ -48,10 +48,10 @@ The project needs separate environments for experimentation, integration, and pr
 
 - Feature work lands on `sandbox` first, then promotes to `develop` and `master`
 
-## ADR-0003: Withings API integration (planned)
+## ADR-0003: Withings API integration
 
-Date: 2026-06-12
-Status: Accepted
+Date: 2026-06-12 (updated 2026-06-12 after security audit)
+Status: Accepted — **implemented**
 
 ### Context
 
@@ -61,24 +61,57 @@ Users with Withings smart scales should be able to sync weight automatically ins
 
 Use the **Withings Public API** (no contract required):
 
-- OAuth 2.0 web flow (`user.metrics` scope minimum for weight)
-- Store encrypted refresh tokens server-side, scoped per Clerk user
+- OAuth 2.0 web flow (`user.info`, `user.metrics` scopes; weight via measurement type `1`)
+- **Encrypt `access_token` and `refresh_token` at rest** in `withings_connection` using AES-256-GCM (`lib/withings/token-crypto.ts`, `wte1:` prefix)
+- Require `WITHINGS_TOKEN_ENCRYPTION_KEY` (32-byte base64 or hex) when Withings is enabled
+- **Decrypt tokens only server-side**, immediately before Withings API calls; never send tokens to client components
+- On token refresh, **always persist the rotated `refresh_token`** from Withings, re-encrypted before storage
 - Webhook + pull pattern: subscribe to `appli=1` (body metrics), fetch via `measure/getmeas` on notification
-- Map Withings measurement type `1` (weight, kg) into `daily_body_logs` with source metadata
-- Token refresh every ~3 hours; persist rotated refresh tokens
+- Map Withings weight (kg) into `daily_body_log` with `weight_source = 'withings'`
+- Manual weight entries are not overwritten by Withings sync
+
+### Implementation (current)
+
+| Area | Status |
+|------|--------|
+| OAuth connect / callback / disconnect | ✅ Production — redirect URI must match Withings Developer Portal exactly |
+| Token encryption at rest | ✅ `encryptWithingsToken` / `decryptWithingsToken` |
+| Server-only decrypt before API | ✅ `lib/withings/sync.ts`, `lib/withings/connection-secrets.ts` |
+| Client boundary | ✅ `WithingsConnectionPublic` — `{ connected, lastSyncAt }` only |
+| Logging safety | ✅ No token values in logs or error messages |
+| Plaintext migration | ✅ Idempotent `npm run withings:encrypt-tokens` |
+| Prod verification | ✅ Reconnect confirmed full OAuth → encrypt → decrypt → API path |
+| Webhook authenticity (#21) | ✅ Secret path token (`/webhook/{WITHINGS_WEBHOOK_SECRET}`); Public API has no HMAC on callbacks |
+| OAuth state hardening (#22) | ✅ `WITHINGS_STATE_SECRET` required when `NODE_ENV=production` |
+| Refresh-token race mitigation (#23) | ✅ In-flight dedup + optimistic `token_expires_at` update + 601/503 recovery re-read |
 
 ### Rationale
 
-Documented in [Withings API reference for AI agents](https://developer.withings.com/llms.md). Public API fits personal-use scale sync without cellular/contract solutions.
+Documented in [Withings API reference for AI agents](https://developer.withings.com/llms.md). Public API fits personal-use scale sync without cellular/contract solutions. Application-layer encryption limits exposure if the database is read without the encryption key.
 
-### Alternatives
+### Alternatives considered
 
-- Manual import only (current MVP)
-- SDK embed (requires contract; overkill for web app)
+- Manual import only — rejected for ongoing sync UX
+- SDK embed — requires contract; overkill for web app
+- Plaintext token storage — rejected; replaced by AES-256-GCM at rest
 
 ### Consequences
 
-- New tables: `withings_connections` (tokens, userid, last sync)
-- New routes: OAuth callback, webhook handler (public in `proxy.ts`)
-- Env vars: `WITHINGS_CLIENT_ID`, `WITHINGS_CLIENT_SECRET`, `WITHINGS_REDIRECT_URI`
-- Implemented on `sandbox`: OAuth connect, background sync on dashboard, webhook handler
+- Table: `withings_connection` (singular; one row per Clerk user, unique `withings_user_id`)
+- Routes: `/api/integrations/withings/connect`, `callback`, `disconnect`, `webhook` (callback + webhook public in `proxy.ts`)
+- Env vars:
+  - `WITHINGS_CLIENT_ID`, `WITHINGS_CLIENT_SECRET`, `WITHINGS_REDIRECT_URI`
+  - `WITHINGS_TOKEN_ENCRYPTION_KEY` (required when Withings enabled; generate with `openssl rand -base64 32`)
+  - Optional: `WITHINGS_STATE_SECRET`, `WITHINGS_OAUTH_MODE`
+  - `WITHINGS_WEBHOOK_SECRET` (required for public prod webhook URLs; embedded in subscribed callback path)
+  - `WITHINGS_STATE_SECRET` (required in production for OAuth CSRF state signing)
+- Sync triggers: dashboard, check-in, webhook, post-connect callback
+- Withings callback URL in Developer Portal must match `WITHINGS_REDIRECT_URI` exactly (prod: `https://bodyflow.echonote.no/api/integrations/withings/callback`)
+
+### Follow-up security tasks
+
+| Issue | Task | Status |
+|-------|------|--------|
+| #21 | Verify Withings webhook authenticity (secret path; Withings Public API does not sign callbacks) | ✅ Done |
+| #22 | Harden OAuth state handling for production (`WITHINGS_STATE_SECRET` required) | ✅ Done |
+| #23 | Prevent Withings refresh-token race conditions (dedup + optimistic DB update) | ✅ Done |

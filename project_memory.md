@@ -151,6 +151,8 @@ KASSAL_API_KEY=
 FOOD_CUSTOM_PREFIX_ID=go4g
 WITHINGS_CLIENT_ID / SECRET / REDIRECT_URI
 WITHINGS_TOKEN_ENCRYPTION_KEY   # openssl rand -base64 32
+WITHINGS_STATE_SECRET           # required in production (OAuth CSRF state)
+WITHINGS_WEBHOOK_SECRET         # required in production (webhook path token)
 # Optional:
 OPENAI_API_KEY                   # Vision for food labels
 ALLOWED_DEV_ORIGINS=             # ngrok hostnames for Clerk dev
@@ -164,9 +166,11 @@ ALLOWED_DEV_ORIGINS=             # ngrok hostnames for Clerk dev
 4. Withings redirect URI → prod URL callback
 5. `WITHINGS_TOKEN_ENCRYPTION_KEY` in Vercel (same key as used for migration; `openssl rand -base64 32`)
 6. Existing Withings rows: `npm run withings:encrypt-tokens` once against prod DB
-7. Deploy from `master` after merge
+7. `WITHINGS_STATE_SECRET` + `WITHINGS_WEBHOOK_SECRET` in Vercel Production (`openssl rand -base64 32` each)
+8. Re-subscribe webhooks: set `webhook_subscribed = false` in Neon or disconnect/reconnect Withings (new callback URL includes secret path)
+9. Deploy from `master` after merge
 
-**Next recommended security task:** verify Withings webhook authenticity (signature / shared secret) and require `WITHINGS_STATE_SECRET` in production (no dev fallback in `oauth-state.ts`).
+**Withings security (#21–#23):** done — see `DECISIONS.md` ADR-0003.
 
 ---
 

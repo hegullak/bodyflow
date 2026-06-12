@@ -8,7 +8,7 @@ const isPublicRoute = createRouteMatcher([
   "/manifest.webmanifest",
   "/api/health(.*)",
   "/api/integrations/withings/callback",
-  "/api/integrations/withings/webhook",
+  "/api/integrations/withings/webhook(.*)",
 ]);
 
 const isApiRoute = createRouteMatcher(["/api/(.*)"]);
