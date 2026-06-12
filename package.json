@@ -18,6 +18,7 @@
     "db:studio": "drizzle-kit studio",
     "db:seed-measurements": "tsx db/seed-measurements.ts",
     "db:seed-matvaretabellen": "tsx db/seed-matvaretabellen.ts",
+    "withings:encrypt-tokens": "tsx scripts/encrypt-withings-tokens.ts",
     "check": "npm run lint && npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {

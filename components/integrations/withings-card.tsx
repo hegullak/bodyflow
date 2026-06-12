@@ -3,30 +3,25 @@
 import { ClientOnly } from "@/components/client-only";
 import { Button } from "@/components/ui/button";
 import { CardTitle } from "@/components/ui/card";
-import type { WithingsConnection } from "@/db/schema";
-import { isWithingsConfigured } from "@/lib/withings/config";
+import type { WithingsConnectionPublic } from "@/lib/withings/types";
 import { formatDate } from "@/lib/utils";
 
 export function WithingsCard({
   connection,
+  configured,
   status,
   embedded = false,
 }: {
-  connection: WithingsConnection | null;
+  connection: WithingsConnectionPublic;
+  configured: boolean;
   status?: string | null;
   embedded?: boolean;
 }) {
-  const configured = isWithingsConfigured();
-
   return (
     <div className={embedded ? "" : "mt-3"}>
       <CardTitle>Withings</CardTitle>
 
-      {!configured ? (
-        <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-          Add Withings keys to <code className="text-[10px]">.env.local</code> to enable sync.
-        </p>
-      ) : connection ? (
+      {connection.connected ? (
         <div className="mt-1 flex items-center justify-between gap-2">
           <p className="text-xs text-[var(--color-primary)]">
             Connected
@@ -42,6 +37,10 @@ export function WithingsCard({
             </form>
           </ClientOnly>
         </div>
+      ) : !configured ? (
+        <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+          Withings is not configured on the server.
+        </p>
       ) : (
         <a
           href="/api/integrations/withings/connect"

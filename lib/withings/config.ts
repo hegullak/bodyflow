@@ -24,8 +24,12 @@ export function getWithingsConfig() {
   };
 }
 
+export function isWithingsTokenEncryptionConfigured(): boolean {
+  return Boolean(process.env.WITHINGS_TOKEN_ENCRYPTION_KEY?.trim());
+}
+
 export function isWithingsConfigured(): boolean {
-  return getWithingsConfig() !== null;
+  return getWithingsConfig() !== null && isWithingsTokenEncryptionConfigured();
 }
 
 export function getWithingsWebhookUrl(): string {

@@ -10,7 +10,11 @@ import {
   WithingsApiError,
 } from "./api";
 import {
-  getWithingsConfig,
+  decryptConnectionTokens,
+  encryptTokensForStorage,
+  type WithingsConnectionSecrets,
+} from "./connection-secrets";
+import {
   getWithingsWebhookUrl,
   isWithingsConfigured,
   WITHINGS_INITIAL_LOOKBACK_SECONDS,
@@ -36,21 +40,26 @@ export async function getWithingsConnectionByWithingsUserId(withingsUserId: stri
   );
 }
 
-async function ensureFreshTokens(connection: WithingsConnection): Promise<WithingsConnection> {
+async function ensureFreshTokens(connection: WithingsConnection): Promise<WithingsConnectionSecrets> {
+  const secrets = decryptConnectionTokens(connection);
   const expiresAt = connection.tokenExpiresAt?.getTime() ?? 0;
   const needsRefresh = expiresAt - Date.now() < 5 * 60 * 1000;
 
-  if (!needsRefresh) return connection;
+  if (!needsRefresh) return secrets;
 
-  const tokens = await refreshAccessToken(connection.refreshToken);
+  const tokens = await refreshAccessToken(secrets.refreshToken);
   const db = getDb();
   const tokenExpiresAt = new Date(Date.now() + tokens.expires_in * 1000);
+  const encrypted = encryptTokensForStorage({
+    accessToken: tokens.access_token,
+    refreshToken: tokens.refresh_token,
+  });
 
   const [updated] = await db
     .update(withingsConnections)
     .set({
-      accessToken: tokens.access_token,
-      refreshToken: tokens.refresh_token,
+      accessToken: encrypted.accessToken,
+      refreshToken: encrypted.refreshToken,
       tokenExpiresAt,
       scope: tokens.scope,
       updatedAt: new Date(),
@@ -58,11 +67,11 @@ async function ensureFreshTokens(connection: WithingsConnection): Promise<Within
     .where(eq(withingsConnections.id, connection.id))
     .returning();
 
-  return updated;
+  return decryptConnectionTokens(updated);
 }
 
-async function ensureWebhookSubscription(connection: WithingsConnection): Promise<void> {
-  if (connection.webhookSubscribed) return;
+async function ensureWebhookSubscription(secrets: WithingsConnectionSecrets): Promise<void> {
+  if (secrets.webhookSubscribed) return;
 
   const webhookUrl = getWithingsWebhookUrl();
   if (webhookUrl.includes("localhost")) {
@@ -70,13 +79,13 @@ async function ensureWebhookSubscription(connection: WithingsConnection): Promis
   }
 
   try {
-    const fresh = await ensureFreshTokens(connection);
+    const fresh = await ensureFreshTokens(secrets);
     await subscribeToBodyMetrics(fresh.accessToken, webhookUrl);
     const db = getDb();
     await db
       .update(withingsConnections)
       .set({ webhookSubscribed: true, updatedAt: new Date() })
-      .where(eq(withingsConnections.id, connection.id));
+      .where(eq(withingsConnections.id, secrets.id));
   } catch (error) {
     logger.warn("Withings", "Webhook subscription failed", {
       reason: error instanceof Error ? error.message : "unknown",
@@ -231,14 +240,18 @@ export async function saveWithingsConnection(input: {
 }) {
   const db = getDb();
   const tokenExpiresAt = new Date(Date.now() + input.expiresIn * 1000);
+  const encrypted = encryptTokensForStorage({
+    accessToken: input.accessToken,
+    refreshToken: input.refreshToken,
+  });
 
   await db
     .insert(withingsConnections)
     .values({
       userId: input.userId,
       withingsUserId: input.withingsUserId,
-      accessToken: input.accessToken,
-      refreshToken: input.refreshToken,
+      accessToken: encrypted.accessToken,
+      refreshToken: encrypted.refreshToken,
       tokenExpiresAt,
       scope: input.scope,
       updatedAt: new Date(),
@@ -247,8 +260,8 @@ export async function saveWithingsConnection(input: {
       target: withingsConnections.userId,
       set: {
         withingsUserId: input.withingsUserId,
-        accessToken: input.accessToken,
-        refreshToken: input.refreshToken,
+        accessToken: encrypted.accessToken,
+        refreshToken: encrypted.refreshToken,
         tokenExpiresAt,
         scope: input.scope,
         webhookSubscribed: false,

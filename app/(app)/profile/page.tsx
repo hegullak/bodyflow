@@ -6,6 +6,8 @@ import { getReminderForUser } from "@/lib/actions/reminders";
 import { getProfileForUser } from "@/lib/actions/profile";
 import { requireUserId } from "@/lib/auth/current-user";
 import { getWithingsConnection } from "@/lib/withings/sync";
+import { isWithingsConfigured } from "@/lib/withings/config";
+import { toWithingsConnectionPublic } from "@/lib/withings/types";
 
 export default async function ProfilePage({
   searchParams,
@@ -28,7 +30,12 @@ export default async function ProfilePage({
       <Card className="card-compact">
         <ProfileForm profile={profile} />
         <hr className="section-divider" />
-        <WithingsCard connection={withingsConnection} status={params.withings} embedded />
+        <WithingsCard
+          connection={toWithingsConnectionPublic(withingsConnection)}
+          configured={isWithingsConfigured()}
+          status={params.withings}
+          embedded
+        />
         <hr className="section-divider" />
         <ReminderSettingsForm reminderType="weigh_in" reminder={weighInReminder} />
       </Card>

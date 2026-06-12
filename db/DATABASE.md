@@ -56,7 +56,7 @@ Unique constraint: `(source, external_id)` — matches standard `unique(source_p
 |-------|---------|-------|
 | `user_profile` | `notes`, health fields | Personal health data |
 | `daily_body_log`, `body_measurement` | weights, notes | Personal health data |
-| `withings_connection` | `access_token`, `refresh_token` | **Deviation:** stored for OAuth refresh; must move to encrypted/secret storage (§10.3) |
+| `withings_connection` | `access_token`, `refresh_token` | Encrypted at rest (AES-256-GCM, `wte1:` prefix) via `WITHINGS_TOKEN_ENCRYPTION_KEY`; decrypt only server-side before Withings API calls |
 
 ## Delete behaviour
 
@@ -85,7 +85,7 @@ User-owned rows: hard delete today; `deleted_at` soft delete planned (§9.3).
 | Audit log table | ✅ `audit_log` |
 | Timestamps (`created_at`, `updated_at`) | ✅ business tables |
 | Soft delete (`deleted_at`) | ⏳ planned (✅ on `reminder`) |
-| Withings token encryption | ⏳ planned — documented deviation |
+| Withings token encryption | ✅ AES-256-GCM at rest; migrate existing rows: `npm run withings:encrypt-tokens` |
 | `source_provider` column naming on `food_product` | ⏳ `source` enum retained; semantic equivalent |
 
 ## Seeds

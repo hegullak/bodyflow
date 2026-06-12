@@ -72,7 +72,7 @@ Bottom nav (`components/layout/bottom-nav.tsx`):
 
 - Soft delete (`deleted_at`) on all user tables
 - `audit_log` usage in all mutations
-- Encrypt Withings tokens at rest
+- ~~Encrypt Withings tokens at rest~~ ✅ (AES-256-GCM, `lib/withings/token-crypto.ts`)
 - Remove legacy `kassal_product_id` on `meal_log_item`
 - Clerk **production** keys + prod domain (currently `pk_test_` on prod URL)
 
@@ -97,7 +97,7 @@ Bottom nav (`components/layout/bottom-nav.tsx`):
 | `food_product` | Shared catalog (matvaretabellen, kassal, custom) |
 | `meal_log_item` | User meal entries (denormalized product snapshot) |
 | `reminder` | Scheduled reminders (`weigh_in` first) |
-| `withings_connection` | OAuth tokens (encryption TODO) |
+| `withings_connection` | OAuth tokens (encrypted at rest) |
 | `audit_log` | Change history (write usage TODO) |
 
 **User scoping:** Always `scopeBy(table.userId, userId, …)` from `lib/auth/scope.ts`.
@@ -150,6 +150,7 @@ NEXT_PUBLIC_APP_URL=             # https://bodyflow.echonote.no in prod
 KASSAL_API_KEY=
 FOOD_CUSTOM_PREFIX_ID=go4g
 WITHINGS_CLIENT_ID / SECRET / REDIRECT_URI
+WITHINGS_TOKEN_ENCRYPTION_KEY   # openssl rand -base64 32
 # Optional:
 OPENAI_API_KEY                   # Vision for food labels
 ALLOWED_DEV_ORIGINS=             # ngrok hostnames for Clerk dev
@@ -161,7 +162,11 @@ ALLOWED_DEV_ORIGINS=             # ngrok hostnames for Clerk dev
 2. `npm run db:migrate` against prod Neon (same `DATABASE_URL` as Vercel)
 3. Clerk Dashboard → Domains: add `https://bodyflow.echonote.no`
 4. Withings redirect URI → prod URL callback
-5. Deploy from `master` after merge
+5. `WITHINGS_TOKEN_ENCRYPTION_KEY` in Vercel (same key as used for migration; `openssl rand -base64 32`)
+6. Existing Withings rows: `npm run withings:encrypt-tokens` once against prod DB
+7. Deploy from `master` after merge
+
+**Next recommended security task:** verify Withings webhook authenticity (signature / shared secret) and require `WITHINGS_STATE_SECRET` in production (no dev fallback in `oauth-state.ts`).
 
 ---
 
