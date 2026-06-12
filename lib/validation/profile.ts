@@ -25,7 +25,6 @@ export const profileFormSchema = z.object({
     z.coerce.number().int().min(500).max(10000).optional(),
   ),
   preferredUnits: z.enum(["metric", "imperial"]),
-  notes: z.string().max(2000).optional().or(z.literal("").transform(() => undefined)),
 });
 
 export type ProfileFormInput = z.infer<typeof profileFormSchema>;

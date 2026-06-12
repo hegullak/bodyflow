@@ -2,9 +2,19 @@ type LogLevel = "debug" | "info" | "warn" | "error";
 
 type LogMeta = Record<string, string | number | boolean | null | undefined>;
 
+function shouldLogLevel(level: LogLevel): boolean {
+  if (level === "debug" && process.env.NODE_ENV === "production") {
+    return false;
+  }
+  return true;
+}
+
 function write(level: LogLevel, scope: string, message: string, meta?: LogMeta) {
-  const payload = meta ? { scope, message, ...meta } : { scope, message };
-  const line = JSON.stringify(payload);
+  if (!shouldLogLevel(level)) return;
+
+  const timestamp = new Date().toISOString();
+  const metaSuffix = meta ? ` ${JSON.stringify(meta)}` : "";
+  const line = `[${timestamp}] ${level.toUpperCase()} ${scope}: ${message}${metaSuffix}`;
 
   switch (level) {
     case "debug":

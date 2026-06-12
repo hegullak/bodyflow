@@ -2,7 +2,9 @@ import { timingSafeEqual } from "node:crypto";
 
 export function isWithingsWebhookSecretRequired(): boolean {
   const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3010";
-  return !base.includes("localhost") && !base.includes("127.0.0.1");
+  if (base.includes("localhost") || base.includes("127.0.0.1")) return false;
+  if (base.includes("ngrok")) return false;
+  return true;
 }
 
 export function getWithingsWebhookSecret(): string | null {

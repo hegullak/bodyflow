@@ -11,7 +11,7 @@ import {
 import {
   getDefaultTimezone,
   REMINDER_DEFINITIONS,
-  WEEKDAY_LABELS,
+  WEEKDAY_SHORT_LABELS,
 } from "@/lib/reminders/constants";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/field";
@@ -68,18 +68,19 @@ function ReminderSettingsFormInner({
 
       <div>
         <Label>Weekdays</Label>
-        <div className="grid grid-cols-7 gap-1">
-          {WEEKDAY_LABELS.map((label, index) => (
+        <div className="grid grid-cols-7 gap-0.5">
+          {WEEKDAY_SHORT_LABELS.map((label, index) => (
             <label
-              key={label}
-              className="flex flex-col items-center gap-1 rounded-[var(--radius-sm)] border border-[var(--color-border)] px-1 py-1.5 text-[10px]"
+              key={`${label}-${index}`}
+              title={["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"][index]}
+              className="flex min-w-0 flex-col items-center gap-0.5 rounded-[var(--radius-sm)] border border-[var(--color-border)] px-0.5 py-1 text-[9px] leading-none"
             >
               <input
                 type="checkbox"
                 name="weekdays"
                 value={index}
                 defaultChecked={selectedWeekdays.has(index)}
-                className="h-3.5 w-3.5 accent-[var(--color-primary)]"
+                className="h-3 w-3 shrink-0 accent-[var(--color-primary)]"
               />
               {label}
             </label>
@@ -141,7 +142,7 @@ export function ReminderSettingsForm({
   reminder: Reminder | null;
 }) {
   return (
-    <ClientOnly fallback={<div className="min-h-48" aria-busy="true" />}>
+    <ClientOnly fallback={<div className="min-h-32" aria-busy="true" />}>
       <ReminderSettingsFormInner reminderType={reminderType} reminder={reminder} />
     </ClientOnly>
   );

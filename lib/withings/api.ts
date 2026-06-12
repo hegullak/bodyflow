@@ -65,7 +65,7 @@ async function postForm<T>(
   return parseWithingsResponse<T>(response);
 }
 
-export function buildAuthorizeUrl(state: string): string {
+export function buildAuthorizeUrl(state: string, redirectUri: string): string {
   const config = getWithingsConfig();
   if (!config) throw new Error("Withings is not configured");
 
@@ -73,7 +73,7 @@ export function buildAuthorizeUrl(state: string): string {
     response_type: "code",
     client_id: config.clientId,
     scope: config.scopes,
-    redirect_uri: config.redirectUri,
+    redirect_uri: redirectUri,
     state,
   });
 
@@ -84,7 +84,10 @@ export function buildAuthorizeUrl(state: string): string {
   return `${config.authorizeUrl}?${params.toString()}`;
 }
 
-export async function exchangeAuthorizationCode(code: string): Promise<WithingsTokenResponse> {
+export async function exchangeAuthorizationCode(
+  code: string,
+  redirectUri: string,
+): Promise<WithingsTokenResponse> {
   const config = getWithingsConfig();
   if (!config) throw new Error("Withings is not configured");
 
@@ -94,7 +97,7 @@ export async function exchangeAuthorizationCode(code: string): Promise<WithingsT
     client_secret: config.clientSecret,
     grant_type: "authorization_code",
     code,
-    redirect_uri: config.redirectUri,
+    redirect_uri: redirectUri,
   });
 }
 

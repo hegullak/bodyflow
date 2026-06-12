@@ -5,13 +5,13 @@ import { ClientOnly } from "@/components/client-only";
 import type { UserProfile } from "@/db/schema";
 import { upsertProfileAction } from "@/lib/actions/profile";
 import { Button } from "@/components/ui/button";
-import { FieldError, Input, Label, Select, Textarea } from "@/components/ui/field";
+import { FieldError, Input, Label, Select } from "@/components/ui/field";
 
 export function ProfileForm({ profile }: { profile: UserProfile | null }) {
   const [state, formAction, pending] = useActionState(upsertProfileAction, null);
 
   return (
-    <ClientOnly fallback={<div className="min-h-96" aria-busy="true" />}>
+    <ClientOnly fallback={<div className="min-h-64" aria-busy="true" />}>
     <form action={formAction} className="form-compact">
       <div className="form-grid-2">
         <div>
@@ -127,11 +127,6 @@ export function ProfileForm({ profile }: { profile: UserProfile | null }) {
             <option value="imperial">Imperial</option>
           </Select>
         </div>
-      </div>
-
-      <div>
-        <Label htmlFor="notes">Notes</Label>
-        <Textarea id="notes" name="notes" rows={2} defaultValue={profile?.notes ?? ""} />
       </div>
 
       {state?.ok === false && !state.fieldErrors ? (

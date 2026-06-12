@@ -1,13 +1,21 @@
 import { NextResponse } from "next/server";
-import { buildAppUrl } from "@/lib/app-url";
+import { buildAppUrl, getWithingsCallbackUrl } from "@/lib/app-url";
+import { logger } from "@/lib/logger";
 import { exchangeAuthorizationCode } from "@/lib/withings/api";
 import { isWithingsConfigured } from "@/lib/withings/config";
 import { verifyWithingsOAuthState } from "@/lib/withings/oauth-state";
-import { saveWithingsConnection, syncWithingsForUser } from "@/lib/withings/sync";
+import { saveWithingsConnection, scheduleWithingsSync } from "@/lib/withings/sync";
+
+function profileRedirect(request: Request, withingsStatus: string) {
+  return NextResponse.redirect(
+    buildAppUrl(request, `/profile?withings=${withingsStatus}`),
+    303,
+  );
+}
 
 export async function GET(request: Request) {
   if (!isWithingsConfigured()) {
-    return NextResponse.redirect(buildAppUrl(request, "/?withings=not_configured"));
+    return profileRedirect(request, "not_configured");
   }
 
   const url = new URL(request.url);
@@ -16,20 +24,21 @@ export async function GET(request: Request) {
   const error = url.searchParams.get("error");
 
   if (error) {
-    return NextResponse.redirect(buildAppUrl(request, "/?withings=denied"));
+    return profileRedirect(request, "denied");
   }
 
   if (!code || !state) {
-    return NextResponse.redirect(buildAppUrl(request, "/?withings=invalid"));
+    return profileRedirect(request, "invalid");
   }
 
   const userId = verifyWithingsOAuthState(state);
   if (!userId) {
-    return NextResponse.redirect(buildAppUrl(request, "/?withings=invalid_state"));
+    return profileRedirect(request, "invalid_state");
   }
 
   try {
-    const tokens = await exchangeAuthorizationCode(code);
+    const redirectUri = getWithingsCallbackUrl(request);
+    const tokens = await exchangeAuthorizationCode(code, redirectUri);
     await saveWithingsConnection({
       userId,
       withingsUserId: String(tokens.userid),
@@ -39,11 +48,14 @@ export async function GET(request: Request) {
       scope: tokens.scope,
     });
 
-    await syncWithingsForUser(userId, { force: true });
-    // Land on public home first to avoid Clerk session-refresh loops on protected routes
-    // immediately after the external OAuth redirect.
-    return NextResponse.redirect(buildAppUrl(request, "/?withings=connected"));
-  } catch {
-    return NextResponse.redirect(buildAppUrl(request, "/?withings=error"));
+    scheduleWithingsSync(userId);
+    logger.info("Withings", "OAuth callback completed", { userId });
+    return profileRedirect(request, "connected");
+  } catch (callbackError) {
+    logger.error("Withings", "OAuth callback failed", {
+      userId,
+      reason: callbackError instanceof Error ? callbackError.message : "unknown",
+    });
+    return profileRedirect(request, "error");
   }
 }

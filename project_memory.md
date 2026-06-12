@@ -30,7 +30,7 @@ Last updated: 2026-06-12
 | Database | Neon Postgres, schema `bodyflow` |
 | ORM | Drizzle + `npm run db:migrate` |
 | Styling | Tailwind CSS 4, mobile-first, max-width 640px shell |
-| Tests | Vitest (`npm test` — 36 tests) |
+| Tests | Vitest (`npm test` — 56 tests) |
 | Barcode | `@zxing/browser` fallback + native `BarcodeDetector` when available |
 | OCR | Tesseract.js (custom food labels); optional OpenAI Vision |
 | PWA | `public/sw.js` + `ReminderSync` for web notifications |
@@ -43,7 +43,7 @@ Bottom nav (`components/layout/bottom-nav.tsx`):
 
 | Path | Purpose |
 |------|---------|
-| `/dashboard` | Home — weight, calories, trends |
+| `/dashboard` | Home — today's calories, latest weight/measurements, BMI/TDEE |
 | `/check-in` | Unified daily log: weight + midje/bryst/hofte, diff vs last |
 | `/meals` | Meal logging per day, calorie budget |
 | `/statistics` | Historical stats |
@@ -59,12 +59,13 @@ Bottom nav (`components/layout/bottom-nav.tsx`):
 
 ### ✅ Built and in use
 
-- **Profile** — sex, height, birth year, activity, goal, daily kcal target, compact mobile layout
+- **Profile** — Clerk name as subtitle, sex/height/activity/goal/kcal (no notes field), compact weigh-in weekdays, Withings connect/disconnect
+- **Dashboard** — simplified: today's calories, latest measurements, latest weight, BMI + TDEE side-by-side; Withings prompt only when not connected
 - **Check-in** — single form (`components/forms/check-in-form.tsx`): vekt + midje/bryst/hofte, one **Save** button, shows 2 previous entries, diff line after save (green = down, red = up)
 - **Meals** — search (local DB → Matvaretabellen → Kassal), EAN barcode (camera + manual), custom food via photo/OCR/AI, calorie budget (Totalt/Brukt/Tilgjengelig), date navigation ←/→
 - **Meal types:** Frokost, Lunsj, Mellommåltid, Middag, Kvelds, **Røk på en smell** (`smoke` enum, migration `0009`)
 - **Statistics** — period views
-- **Withings** — OAuth connect, weight sync to `daily_body_log`, webhook
+- **Withings** — OAuth connect, encrypted tokens, weight sync to `daily_body_log`, webhook (secret path in prod); disconnect via server action; OAuth callback returns to Profile; ngrok-safe redirects via `X-Forwarded-Host` (`lib/app-url.ts`)
 - **Reminders** — generic engine (`reminder` table), weigh-in UI on Profile, PWA notifications via service worker (`docs/REMINDERS.md`)
 - **Food catalog** — `food_product` + `meal_log_item`, Kassal API, Matvaretabellen seed
 
@@ -114,7 +115,8 @@ lib/
   kassal/           # Kassal.app API client
   meals/            # constants (meal types/labels)
   reminders/        # schedule.ts, client-scheduler.ts, constants
-  withings/         # OAuth, sync, measurements
+  withings/         # OAuth, sync, token-crypto, webhook-auth, token-refresh
+  logger.ts         # centralized logging (LOGGING_STANDARD.md)
   calculations/     # BMI, BMR, TDEE
   validation/       # Zod schemas per form
 ```
@@ -185,7 +187,7 @@ npm run dev                  # port 3010
 npm run dev:fresh            # kills 3010 then starts
 ```
 
-### Mobile testing (camera, PWA, notifications)
+### Mobile testing (camera, PWA, notifications, Withings)
 
 ```bash
 npm run ngrok                # updates .env.local with ngrok URL
@@ -193,6 +195,9 @@ npm run dev:fresh
 ```
 
 - Add ngrok URL in Clerk **development** domains
+- Set `NEXT_PUBLIC_APP_URL` and `WITHINGS_REDIRECT_URI` to ngrok callback in `.env.local`
+- Register same ngrok callback in **Withings Developer Portal** (remove stale localhost entries when testing mobile only)
+- OAuth redirect URI is derived from request `X-Forwarded-Host` when behind ngrok — avoids Safari redirect to `localhost:3010`
 - On iPhone: open ngrok URL → Add to Home Screen for PWA
 - **Barcode camera:** must tap strekkode tab (user gesture) — `getUserMedia` called in `product-picker.tsx` `activateScanMode()`, not in passive `useEffect` (iOS requirement)
 - Uses ZXing when `BarcodeDetector` unavailable (desktop Chrome, iOS)
@@ -205,7 +210,9 @@ npm run dev:fresh
 | Clerk origin error | Add URL to Clerk Domains + `ALLOWED_DEV_ORIGINS` |
 | `daily_body_logs does not exist` on Vercel | Deploy latest code (singular table names) + run migrations |
 | Hydration warnings on desktop | Chrome extensions (`__gcruniqueid`) — `ClientOnly` wrappers on forms |
-| Port 3010 held by Cursor background | Kill process or `dev:fresh` |
+| Withings redirect to localhost on mobile | Use ngrok URL everywhere; app uses `X-Forwarded-Host` in `lib/app-url.ts` |
+| Withings black screen after OAuth | Callback redirects to Profile (not `/`); sync runs in background |
+| Withings disconnect black screen | Use server action `disconnectWithingsAction` (not POST to `/api/...`) |
 
 ---
 
@@ -220,18 +227,13 @@ npm run dev:fresh
 
 ## 11. Git state (as of 2026-06-12)
 
-**Last pushed commit:** `9f7f285` — meals, reminders, check-in, DB standards (on `sandbox`, `develop`, `master`)
+**Latest work (sandbox → develop → master):**
 
-**Uncommitted local work** (not yet pushed):
+- Withings token encryption + security hardening (#21–#23)
+- Dashboard + Profile UX cleanup
+- Withings OAuth/ngrok redirect fix, disconnect server action, logger format
 
-- Unified check-in form + diff display
-- Meal type `smoke` + migration `0009`
-- Meals date nav (←/→), removed subtitles/header branding
-- ZXing barcode fallback + camera UX (icon tabs, auto-start on gesture)
-- `dev:fresh`, `kill-port.ps1`, `barcode-detect.ts`
-- Product picker UI refactor
-
-**Before prod deploy:** commit, push, run `db:migrate` on Neon prod, verify Vercel redeploy.
+**Deploy:** merge to `master` → Vercel auto-deploy. Run `npm run db:migrate` if new migrations exist.
 
 ---
 
@@ -244,7 +246,7 @@ npm run lint
 npm run check      # all of the above + build
 ```
 
-Tests in `__tests__/` — kassal nutrition, food label parse, reminders schedule, withings measurements, import parser.
+Tests in `__tests__/` — kassal nutrition, food label parse, reminders schedule, withings crypto/oauth/webhook, app-url (ngrok), logger.
 
 ---
 

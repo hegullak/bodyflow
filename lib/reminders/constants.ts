@@ -2,6 +2,8 @@ import type { ReminderType } from "@/db/schema";
 
 export const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
+export const WEEKDAY_SHORT_LABELS = ["M", "T", "W", "T", "F", "S", "S"] as const;
+
 export type ReminderDefinition = {
   type: ReminderType;
   label: string;

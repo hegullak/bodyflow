@@ -1,15 +1,16 @@
-import { NextResponse } from "next/server";
+"use server";
+
 import { revalidatePath } from "next/cache";
-import { buildAppUrl } from "@/lib/app-url";
+import { redirect } from "next/navigation";
 import { requireUserId } from "@/lib/auth/current-user";
 import { logger } from "@/lib/logger";
 import { disconnectWithings } from "@/lib/withings/sync";
 
-export async function POST(request: Request) {
+export async function disconnectWithingsAction() {
   const userId = await requireUserId();
   await disconnectWithings(userId);
   logger.info("Withings", "Connection disconnected", { userId });
   revalidatePath("/profile");
   revalidatePath("/dashboard");
-  return NextResponse.redirect(buildAppUrl(request, "/profile?withings=disconnected"), 303);
+  redirect("/profile?withings=disconnected");
 }

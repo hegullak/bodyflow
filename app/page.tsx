@@ -8,7 +8,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 
 const withingsMessages: Record<string, string> = {
-  connected: "Withings connected. Sign in to see synced weight on your dashboard.",
+  connected: "Withings connected. Open Profile to confirm sync.",
   denied: "Withings connection was cancelled.",
   error: "Could not connect Withings. Try again from Profile.",
   invalid: "Withings returned an invalid response.",
@@ -25,11 +25,10 @@ export default async function HomePage({
   const params = await searchParams;
 
   if (userId) {
-    redirect(
-      params.withings === "connected"
-        ? "/dashboard?withings=connected"
-        : "/dashboard",
-    );
+    if (params.withings === "connected") {
+      redirect("/profile?withings=connected");
+    }
+    redirect("/dashboard");
   }
 
   const withingsMessage = params.withings ? withingsMessages[params.withings] : null;

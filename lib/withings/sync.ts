@@ -43,7 +43,7 @@ async function ensureWebhookSubscription(secrets: WithingsConnectionSecrets): Pr
   if (secrets.webhookSubscribed) return;
 
   const webhookUrl = getWithingsWebhookUrl();
-  if (webhookUrl.includes("localhost")) {
+  if (!webhookUrl || webhookUrl.includes("localhost")) {
     return;
   }
 
@@ -135,7 +135,11 @@ export async function syncWithingsForUser(
 
   try {
     const fresh = await ensureFreshTokens(connection);
-    void ensureWebhookSubscription(fresh);
+    void ensureWebhookSubscription(fresh).catch((error) => {
+      logger.warn("Withings", "Webhook subscription failed", {
+        reason: error instanceof Error ? error.message : "unknown",
+      });
+    });
 
     const measureParams =
       options.startdate != null || options.enddate != null

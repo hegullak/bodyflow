@@ -23,6 +23,11 @@ describe("withings webhook auth", () => {
     expect(isWithingsWebhookSecretRequired()).toBe(true);
   });
 
+  it("does not require secret for ngrok dev tunnels", () => {
+    process.env.NEXT_PUBLIC_APP_URL = "https://example.ngrok-free.dev";
+    expect(isWithingsWebhookSecretRequired()).toBe(false);
+  });
+
   it("verifies matching webhook secret with timing-safe compare", () => {
     process.env.WITHINGS_WEBHOOK_SECRET = "webhook-test-secret";
     expect(getWithingsWebhookSecret()).toBe("webhook-test-secret");

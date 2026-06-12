@@ -42,14 +42,12 @@ export function isWithingsConfigured(): boolean {
   );
 }
 
-export function getWithingsWebhookUrl(): string {
+export function getWithingsWebhookUrl(): string | null {
   const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3010";
   const secret = getWithingsWebhookSecret();
 
   if (isWithingsWebhookSecretRequired()) {
-    if (!secret) {
-      throw new Error("WITHINGS_WEBHOOK_SECRET is required for public webhook URLs.");
-    }
+    if (!secret) return null;
     return `${base}/api/integrations/withings/webhook/${secret}`;
   }
 

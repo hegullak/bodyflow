@@ -23,7 +23,6 @@ export async function upsertProfileAction(
     targetWeightKg: formData.get("targetWeightKg") ?? "",
     dailyCalorieTarget: formData.get("dailyCalorieTarget") ?? "",
     preferredUnits: formData.get("preferredUnits"),
-    notes: formData.get("notes") ?? "",
   });
 
   if (!parsed.success) {
@@ -46,7 +45,6 @@ export async function upsertProfileAction(
     targetWeightKg: parsed.data.targetWeightKg ?? null,
     dailyCalorieTarget: parsed.data.dailyCalorieTarget ?? null,
     preferredUnits: parsed.data.preferredUnits,
-    notes: parsed.data.notes ?? null,
     updatedAt: new Date(),
   };
 
@@ -65,7 +63,6 @@ export async function upsertProfileAction(
         targetWeightKg: values.targetWeightKg,
         dailyCalorieTarget: values.dailyCalorieTarget,
         preferredUnits: values.preferredUnits,
-        notes: values.notes,
         updatedAt: values.updatedAt,
       },
     });

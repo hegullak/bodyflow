@@ -22,7 +22,7 @@ export function DashboardCards({ data }: { data: DashboardData }) {
         <Card className="border-[var(--color-primary)]/30 bg-[var(--color-accent)]">
           <CardTitle>Complete your profile</CardTitle>
           <CardHint className="mt-2">
-            Add height, sex, and activity level to unlock BMI, BMR, and TDEE estimates.
+            Add height, sex, and activity level to unlock BMI and TDEE estimates.
           </CardHint>
           <Link
             href="/profile"
@@ -33,95 +33,17 @@ export function DashboardCards({ data }: { data: DashboardData }) {
         </Card>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-3">
-        <Card>
-          <CardTitle>Latest weight</CardTitle>
-          <CardValue>{formatNumber(data.latestWeight, " kg")}</CardValue>
-          <CardHint>
-            {data.latestWeightDate ? formatDate(data.latestWeightDate) : "No entries yet"}
-          </CardHint>
-        </Card>
-
-        <Card>
-          <CardTitle>BMI</CardTitle>
-          <CardValue>{formatNumber(data.bmi)}</CardValue>
-          <CardHint>{data.bmiCategory ?? "Add weight and profile"}</CardHint>
-        </Card>
-
-        <Card>
-          <CardTitle>Normal range</CardTitle>
-          <CardValue className="text-lg">
-            {data.normalRange
-              ? `${data.normalRange.minKg}–${data.normalRange.maxKg} kg`
-              : "—"}
-          </CardValue>
-          <CardHint>Based on your height</CardHint>
-        </Card>
-
-        <Card>
-          <CardTitle>7-day avg weight</CardTitle>
-          <CardValue>{formatNumber(data.avgWeight7d, " kg")}</CardValue>
-          <CardHint>Rolling average</CardHint>
-        </Card>
-
-        <Card>
-          <CardTitle>BMR</CardTitle>
-          <CardValue>{formatNumber(data.bmr, " kcal")}</CardValue>
-          <CardHint>Mifflin-St Jeor</CardHint>
-        </Card>
-
-        <Card>
-          <CardTitle>TDEE</CardTitle>
-          <CardValue>{formatNumber(data.tdee, " kcal")}</CardValue>
-          <CardHint>Estimated maintenance</CardHint>
-        </Card>
-
-        <Card>
-          <CardTitle>Today&apos;s calories</CardTitle>
-          <CardValue>{formatNumber(data.todayCalories, " kcal")}</CardValue>
-          <CardHint>
-            {formatBalance(data.calorieBalance)}
-            {data.dailyCalorieTarget != null
-              ? ` · ${data.dailyCalorieTarget} kcal target`
-              : data.tdee != null
-                ? " · vs TDEE"
-                : ""}
-          </CardHint>
-        </Card>
-
-        <Card>
-          <CardTitle>7-day avg calories</CardTitle>
-          <CardValue>{formatNumber(data.avgCalories7d, " kcal")}</CardValue>
-          <CardHint>Rolling average</CardHint>
-        </Card>
-      </div>
-
       <Card>
-        <CardTitle>Weight trend</CardTitle>
-        {data.weightTrend.length > 0 ? (
-          <div className="mt-3 flex items-end gap-2">
-            {data.weightTrend.map((point) => {
-              const min = Math.min(...data.weightTrend.map((p) => p.weightKg));
-              const max = Math.max(...data.weightTrend.map((p) => p.weightKg));
-              const range = Math.max(max - min, 0.5);
-              const height = 24 + ((point.weightKg - min) / range) * 56;
-              return (
-                <div key={point.date} className="flex flex-1 flex-col items-center gap-1">
-                  <div
-                    className="w-full rounded-t bg-[var(--color-primary)]/70"
-                    style={{ height }}
-                    title={`${formatDate(point.date)}: ${point.weightKg} kg`}
-                  />
-                  <span className="text-[10px] text-[var(--color-muted-foreground)]">
-                    {point.date.slice(8)}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <CardHint className="mt-2">Log weight for a few days to see a simple trend.</CardHint>
-        )}
+        <CardTitle>Today&apos;s calories</CardTitle>
+        <CardValue>{formatNumber(data.todayCalories, " kcal")}</CardValue>
+        <CardHint>
+          {formatBalance(data.calorieBalance)}
+          {data.dailyCalorieTarget != null
+            ? ` · ${data.dailyCalorieTarget} kcal target`
+            : data.tdee != null
+              ? " · vs TDEE"
+              : ""}
+        </CardHint>
       </Card>
 
       <Card>
@@ -145,9 +67,41 @@ export function DashboardCards({ data }: { data: DashboardData }) {
             </CardHint>
           </div>
         ) : (
-          <CardHint className="mt-2">No measurements yet. Body measurements come in a later slice.</CardHint>
+          <CardHint className="mt-2">No measurements yet.</CardHint>
         )}
       </Card>
+
+      <Card>
+        <CardTitle>Latest weight</CardTitle>
+        <CardValue>{formatNumber(data.latestWeight, " kg")}</CardValue>
+        <CardHint>
+          {data.latestWeightDate ? formatDate(data.latestWeightDate) : "No entries yet"}
+        </CardHint>
+      </Card>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Card>
+          <CardTitle>BMI</CardTitle>
+          <CardValue>{formatNumber(data.bmi)}</CardValue>
+          <CardHint>
+            {data.bmi != null ? (
+              <>
+                {data.bmiCategory}. Body Mass Index from your latest weight and profile height.
+              </>
+            ) : (
+              <>Add weight and profile height to calculate BMI.</>
+            )}
+          </CardHint>
+        </Card>
+
+        <Card>
+          <CardTitle>TDEE</CardTitle>
+          <CardValue>{formatNumber(data.tdee, " kcal")}</CardValue>
+          <CardHint>
+            Estimated daily calories to maintain weight, based on profile activity level.
+          </CardHint>
+        </Card>
+      </div>
     </div>
   );
 }

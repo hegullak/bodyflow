@@ -3,6 +3,7 @@
 import { ClientOnly } from "@/components/client-only";
 import { Button } from "@/components/ui/button";
 import { CardTitle } from "@/components/ui/card";
+import { disconnectWithingsAction } from "@/lib/actions/withings";
 import type { WithingsConnectionPublic } from "@/lib/withings/types";
 import { formatDate } from "@/lib/utils";
 
@@ -30,7 +31,7 @@ export function WithingsCard({
               : ""}
           </p>
           <ClientOnly>
-            <form action="/api/integrations/withings/disconnect" method="post">
+            <form action={disconnectWithingsAction}>
               <Button type="submit" variant="outline" size="sm" className="h-8 px-2.5 text-xs">
                 Disconnect
               </Button>
@@ -52,6 +53,9 @@ export function WithingsCard({
 
       {status === "connected" ? (
         <p className="mt-1 text-xs text-[var(--color-primary)]">Withings connected.</p>
+      ) : null}
+      {status === "disconnected" ? (
+        <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">Withings disconnected.</p>
       ) : null}
       {status === "denied" ? (
         <p className="mt-1 text-xs text-[#9a5b45]">Connection cancelled.</p>
