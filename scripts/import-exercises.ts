@@ -41,6 +41,28 @@ function logToFile(message: string) {
   console.log(message);
 }
 
+interface ImportState {
+  lastSuccessfulOffset: number;
+  lastRun: string;
+  totalImported: number;
+}
+
+function loadState(): ImportState {
+  try {
+    if (existsSync(STATE_FILE)) {
+      const data = JSON.parse(
+        require("fs").readFileSync(STATE_FILE, "utf-8")
+      ) as ImportState;
+      return data;
+    }
+  } catch {}
+  return { lastSuccessfulOffset: 0, lastRun: new Date().toISOString(), totalImported: 0 };
+}
+
+function saveState(state: ImportState): void {
+  require("fs").writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), "utf-8");
+}
+
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
@@ -49,9 +71,10 @@ const BASE_URL = "https://oss.exercisedb.dev/api/v1";
 const PAGE_LIMIT = 100;
 const SOURCE = "exercisedb";
 const SOURCE_LICENSE = "CC BY-SA 4.0 (ExerciseDB OSS dataset)";
-const REQUEST_DELAY_MS = 2000; // Cloudflare is aggressive; 0.5 req/sec to avoid 429
+const REQUEST_DELAY_MS = 3000; // Cloudflare rate limiting; 0.33 req/sec
 const MAX_RETRIES = 5;
-const RETRY_DELAY_MS = 3000;
+const RETRY_DELAY_MS = 4000;
+const STATE_FILE = join(process.cwd(), ".import-state.json");
 
 // ---------------------------------------------------------------------------
 // Types from ExerciseDB API (official v1.0.0)
@@ -166,7 +189,17 @@ async function fetchAllExercises(): Promise<ExerciseDbItem[]> {
   }
 
   const allItems: ExerciseDbItem[] = [...first.items];
-  let offset = PAGE_LIMIT;
+  const state = loadState();
+  let offset = Math.max(PAGE_LIMIT, state.lastSuccessfulOffset);
+
+  if (state.lastSuccessfulOffset > 0) {
+    logToFile(
+      `[resume] Starting from offset=${offset} (last successful: ${state.lastSuccessfulOffset})`
+    );
+    console.log(
+      `[import] Resuming from offset=${offset} (previously imported: ${state.totalImported})`
+    );
+  }
 
   while (offset < first.total) {
     await sleep(REQUEST_DELAY_MS);
@@ -174,9 +207,12 @@ async function fetchAllExercises(): Promise<ExerciseDbItem[]> {
     try {
       const page = await fetchPage(offset);
       allItems.push(...page.items);
+      state.lastSuccessfulOffset = offset;
+      saveState(state);
       offset += PAGE_LIMIT;
     } catch (err) {
       console.error(`[import] Failed to fetch offset=${offset}:`, err instanceof Error ? err.message : String(err));
+      logToFile(`[import] Stopped at offset=${offset}. Run again to resume.`);
       console.warn(`[import] Stopping at ${allItems.length} exercises (rate limit reached). Run again to continue.`);
       break;
     }
@@ -448,6 +484,13 @@ async function main() {
   const summary = `\n[import] Done. ${imported} exercises imported, ${errors} batch errors.`;
   logToFile(summary);
   console.log(summary);
+
+  // Update state with final count
+  const state = loadState();
+  state.totalImported += imported;
+  state.lastRun = new Date().toISOString();
+  saveState(state);
+  logToFile(`[state] Total progress: ${state.totalImported} exercises imported across all runs`);
 
   if (errors > 0) {
     process.exit(1);
