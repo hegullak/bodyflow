@@ -22,26 +22,26 @@ import * as schema from "../db/schema";
 // Config
 // ---------------------------------------------------------------------------
 
-const BASE_URL = "https://edb-with-videos-and-images-by-ascendapi.p.rapidapi.com";
-const API_HOST = "edb-with-videos-and-images-by-ascendapi.p.rapidapi.com";
+const BASE_URL = "https://oss.exercisedb.dev/api/v1";
 const PAGE_LIMIT = 100;
 const SOURCE = "exercisedb";
 const SOURCE_LICENSE = "CC BY-SA 4.0 (ExerciseDB OSS dataset)";
 const REQUEST_DELAY_MS = 100;
 
 // ---------------------------------------------------------------------------
-// Types from ExerciseDB API
+// Types from ExerciseDB API (official v1.0.0)
+// Per https://oss.exercisedb.dev/docs#description/introduction
 // ---------------------------------------------------------------------------
 
 interface ExerciseDbItem {
-  id: string;
+  exerciseId: string;
   name: string;
-  bodyPart: string;
-  equipment: string;
   gifUrl: string;
-  target: string;
-  secondaryMuscles: string[];
-  instructions: string[];
+  bodyParts: string[]; // e.g. ["chest", "back"]
+  equipments: string[]; // e.g. ["barbell", "dumbbell"]
+  targetMuscles: string[]; // e.g. ["pectorals", "triceps"]
+  secondaryMuscles: string[]; // e.g. ["shoulders", "triceps"]
+  instructions: string[]; // e.g. ["Step:1 Lie flat...", "Step:2 Grasp..."]
 }
 
 interface ExerciseDbResponse {
@@ -67,18 +67,10 @@ function sleep(ms: number) {
 }
 
 async function fetchPage(offset: number): Promise<{ items: ExerciseDbItem[]; total: number }> {
-  const apiKey = process.env["X-RapidAPI-Key"];
-  if (!apiKey) {
-    throw new Error("X-RapidAPI-Key environment variable not set");
-  }
-
-  const url = `${BASE_URL}/api/v1/exercises?offset=${offset}&limit=${PAGE_LIMIT}`;
+  const url = `${BASE_URL}/exercises?offset=${offset}&limit=${PAGE_LIMIT}`;
   const res = await fetch(url, {
     method: "GET",
     headers: {
-      "Content-Type": "application/json",
-      "x-rapidapi-key": apiKey,
-      "x-rapidapi-host": API_HOST,
       "User-Agent": "bodyflow-import/1.0",
     },
   });
@@ -105,6 +97,14 @@ async function fetchPage(offset: number): Promise<{ items: ExerciseDbItem[]; tot
 async function fetchAllExercises(): Promise<ExerciseDbItem[]> {
   console.log("[import] Fetching first page to discover total count...");
   const first = await fetchPage(0);
+
+  if (first.items.length === 0) {
+    console.warn("[import] First page returned 0 items. API response structure may be different.");
+    console.log("[import] Raw first page data:", JSON.stringify(first, null, 2).slice(0, 500));
+    return [];
+  }
+
+  console.log("[import] Sample first item:", JSON.stringify(first.items[0], null, 2));
 
   if (first.total <= PAGE_LIMIT) {
     console.log(`[import] Fetched ${first.items.length} exercises (single page).`);
@@ -199,22 +199,32 @@ async function upsertExerciseBatch(
   seenSlugs: Set<string>,
 ): Promise<Map<string, string>> {
   const rows = batch.map((ex) => {
-    const categoryId = categoryMap.get(slugify(ex.bodyPart));
-    const targetMuscleId = muscleMap.get(slugify(ex.target));
+    // Use first body part (exercise may have multiple)
+    const primaryBodyPart = ex.bodyParts?.[0];
+    const categoryId = primaryBodyPart ? categoryMap.get(slugify(primaryBodyPart)) : null;
 
     if (!categoryId) {
-      throw new Error(`Unknown bodyPart "${ex.bodyPart}" for exercise id=${ex.id}`);
+      throw new Error(
+        `No valid bodyPart found for exercise "${ex.name}" (id=${ex.exerciseId}). Available: ${ex.bodyParts?.join(", ")}`
+      );
     }
 
+    // Use first target muscle
+    const primaryTargetMuscle = ex.targetMuscles?.[0];
+    const targetMuscleId = primaryTargetMuscle ? muscleMap.get(slugify(primaryTargetMuscle)) : null;
+
+    // Use first equipment or fall back to generic
+    const primaryEquipment = ex.equipments?.[0] ?? "UNKNOWN";
+
     return {
-      externalId: ex.id,
+      externalId: ex.exerciseId,
       slug: uniqueSlug(slugify(ex.name), seenSlugs),
       name: ex.name,
       categoryId,
       targetMuscleId: targetMuscleId ?? null,
-      equipment: ex.equipment,
+      equipment: primaryEquipment,
       gifUrl: ex.gifUrl || null,
-      instructions: ex.instructions,
+      instructions: ex.instructions ?? [],
       source: SOURCE,
       sourceLicense: SOURCE_LICENSE,
       updatedAt: new Date(),
@@ -260,12 +270,19 @@ async function replaceSecondaryMuscles(
 
   const rows: { exerciseId: string; muscleId: string }[] = [];
   for (const ex of batch) {
-    const exerciseId = exerciseIdMap.get(ex.id);
+    const exerciseId = exerciseIdMap.get(ex.exerciseId);
     if (!exerciseId) continue;
 
-    for (const m of ex.secondaryMuscles) {
+    // Skip if this muscle is already the target muscle
+    const primaryTarget = ex.targetMuscles?.[0];
+    const targetMuscleId = primaryTarget ? muscleMap.get(slugify(primaryTarget)) : null;
+
+    for (const m of ex.secondaryMuscles ?? []) {
       const muscleId = muscleMap.get(slugify(m));
-      if (muscleId) rows.push({ exerciseId, muscleId });
+      // Don't add target muscle as secondary
+      if (muscleId && muscleId !== targetMuscleId) {
+        rows.push({ exerciseId, muscleId });
+      }
     }
   }
 
@@ -306,11 +323,11 @@ async function main() {
     return;
   }
 
-  // Collect unique controlled values
-  const bodyParts = [...new Set(rawExercises.map((e) => e.bodyPart))];
+  // Collect unique controlled values from arrays
+  const bodyParts = [...new Set(rawExercises.flatMap((e) => e.bodyParts))];
   const allMuscles = [
     ...new Set([
-      ...rawExercises.map((e) => e.target),
+      ...rawExercises.flatMap((e) => e.targetMuscles),
       ...rawExercises.flatMap((e) => e.secondaryMuscles),
     ]),
   ];
