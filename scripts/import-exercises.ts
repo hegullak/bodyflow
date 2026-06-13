@@ -22,11 +22,11 @@ import * as schema from "../db/schema";
 // Config
 // ---------------------------------------------------------------------------
 
-const BASE_URL = "https://oss.exercisedb.dev";
-const PAGE_LIMIT = 500;
+const BASE_URL = "https://exercisedb.p.rapidapi.com";
+const PAGE_LIMIT = 100;
 const SOURCE = "exercisedb";
 const SOURCE_LICENSE = "CC BY-SA 4.0 (ExerciseDB OSS dataset)";
-const REQUEST_DELAY_MS = 200;
+const REQUEST_DELAY_MS = 100;
 
 // ---------------------------------------------------------------------------
 // Types from ExerciseDB API
@@ -66,13 +66,26 @@ function sleep(ms: number) {
 }
 
 async function fetchPage(offset: number): Promise<{ items: ExerciseDbItem[]; total: number }> {
-  const url = `${BASE_URL}/exercises?limit=${PAGE_LIMIT}&offset=${offset}`;
+  const apiKey = process.env["X-RapidAPI-Key"];
+  if (!apiKey) {
+    throw new Error("X-RapidAPI-Key environment variable not set");
+  }
+
+  const url = `${BASE_URL}/exercises?offset=${offset}&limit=${PAGE_LIMIT}`;
   const res = await fetch(url, {
-    headers: { "User-Agent": "bodyflow-import/1.0" },
+    method: "GET",
+    headers: {
+      "X-RapidAPI-Key": apiKey,
+      "X-RapidAPI-Host": "exercisedb.p.rapidapi.com",
+      "User-Agent": "bodyflow-import/1.0",
+    },
   });
 
   if (!res.ok) {
-    throw new Error(`ExerciseDB responded ${res.status} for offset=${offset}: ${await res.text()}`);
+    const body = await res.text();
+    throw new Error(
+      `ExerciseDB responded ${res.status} for offset=${offset}\nURL: ${url}\nResponse: ${body}`
+    );
   }
 
   const json = (await res.json()) as ExerciseDbResponse | ExerciseDbItem[];
