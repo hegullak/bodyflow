@@ -12,6 +12,8 @@ import {
 
   pgSchema,
 
+  primaryKey,
+
   real,
 
   text,
@@ -493,5 +495,79 @@ export type ReminderType = (typeof reminderTypeEnum.enumValues)[number];
 export type WithingsConnection = typeof withingsConnections.$inferSelect;
 
 export type NewWithingsConnection = typeof withingsConnections.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// Exercise Catalog
+// Shared, non-user-owned reference data imported from ExerciseDB OSS.
+// No user_id or soft-delete: catalog rows are managed by the import script.
+// ---------------------------------------------------------------------------
+
+export const exerciseCategories = pgTable("exercise_category", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const exerciseMuscles = pgTable("exercise_muscle", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const exercises = pgTable(
+  "exercise",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    externalId: text("external_id").notNull(),
+    slug: text("slug").notNull().unique(),
+    name: text("name").notNull(),
+    categoryId: uuid("category_id")
+      .notNull()
+      .references(() => exerciseCategories.id, { onDelete: "restrict" }),
+    targetMuscleId: uuid("target_muscle_id").references(() => exerciseMuscles.id, {
+      onDelete: "restrict",
+    }),
+    equipment: text("equipment").notNull(),
+    gifUrl: text("gif_url"),
+    instructions: jsonb("instructions").notNull().$type<string[]>().default([]),
+    source: text("source").notNull().default("exercisedb"),
+    sourceLicense: text("source_license"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("exercise_source_external_unique").on(t.source, t.externalId),
+    index("exercise_category_idx").on(t.categoryId),
+    index("exercise_target_muscle_idx").on(t.targetMuscleId),
+    index("exercise_equipment_idx").on(t.equipment),
+    index("exercise_name_idx").on(t.name),
+  ],
+);
+
+// Join table: one exercise → many secondary muscles
+export const exerciseSecondaryMuscles = pgTable(
+  "exercise_secondary_muscle",
+  {
+    exerciseId: uuid("exercise_id")
+      .notNull()
+      .references(() => exercises.id, { onDelete: "cascade" }),
+    muscleId: uuid("muscle_id")
+      .notNull()
+      .references(() => exerciseMuscles.id, { onDelete: "restrict" }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.exerciseId, t.muscleId] }),
+    index("exercise_secondary_muscle_exercise_idx").on(t.exerciseId),
+  ],
+);
+
+export type ExerciseCategory = typeof exerciseCategories.$inferSelect;
+export type ExerciseMuscle = typeof exerciseMuscles.$inferSelect;
+export type Exercise = typeof exercises.$inferSelect;
+export type NewExercise = typeof exercises.$inferInsert;
 
 

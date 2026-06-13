@@ -78,6 +78,13 @@
       "when": 1781380000000,
       "tag": "0010_soft_delete",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1781900000000,
+      "tag": "0011_exercise_catalog",
+      "breakpoints": true
     }
   ]
 }
