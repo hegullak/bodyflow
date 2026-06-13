@@ -22,7 +22,8 @@ import * as schema from "../db/schema";
 // Config
 // ---------------------------------------------------------------------------
 
-const BASE_URL = "https://exercisedb.p.rapidapi.com";
+const BASE_URL = "https://edb-with-videos-and-images-by-ascendapi.p.rapidapi.com";
+const API_HOST = "edb-with-videos-and-images-by-ascendapi.p.rapidapi.com";
 const PAGE_LIMIT = 100;
 const SOURCE = "exercisedb";
 const SOURCE_LICENSE = "CC BY-SA 4.0 (ExerciseDB OSS dataset)";
@@ -71,12 +72,13 @@ async function fetchPage(offset: number): Promise<{ items: ExerciseDbItem[]; tot
     throw new Error("X-RapidAPI-Key environment variable not set");
   }
 
-  const url = `${BASE_URL}/exercises?offset=${offset}&limit=${PAGE_LIMIT}`;
+  const url = `${BASE_URL}/api/v1/exercises?offset=${offset}&limit=${PAGE_LIMIT}`;
   const res = await fetch(url, {
     method: "GET",
     headers: {
-      "X-RapidAPI-Key": apiKey,
-      "X-RapidAPI-Host": "exercisedb.p.rapidapi.com",
+      "Content-Type": "application/json",
+      "x-rapidapi-key": apiKey,
+      "x-rapidapi-host": API_HOST,
       "User-Agent": "bodyflow-import/1.0",
     },
   });
