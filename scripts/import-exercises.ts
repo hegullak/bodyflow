@@ -9,6 +9,8 @@
  */
 
 import dotenv from "dotenv";
+import { existsSync, mkdirSync, appendFileSync } from "fs";
+import { join } from "path";
 
 dotenv.config({ path: ".env.local" });
 dotenv.config();
@@ -19,6 +21,27 @@ import { eq, inArray } from "drizzle-orm";
 import * as schema from "../db/schema";
 
 // ---------------------------------------------------------------------------
+// Logging setup
+// ---------------------------------------------------------------------------
+
+const LOGS_DIR = join(process.cwd(), "..", "logs", "bodyflow");
+const LOG_FILE = join(LOGS_DIR, `import-${new Date().toISOString().replace(/[:.]/g, "-")}.log`);
+
+function ensureLogsDir() {
+  if (!existsSync(LOGS_DIR)) {
+    mkdirSync(LOGS_DIR, { recursive: true });
+  }
+}
+
+function logToFile(message: string) {
+  ensureLogsDir();
+  const timestamp = new Date().toISOString();
+  const line = `[${timestamp}] ${message}\n`;
+  appendFileSync(LOG_FILE, line, "utf-8");
+  console.log(message);
+}
+
+// ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
 
@@ -26,7 +49,9 @@ const BASE_URL = "https://oss.exercisedb.dev/api/v1";
 const PAGE_LIMIT = 100;
 const SOURCE = "exercisedb";
 const SOURCE_LICENSE = "CC BY-SA 4.0 (ExerciseDB OSS dataset)";
-const REQUEST_DELAY_MS = 100;
+const REQUEST_DELAY_MS = 2000; // Cloudflare is aggressive; 0.5 req/sec to avoid 429
+const MAX_RETRIES = 5;
+const RETRY_DELAY_MS = 3000;
 
 // ---------------------------------------------------------------------------
 // Types from ExerciseDB API (official v1.0.0)
@@ -68,30 +93,59 @@ function sleep(ms: number) {
 
 async function fetchPage(offset: number): Promise<{ items: ExerciseDbItem[]; total: number }> {
   const url = `${BASE_URL}/exercises?offset=${offset}&limit=${PAGE_LIMIT}`;
-  const res = await fetch(url, {
-    method: "GET",
-    headers: {
-      "User-Agent": "bodyflow-import/1.0",
-    },
-  });
+  let lastError: Error | null = null;
 
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(
-      `ExerciseDB responded ${res.status} for offset=${offset}\nURL: ${url}\nResponse: ${body}`
-    );
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const res = await fetch(url, {
+        method: "GET",
+        headers: {
+          "User-Agent": "bodyflow-import/1.0",
+        },
+      });
+
+      if (res.status === 429) {
+        // Rate limited — retry with exponential backoff
+        const backoffMs = RETRY_DELAY_MS * Math.pow(2, attempt - 1);
+        console.log(
+          `[import] Rate limited at offset=${offset}, retry ${attempt}/${MAX_RETRIES} after ${backoffMs}ms`
+        );
+        await sleep(backoffMs);
+        continue;
+      }
+
+      if (!res.ok) {
+        const body = await res.text().catch(() => "(could not read response)");
+        throw new Error(
+          `ExerciseDB responded ${res.status} for offset=${offset}\nURL: ${url}\nResponse: ${body.slice(0, 200)}`
+        );
+      }
+
+      const json = (await res.json()) as ExerciseDbResponse | ExerciseDbItem[];
+
+      if (offset === 0) {
+        console.log("[import] API response structure (first page):", JSON.stringify(json, null, 2).slice(0, 300));
+      }
+
+      // Handle both array and {success, data, total} envelope formats
+      if (Array.isArray(json)) {
+        return { items: json, total: 1500 }; // ExerciseDB has ~1500 exercises
+      }
+
+      const items = json.data ?? [];
+      const total = json.total ?? 1500; // Assume 1500 if not specified
+      return { items, total };
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      if (attempt < MAX_RETRIES && !(err instanceof Error && err.message.includes("responded"))) {
+        const backoffMs = RETRY_DELAY_MS * Math.pow(2, attempt - 1);
+        console.log(`[import] Attempt ${attempt}/${MAX_RETRIES} failed, retrying after ${backoffMs}ms...`);
+        await sleep(backoffMs);
+      }
+    }
   }
 
-  const json = (await res.json()) as ExerciseDbResponse | ExerciseDbItem[];
-
-  // Handle both array and {success, data, total} envelope formats
-  if (Array.isArray(json)) {
-    return { items: json, total: json.length };
-  }
-
-  const items = json.data ?? [];
-  const total = json.total ?? items.length;
-  return { items, total };
+  throw lastError || new Error(`Failed to fetch page at offset=${offset} after ${MAX_RETRIES} attempts`);
 }
 
 async function fetchAllExercises(): Promise<ExerciseDbItem[]> {
@@ -117,9 +171,15 @@ async function fetchAllExercises(): Promise<ExerciseDbItem[]> {
   while (offset < first.total) {
     await sleep(REQUEST_DELAY_MS);
     console.log(`[import] Fetching offset=${offset} / ${first.total} ...`);
-    const page = await fetchPage(offset);
-    allItems.push(...page.items);
-    offset += PAGE_LIMIT;
+    try {
+      const page = await fetchPage(offset);
+      allItems.push(...page.items);
+      offset += PAGE_LIMIT;
+    } catch (err) {
+      console.error(`[import] Failed to fetch offset=${offset}:`, err instanceof Error ? err.message : String(err));
+      console.warn(`[import] Stopping at ${allItems.length} exercises (rate limit reached). Run again to continue.`);
+      break;
+    }
   }
 
   console.log(`[import] Fetched ${allItems.length} exercises total.`);
@@ -198,7 +258,23 @@ async function upsertExerciseBatch(
   muscleMap: Map<string, string>,
   seenSlugs: Set<string>,
 ): Promise<Map<string, string>> {
-  const rows = batch.map((ex) => {
+  // Dedup by externalId — if same exercise appears twice in batch, keep first
+  const deduped = batch.reduce(
+    (acc, ex) => {
+      if (!acc.seen.has(ex.exerciseId)) {
+        acc.seen.add(ex.exerciseId);
+        acc.items.push(ex);
+      }
+      return acc;
+    },
+    { items: [] as ExerciseDbItem[], seen: new Set<string>() }
+  );
+
+  if (deduped.items.length < batch.length) {
+    logToFile(`[dedup] Removed ${batch.length - deduped.items.length} duplicates from batch`);
+  }
+
+  const rows = deduped.items.map((ex) => {
     // Use first body part (exercise may have multiple)
     const primaryBodyPart = ex.bodyParts?.[0];
     const categoryId = primaryBodyPart ? categoryMap.get(slugify(primaryBodyPart)) : null;
@@ -299,27 +375,31 @@ async function replaceSecondaryMuscles(
 // ---------------------------------------------------------------------------
 
 async function main() {
+  ensureLogsDir();
+  logToFile(`\n========== Import started at ${new Date().toISOString()} ==========`);
+
   const url = process.env.DATABASE_URL;
   if (!url) {
-    console.error("[import] DATABASE_URL not set. Copy .env.example to .env.local.");
+    logToFile("[ERROR] DATABASE_URL not set. Copy .env.example to .env.local.");
     process.exit(1);
   }
 
   const sql = neon(url);
   const db = drizzle({ client: sql, schema, casing: "snake_case" });
 
-  console.log("[import] Starting ExerciseDB import...");
+  logToFile("[import] Starting ExerciseDB import...");
 
   let rawExercises: ExerciseDbItem[];
   try {
     rawExercises = await fetchAllExercises();
   } catch (err) {
-    console.error("[import] Failed to fetch exercises from ExerciseDB:", err);
+    const msg = err instanceof Error ? err.message : String(err);
+    logToFile(`[ERROR] Failed to fetch exercises from ExerciseDB: ${msg}`);
     process.exit(1);
   }
 
   if (rawExercises.length === 0) {
-    console.warn("[import] ExerciseDB returned 0 exercises. Nothing to import.");
+    logToFile("[WARN] ExerciseDB returned 0 exercises. Nothing to import.");
     return;
   }
 
@@ -332,10 +412,10 @@ async function main() {
     ]),
   ];
 
-  console.log(`[import] Upserting ${bodyParts.length} categories...`);
+  logToFile(`[import] Upserting ${bodyParts.length} categories...`);
   const categoryMap = await upsertCategories(db, bodyParts);
 
-  console.log(`[import] Upserting ${allMuscles.length} muscles...`);
+  logToFile(`[import] Upserting ${allMuscles.length} muscles...`);
   const muscleMap = await upsertMuscles(db, allMuscles);
 
   // Process exercises in batches of 100 to stay within Neon's parameter limits
@@ -359,11 +439,15 @@ async function main() {
       process.stdout.write(`\r[import] ${imported} / ${rawExercises.length} exercises processed`);
     } catch (err) {
       errors++;
-      console.error(`\n[import] Batch starting at index ${i} failed:`, err);
+      const msg = err instanceof Error ? err.message : String(err);
+      logToFile(`[ERROR] Batch at index ${i}: ${msg.slice(0, 200)}`);
+      console.error(`\n[import] Batch starting at index ${i} failed:`, msg.slice(0, 200));
     }
   }
 
-  console.log(`\n[import] Done. ${imported} exercises imported, ${errors} batch errors.`);
+  const summary = `\n[import] Done. ${imported} exercises imported, ${errors} batch errors.`;
+  logToFile(summary);
+  console.log(summary);
 
   if (errors > 0) {
     process.exit(1);
@@ -371,6 +455,8 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("[import] Unhandled error:", err);
+  const msg = err instanceof Error ? err.message : String(err);
+  logToFile(`[FATAL] ${msg}`);
+  console.error("[import] Unhandled error:", msg);
   process.exit(1);
 });
