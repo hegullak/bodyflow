@@ -1,15 +1,16 @@
 /**
- * Import exercises from OSS ExerciseDB v1 into the local database.
+ * Import exercises from wger (https://wger.de) into the local database.
+ *
+ * wger is open-source, no auth required, ~800 English exercises.
+ * License: Creative Commons Attribution Share Alike 3.0 (CC BY-SA 3.0)
+ * Attribution: wger Project — https://wger.de
  *
  * Usage:  npm run import:exercises
  * Safe to rerun: all operations use upsert / idempotent deletes.
- *
- * Only touches exercise_category, exercise_muscle, exercise,
- * exercise_secondary_muscle — no existing tables are affected.
  */
 
 import dotenv from "dotenv";
-import { existsSync, mkdirSync, appendFileSync } from "fs";
+import { existsSync, mkdirSync, appendFileSync, writeFileSync, readFileSync } from "fs";
 import { join } from "path";
 
 dotenv.config({ path: ".env.local" });
@@ -17,85 +18,113 @@ dotenv.config();
 
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
-import { eq, inArray } from "drizzle-orm";
+import { inArray } from "drizzle-orm";
 import * as schema from "../db/schema";
-
-// ---------------------------------------------------------------------------
-// Logging setup
-// ---------------------------------------------------------------------------
-
-const LOGS_DIR = join(process.cwd(), "..", "logs", "bodyflow");
-const LOG_FILE = join(LOGS_DIR, `import-${new Date().toISOString().replace(/[:.]/g, "-")}.log`);
-
-function ensureLogsDir() {
-  if (!existsSync(LOGS_DIR)) {
-    mkdirSync(LOGS_DIR, { recursive: true });
-  }
-}
-
-function logToFile(message: string) {
-  ensureLogsDir();
-  const timestamp = new Date().toISOString();
-  const line = `[${timestamp}] ${message}\n`;
-  appendFileSync(LOG_FILE, line, "utf-8");
-  console.log(message);
-}
-
-interface ImportState {
-  lastSuccessfulOffset: number;
-  lastRun: string;
-  totalImported: number;
-}
-
-function loadState(): ImportState {
-  try {
-    if (existsSync(STATE_FILE)) {
-      const data = JSON.parse(
-        require("fs").readFileSync(STATE_FILE, "utf-8")
-      ) as ImportState;
-      return data;
-    }
-  } catch {}
-  return { lastSuccessfulOffset: 0, lastRun: new Date().toISOString(), totalImported: 0 };
-}
-
-function saveState(state: ImportState): void {
-  require("fs").writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), "utf-8");
-}
 
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
 
-const BASE_URL = "https://oss.exercisedb.dev/api/v1";
+const BASE_URL = "https://wger.de/api/v2";
+const LANGUAGE_ENGLISH = 2;
 const PAGE_LIMIT = 100;
-const SOURCE = "exercisedb";
-const SOURCE_LICENSE = "CC BY-SA 4.0 (ExerciseDB OSS dataset)";
-const REQUEST_DELAY_MS = 3000; // Cloudflare rate limiting; 0.33 req/sec
-const MAX_RETRIES = 5;
-const RETRY_DELAY_MS = 4000;
+const SOURCE = "wger";
+const SOURCE_LICENSE = "CC BY-SA 3.0 (wger Project — https://wger.de)";
+const REQUEST_DELAY_MS = 1000;
+const LOGS_DIR = join(process.cwd(), "..", "logs", "bodyflow");
 const STATE_FILE = join(process.cwd(), ".import-state.json");
+const LOG_FILE = join(
+  LOGS_DIR,
+  `import-${new Date().toISOString().replace(/[:.]/g, "-")}.log`
+);
 
 // ---------------------------------------------------------------------------
-// Types from ExerciseDB API (official v1.0.0)
-// Per https://oss.exercisedb.dev/docs#description/introduction
+// Logging
 // ---------------------------------------------------------------------------
 
-interface ExerciseDbItem {
-  exerciseId: string;
-  name: string;
-  gifUrl: string;
-  bodyParts: string[]; // e.g. ["chest", "back"]
-  equipments: string[]; // e.g. ["barbell", "dumbbell"]
-  targetMuscles: string[]; // e.g. ["pectorals", "triceps"]
-  secondaryMuscles: string[]; // e.g. ["shoulders", "triceps"]
-  instructions: string[]; // e.g. ["Step:1 Lie flat...", "Step:2 Grasp..."]
+function ensureLogsDir() {
+  if (!existsSync(LOGS_DIR)) mkdirSync(LOGS_DIR, { recursive: true });
 }
 
-interface ExerciseDbResponse {
-  success?: boolean;
-  data?: ExerciseDbItem[];
-  total?: number;
+function log(message: string) {
+  ensureLogsDir();
+  const line = `[${new Date().toISOString()}] ${message}\n`;
+  appendFileSync(LOG_FILE, line, "utf-8");
+  console.log(message);
+}
+
+// ---------------------------------------------------------------------------
+// State (resume support)
+// ---------------------------------------------------------------------------
+
+interface ImportState {
+  lastOffset: number;
+  totalImported: number;
+  lastRun: string;
+}
+
+function loadState(): ImportState {
+  try {
+    if (existsSync(STATE_FILE)) {
+      return JSON.parse(readFileSync(STATE_FILE, "utf-8")) as ImportState;
+    }
+  } catch {}
+  return { lastOffset: 0, totalImported: 0, lastRun: new Date().toISOString() };
+}
+
+function saveState(state: ImportState) {
+  writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), "utf-8");
+}
+
+// ---------------------------------------------------------------------------
+// wger API types
+// ---------------------------------------------------------------------------
+
+interface WgerMuscle {
+  id: number;
+  name_en: string;
+  is_front: boolean;
+}
+
+interface WgerEquipment {
+  id: number;
+  name: string;
+}
+
+interface WgerCategory {
+  id: number;
+  name: string;
+}
+
+interface WgerImage {
+  id: number;
+  image: string;
+  is_main: boolean;
+}
+
+interface WgerTranslation {
+  id: number;
+  language: number;
+  name: string;
+  description: string;
+}
+
+interface WgerExercise {
+  id: number;
+  uuid: string;
+  category: WgerCategory;
+  muscles: WgerMuscle[];
+  muscles_secondary: WgerMuscle[];
+  equipment: WgerEquipment[];
+  images: WgerImage[];
+  translations: WgerTranslation[];
+}
+
+interface WgerResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: WgerExercise[];
 }
 
 // ---------------------------------------------------------------------------
@@ -110,134 +139,102 @@ function slugify(value: string): string {
     .replace(/^-|-$/g, "");
 }
 
+function uniqueSlug(base: string, seen: Set<string>): string {
+  let slug = base;
+  let i = 2;
+  while (seen.has(slug)) slug = `${base}-${i++}`;
+  seen.add(slug);
+  return slug;
+}
+
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function fetchPage(offset: number): Promise<{ items: ExerciseDbItem[]; total: number }> {
-  const url = `${BASE_URL}/exercises?offset=${offset}&limit=${PAGE_LIMIT}`;
-  let lastError: Error | null = null;
-
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      const res = await fetch(url, {
-        method: "GET",
-        headers: {
-          "User-Agent": "bodyflow-import/1.0",
-        },
-      });
-
-      if (res.status === 429) {
-        // Rate limited — retry with exponential backoff
-        const backoffMs = RETRY_DELAY_MS * Math.pow(2, attempt - 1);
-        console.log(
-          `[import] Rate limited at offset=${offset}, retry ${attempt}/${MAX_RETRIES} after ${backoffMs}ms`
-        );
-        await sleep(backoffMs);
-        continue;
-      }
-
-      if (!res.ok) {
-        const body = await res.text().catch(() => "(could not read response)");
-        throw new Error(
-          `ExerciseDB responded ${res.status} for offset=${offset}\nURL: ${url}\nResponse: ${body.slice(0, 200)}`
-        );
-      }
-
-      const json = (await res.json()) as ExerciseDbResponse | ExerciseDbItem[];
-
-      if (offset === 0) {
-        console.log("[import] API response structure (first page):", JSON.stringify(json, null, 2).slice(0, 300));
-      }
-
-      // Handle both array and {success, data, total} envelope formats
-      if (Array.isArray(json)) {
-        return { items: json, total: 1500 }; // ExerciseDB has ~1500 exercises
-      }
-
-      const items = json.data ?? [];
-      const total = json.total ?? 1500; // Assume 1500 if not specified
-      return { items, total };
-    } catch (err) {
-      lastError = err instanceof Error ? err : new Error(String(err));
-      if (attempt < MAX_RETRIES && !(err instanceof Error && err.message.includes("responded"))) {
-        const backoffMs = RETRY_DELAY_MS * Math.pow(2, attempt - 1);
-        console.log(`[import] Attempt ${attempt}/${MAX_RETRIES} failed, retrying after ${backoffMs}ms...`);
-        await sleep(backoffMs);
-      }
-    }
-  }
-
-  throw lastError || new Error(`Failed to fetch page at offset=${offset} after ${MAX_RETRIES} attempts`);
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 
-async function fetchAllExercises(): Promise<ExerciseDbItem[]> {
-  console.log("[import] Fetching first page to discover total count...");
-  const first = await fetchPage(0);
+function getEnglishTranslation(translations: WgerTranslation[]): WgerTranslation | null {
+  return translations.find((t) => t.language === LANGUAGE_ENGLISH) ?? null;
+}
 
-  if (first.items.length === 0) {
-    console.warn("[import] First page returned 0 items. API response structure may be different.");
-    console.log("[import] Raw first page data:", JSON.stringify(first, null, 2).slice(0, 500));
-    return [];
+// ---------------------------------------------------------------------------
+// Fetch
+// ---------------------------------------------------------------------------
+
+async function fetchPage(offset: number): Promise<WgerResponse> {
+  const url = `${BASE_URL}/exerciseinfo/?format=json&language=${LANGUAGE_ENGLISH}&limit=${PAGE_LIMIT}&offset=${offset}`;
+
+  const res = await fetch(url, {
+    headers: { "User-Agent": "bodyflow-import/1.0 (https://github.com/hegullak/bodyflow)" },
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "(could not read response)");
+    throw new Error(`wger responded ${res.status} at offset=${offset}\n${body.slice(0, 200)}`);
   }
 
-  console.log("[import] Sample first item:", JSON.stringify(first.items[0], null, 2));
+  return res.json() as Promise<WgerResponse>;
+}
 
-  if (first.total <= PAGE_LIMIT) {
-    console.log(`[import] Fetched ${first.items.length} exercises (single page).`);
-    return first.items;
-  }
-
-  const allItems: ExerciseDbItem[] = [...first.items];
+async function fetchAllExercises(): Promise<WgerExercise[]> {
   const state = loadState();
-  let offset = Math.max(PAGE_LIMIT, state.lastSuccessfulOffset);
+  const startOffset = state.lastOffset;
 
-  if (state.lastSuccessfulOffset > 0) {
-    logToFile(
-      `[resume] Starting from offset=${offset} (last successful: ${state.lastSuccessfulOffset})`
-    );
-    console.log(
-      `[import] Resuming from offset=${offset} (previously imported: ${state.totalImported})`
-    );
+  log(`[import] Fetching first page to get total count...`);
+  const first = await fetchPage(0);
+  log(`[import] wger has ${first.count} exercises total`);
+
+  const allItems: WgerExercise[] = startOffset === 0 ? [...first.results] : [];
+  let offset = startOffset === 0 ? PAGE_LIMIT : startOffset;
+
+  if (startOffset > 0) {
+    log(`[resume] Starting from offset=${startOffset} (previously imported: ${state.totalImported})`);
   }
 
-  while (offset < first.total) {
+  while (offset < first.count) {
     await sleep(REQUEST_DELAY_MS);
-    console.log(`[import] Fetching offset=${offset} / ${first.total} ...`);
+    log(`[import] Fetching offset=${offset} / ${first.count} ...`);
     try {
       const page = await fetchPage(offset);
-      allItems.push(...page.items);
-      state.lastSuccessfulOffset = offset;
+      allItems.push(...page.results);
+      state.lastOffset = offset;
       saveState(state);
       offset += PAGE_LIMIT;
+      if (!page.next) break; // no more pages
     } catch (err) {
-      console.error(`[import] Failed to fetch offset=${offset}:`, err instanceof Error ? err.message : String(err));
-      logToFile(`[import] Stopped at offset=${offset}. Run again to resume.`);
-      console.warn(`[import] Stopping at ${allItems.length} exercises (rate limit reached). Run again to continue.`);
+      const msg = err instanceof Error ? err.message : String(err);
+      log(`[import] Stopped at offset=${offset}. Error: ${msg}`);
+      log(`[import] Run again to resume.`);
       break;
     }
   }
 
-  console.log(`[import] Fetched ${allItems.length} exercises total.`);
+  log(`[import] Fetched ${allItems.length} exercises from wger`);
   return allItems;
 }
 
 // ---------------------------------------------------------------------------
-// Upsert helpers
+// DB helpers
 // ---------------------------------------------------------------------------
 
 type Db = ReturnType<typeof drizzle<typeof schema>>;
 
-async function upsertCategories(
-  db: Db,
-  bodyParts: string[],
-): Promise<Map<string, string>> {
-  const rows = bodyParts.map((bp) => ({
-    slug: slugify(bp),
-    name: bp,
-    updatedAt: new Date(),
+async function upsertCategories(db: Db, exercises: WgerExercise[]): Promise<Map<number, string>> {
+  const categories = new Map<number, string>(); // wger id → name
+  for (const ex of exercises) {
+    if (ex.category) categories.set(ex.category.id, ex.category.name);
+  }
+
+  const rows = [...categories.entries()].map(([wgerId, name]) => ({
+    slug: slugify(`wger-cat-${wgerId}`),
+    name,
   }));
 
+  if (rows.length === 0) return new Map();
+
+  log(`[import] Upserting ${rows.length} categories...`);
   const result = await db
     .insert(schema.exerciseCategories)
     .values(rows)
@@ -247,21 +244,33 @@ async function upsertCategories(
     })
     .returning({ id: schema.exerciseCategories.id, slug: schema.exerciseCategories.slug });
 
-  const map = new Map<string, string>();
-  for (const r of result) map.set(r.slug, r.id);
-  return map;
+  const slugToId = new Map(result.map((r) => [r.slug, r.id]));
+  const wgerIdToDbId = new Map<number, string>();
+  for (const [wgerId] of categories.entries()) {
+    const slug = slugify(`wger-cat-${wgerId}`);
+    const dbId = slugToId.get(slug);
+    if (dbId) wgerIdToDbId.set(wgerId, dbId);
+  }
+  log(`[import] Categories upserted: ${result.length}`);
+  return wgerIdToDbId;
 }
 
-async function upsertMuscles(
-  db: Db,
-  muscles: string[],
-): Promise<Map<string, string>> {
-  const rows = muscles.map((m) => ({
-    slug: slugify(m),
-    name: m,
-    updatedAt: new Date(),
+async function upsertMuscles(db: Db, exercises: WgerExercise[]): Promise<Map<number, string>> {
+  const muscles = new Map<number, string>(); // wger id → name_en
+  for (const ex of exercises) {
+    for (const m of [...ex.muscles, ...ex.muscles_secondary]) {
+      if (m.name_en) muscles.set(m.id, m.name_en);
+    }
+  }
+
+  const rows = [...muscles.entries()].map(([wgerId, name]) => ({
+    slug: slugify(`wger-muscle-${wgerId}`),
+    name,
   }));
 
+  if (rows.length === 0) return new Map();
+
+  log(`[import] Upserting ${rows.length} muscles...`);
   const result = await db
     .insert(schema.exerciseMuscles)
     .values(rows)
@@ -271,138 +280,102 @@ async function upsertMuscles(
     })
     .returning({ id: schema.exerciseMuscles.id, slug: schema.exerciseMuscles.slug });
 
-  const map = new Map<string, string>();
-  for (const r of result) map.set(r.slug, r.id);
-  return map;
-}
-
-// Deduplicate slugs: if the same name produces the same slug, append -N.
-function uniqueSlug(base: string, seen: Set<string>): string {
-  let slug = base;
-  let n = 2;
-  while (seen.has(slug)) {
-    slug = `${base}-${n++}`;
+  const slugToId = new Map(result.map((r) => [r.slug, r.id]));
+  const wgerIdToDbId = new Map<number, string>();
+  for (const [wgerId] of muscles.entries()) {
+    const slug = slugify(`wger-muscle-${wgerId}`);
+    const dbId = slugToId.get(slug);
+    if (dbId) wgerIdToDbId.set(wgerId, dbId);
   }
-  seen.add(slug);
-  return slug;
+  log(`[import] Muscles upserted: ${result.length}`);
+  return wgerIdToDbId;
 }
 
 async function upsertExerciseBatch(
   db: Db,
-  batch: ExerciseDbItem[],
-  categoryMap: Map<string, string>,
-  muscleMap: Map<string, string>,
-  seenSlugs: Set<string>,
-): Promise<Map<string, string>> {
-  // Dedup by externalId — if same exercise appears twice in batch, keep first
-  const deduped = batch.reduce(
-    (acc, ex) => {
-      if (!acc.seen.has(ex.exerciseId)) {
-        acc.seen.add(ex.exerciseId);
-        acc.items.push(ex);
-      }
-      return acc;
-    },
-    { items: [] as ExerciseDbItem[], seen: new Set<string>() }
-  );
+  batch: WgerExercise[],
+  categoryMap: Map<number, string>,
+  muscleMap: Map<number, string>,
+  seenSlugs: Set<string>
+): Promise<Map<number, string>> {
+  const rows: (typeof schema.exercises.$inferInsert)[] = [];
 
-  if (deduped.items.length < batch.length) {
-    logToFile(`[dedup] Removed ${batch.length - deduped.items.length} duplicates from batch`);
-  }
+  for (const ex of batch) {
+    const translation = getEnglishTranslation(ex.translations);
+    if (!translation?.name) continue; // skip exercises without English name
 
-  const rows = deduped.items.map((ex) => {
-    // Use first body part (exercise may have multiple)
-    const primaryBodyPart = ex.bodyParts?.[0];
-    const categoryId = primaryBodyPart ? categoryMap.get(slugify(primaryBodyPart)) : null;
+    const categoryId = categoryMap.get(ex.category?.id);
+    if (!categoryId) continue; // skip if no category
 
-    if (!categoryId) {
-      throw new Error(
-        `No valid bodyPart found for exercise "${ex.name}" (id=${ex.exerciseId}). Available: ${ex.bodyParts?.join(", ")}`
-      );
-    }
+    const primaryMuscle = ex.muscles[0];
+    const targetMuscleId = primaryMuscle ? muscleMap.get(primaryMuscle.id) : undefined;
+    const primaryEquipment = ex.equipment[0]?.name ?? "body weight";
+    const mainImage = ex.images.find((img) => img.is_main) ?? ex.images[0];
 
-    // Use first target muscle
-    const primaryTargetMuscle = ex.targetMuscles?.[0];
-    const targetMuscleId = primaryTargetMuscle ? muscleMap.get(slugify(primaryTargetMuscle)) : null;
+    const description = translation.description ? stripHtml(translation.description) : "";
+    const instructions = description ? [description] : [];
 
-    // Use first equipment or fall back to generic
-    const primaryEquipment = ex.equipments?.[0] ?? "UNKNOWN";
-
-    return {
-      externalId: ex.exerciseId,
-      slug: uniqueSlug(slugify(ex.name), seenSlugs),
-      name: ex.name,
+    rows.push({
+      externalId: String(ex.id),
+      slug: uniqueSlug(slugify(translation.name), seenSlugs),
+      name: translation.name,
       categoryId,
       targetMuscleId: targetMuscleId ?? null,
       equipment: primaryEquipment,
-      gifUrl: ex.gifUrl || null,
-      instructions: ex.instructions ?? [],
+      imageUrl: mainImage?.image ?? null,
+      instructions,
       source: SOURCE,
       sourceLicense: SOURCE_LICENSE,
       updatedAt: new Date(),
-    };
-  });
+    });
+  }
+
+  if (rows.length === 0) return new Map();
 
   const result = await db
     .insert(schema.exercises)
     .values(rows)
-    .onConflictDoUpdate({
-      target: [schema.exercises.source, schema.exercises.externalId],
-      set: {
-        name: schema.exercises.name,
-        categoryId: schema.exercises.categoryId,
-        targetMuscleId: schema.exercises.targetMuscleId,
-        equipment: schema.exercises.equipment,
-        gifUrl: schema.exercises.gifUrl,
-        instructions: schema.exercises.instructions,
-        sourceLicense: schema.exercises.sourceLicense,
-        updatedAt: new Date(),
-      },
-    })
+    .onConflictDoNothing()
     .returning({ id: schema.exercises.id, externalId: schema.exercises.externalId });
 
-  const map = new Map<string, string>();
-  for (const r of result) map.set(r.externalId, r.id);
+  log(`[import] Batch: ${result.length}/${rows.length} exercises inserted`);
+
+  const map = new Map<number, string>();
+  for (const r of result) map.set(Number(r.externalId), r.id);
   return map;
 }
 
-async function replaceSecondaryMuscles(
+async function upsertSecondaryMuscles(
   db: Db,
-  exerciseIdMap: Map<string, string>,
-  batch: ExerciseDbItem[],
-  muscleMap: Map<string, string>,
+  exerciseIdMap: Map<number, string>,
+  batch: WgerExercise[],
+  muscleMap: Map<number, string>
 ): Promise<void> {
-  const exerciseIds = [...exerciseIdMap.values()];
-  if (exerciseIds.length === 0) return;
+  const exerciseDbIds = [...exerciseIdMap.values()];
+  if (exerciseDbIds.length === 0) return;
 
-  // Delete existing secondary muscles for this batch
   await db
     .delete(schema.exerciseSecondaryMuscles)
-    .where(inArray(schema.exerciseSecondaryMuscles.exerciseId, exerciseIds));
+    .where(inArray(schema.exerciseSecondaryMuscles.exerciseId, exerciseDbIds));
 
   const rows: { exerciseId: string; muscleId: string }[] = [];
   for (const ex of batch) {
-    const exerciseId = exerciseIdMap.get(ex.exerciseId);
+    const exerciseId = exerciseIdMap.get(ex.id);
     if (!exerciseId) continue;
 
-    // Skip if this muscle is already the target muscle
-    const primaryTarget = ex.targetMuscles?.[0];
-    const targetMuscleId = primaryTarget ? muscleMap.get(slugify(primaryTarget)) : null;
+    const primaryMuscleId = ex.muscles[0] ? muscleMap.get(ex.muscles[0].id) : null;
 
-    for (const m of ex.secondaryMuscles ?? []) {
-      const muscleId = muscleMap.get(slugify(m));
-      // Don't add target muscle as secondary
-      if (muscleId && muscleId !== targetMuscleId) {
+    for (const m of ex.muscles_secondary) {
+      const muscleId = muscleMap.get(m.id);
+      if (muscleId && muscleId !== primaryMuscleId) {
         rows.push({ exerciseId, muscleId });
       }
     }
   }
 
   if (rows.length > 0) {
-    await db
-      .insert(schema.exerciseSecondaryMuscles)
-      .values(rows)
-      .onConflictDoNothing();
+    await db.insert(schema.exerciseSecondaryMuscles).values(rows).onConflictDoNothing();
+    log(`[import] Secondary muscles: ${rows.length} links inserted`);
   }
 }
 
@@ -412,94 +385,68 @@ async function replaceSecondaryMuscles(
 
 async function main() {
   ensureLogsDir();
-  logToFile(`\n========== Import started at ${new Date().toISOString()} ==========`);
+  log(`\n========== Import started at ${new Date().toISOString()} ==========`);
 
   const url = process.env.DATABASE_URL;
   if (!url) {
-    logToFile("[ERROR] DATABASE_URL not set. Copy .env.example to .env.local.");
+    log("[ERROR] DATABASE_URL not set");
     process.exit(1);
   }
 
+  // NOTE: Do NOT use casing: "snake_case" — schema uses explicit column names.
+  // Combining casing with explicit names in drizzle-orm v0.45 generates invalid SQL.
   const sql = neon(url);
-  const db = drizzle({ client: sql, schema, casing: "snake_case" });
+  const db = drizzle({ client: sql, schema });
 
-  logToFile("[import] Starting ExerciseDB import...");
-
-  let rawExercises: ExerciseDbItem[];
+  let rawExercises: WgerExercise[];
   try {
     rawExercises = await fetchAllExercises();
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    logToFile(`[ERROR] Failed to fetch exercises from ExerciseDB: ${msg}`);
+    log(`[ERROR] Failed to fetch exercises: ${err instanceof Error ? err.message : String(err)}`);
     process.exit(1);
   }
 
   if (rawExercises.length === 0) {
-    logToFile("[WARN] ExerciseDB returned 0 exercises. Nothing to import.");
+    log("[WARN] No exercises fetched. Nothing to import.");
     return;
   }
 
-  // Collect unique controlled values from arrays
-  const bodyParts = [...new Set(rawExercises.flatMap((e) => e.bodyParts))];
-  const allMuscles = [
-    ...new Set([
-      ...rawExercises.flatMap((e) => e.targetMuscles),
-      ...rawExercises.flatMap((e) => e.secondaryMuscles),
-    ]),
-  ];
+  // Filter: only exercises with English translation
+  const withEnglish = rawExercises.filter((ex) => getEnglishTranslation(ex.translations));
+  log(`[import] ${withEnglish.length} / ${rawExercises.length} exercises have English translations`);
 
-  logToFile(`[import] Upserting ${bodyParts.length} categories...`);
-  const categoryMap = await upsertCategories(db, bodyParts);
+  const categoryMap = await upsertCategories(db, withEnglish);
+  const muscleMap = await upsertMuscles(db, withEnglish);
 
-  logToFile(`[import] Upserting ${allMuscles.length} muscles...`);
-  const muscleMap = await upsertMuscles(db, allMuscles);
-
-  // Process exercises in batches of 100 to stay within Neon's parameter limits
-  const BATCH = 100;
+  const BATCH = 50;
   const seenSlugs = new Set<string>();
   let imported = 0;
   let errors = 0;
 
-  for (let i = 0; i < rawExercises.length; i += BATCH) {
-    const batch = rawExercises.slice(i, i + BATCH);
+  for (let i = 0; i < withEnglish.length; i += BATCH) {
+    const batch = withEnglish.slice(i, i + BATCH);
     try {
-      const exerciseIdMap = await upsertExerciseBatch(
-        db,
-        batch,
-        categoryMap,
-        muscleMap,
-        seenSlugs,
-      );
-      await replaceSecondaryMuscles(db, exerciseIdMap, batch, muscleMap);
-      imported += batch.length;
-      process.stdout.write(`\r[import] ${imported} / ${rawExercises.length} exercises processed`);
+      const exerciseIdMap = await upsertExerciseBatch(db, batch, categoryMap, muscleMap, seenSlugs);
+      await upsertSecondaryMuscles(db, exerciseIdMap, batch, muscleMap);
+      imported += exerciseIdMap.size;
+      process.stdout.write(`\r[import] ${imported} exercises inserted so far...`);
     } catch (err) {
       errors++;
       const msg = err instanceof Error ? err.message : String(err);
-      logToFile(`[ERROR] Batch at index ${i}: ${msg.slice(0, 200)}`);
-      console.error(`\n[import] Batch starting at index ${i} failed:`, msg.slice(0, 200));
+      log(`\n[ERROR] Batch at index ${i}: ${msg.slice(0, 300)}`);
     }
   }
 
-  const summary = `\n[import] Done. ${imported} exercises imported, ${errors} batch errors.`;
-  logToFile(summary);
-  console.log(summary);
-
-  // Update state with final count
   const state = loadState();
   state.totalImported += imported;
   state.lastRun = new Date().toISOString();
   saveState(state);
-  logToFile(`[state] Total progress: ${state.totalImported} exercises imported across all runs`);
 
-  if (errors > 0) {
-    process.exit(1);
-  }
+  log(`\n[import] Done. ${imported} exercises imported, ${errors} batch errors.`);
+  log(`[state] Total across all runs: ${state.totalImported}`);
 }
 
 main().catch((err) => {
-  const msg = err instanceof Error ? err.message : String(err);
-  logToFile(`[FATAL] ${msg}`);
-  console.error("[import] Unhandled error:", msg);
+  log(`[FATAL] ${err instanceof Error ? err.message : String(err)}`);
   process.exit(1);
 });

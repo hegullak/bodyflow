@@ -58,7 +58,7 @@ export async function listExercises(filters: ExerciseFilters = {}) {
         slug: exercises.slug,
         name: exercises.name,
         equipment: exercises.equipment,
-        gifUrl: exercises.gifUrl,
+        imageUrl: exercises.imageUrl,
         instructions: exercises.instructions,
         source: exercises.source,
         categorySlug: exerciseCategories.slug,
@@ -96,7 +96,7 @@ export async function getExerciseById(id: string) {
       slug: exercises.slug,
       name: exercises.name,
       equipment: exercises.equipment,
-      gifUrl: exercises.gifUrl,
+      imageUrl: exercises.imageUrl,
       instructions: exercises.instructions,
       source: exercises.source,
       categorySlug: exerciseCategories.slug,
@@ -156,7 +156,7 @@ type ExerciseRow = {
   slug: string;
   name: string;
   equipment: string;
-  gifUrl: string | null;
+  imageUrl: string | null;
   instructions: string[];
   source: string;
   categorySlug: string | null;
@@ -179,7 +179,7 @@ function formatRow(row: ExerciseRow, secondaryMuscles: Muscle[]) {
       : null,
     secondaryMuscles,
     equipment: row.equipment,
-    gifUrl: row.gifUrl,
+    imageUrl: row.imageUrl,
     instructions: row.instructions,
     source: row.source,
   };
