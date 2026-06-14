@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, ClipboardPen, LayoutDashboard, Utensils, UserRound } from "lucide-react";
+import { BarChart3, ClipboardPen, Dumbbell, LayoutDashboard, Utensils, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const tabs = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/check-in", label: "Check-in", icon: ClipboardPen },
+  { href: "/training", label: "Trening", icon: Dumbbell },
   { href: "/meals", label: "Meals", icon: Utensils },
   { href: "/statistics", label: "Stats", icon: BarChart3 },
   { href: "/profile", label: "Profile", icon: UserRound },
@@ -20,7 +21,9 @@ export function BottomNav() {
     <nav className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-[2rem] border border-[var(--border)] bg-[var(--card)]/95 shadow-2xl backdrop-blur-md">
       <div className="flex items-center gap-1 px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         {tabs.map(({ href, icon: Icon }) => {
-          const active = pathname === href;
+          const active = href === "/training"
+            ? pathname === "/training" || pathname.startsWith("/training/")
+            : pathname === href;
           return (
             <Link
               key={href}

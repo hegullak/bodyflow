@@ -571,4 +571,108 @@ export type ExerciseMuscle = typeof exerciseMuscles.$inferSelect;
 export type Exercise = typeof exercises.$inferSelect;
 export type NewExercise = typeof exercises.$inferInsert;
 
+// ---------------------------------------------------------------------------
+// Training Flow
+// User-owned data: programs, sessions, set logs.
+// ---------------------------------------------------------------------------
+
+export const workoutPrograms = pgTable(
+  "workout_program",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    name: text("name").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("workout_program_user_idx").on(t.userId)],
+);
+
+export const workoutSupersets = pgTable(
+  "workout_superset",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    programId: uuid("program_id")
+      .notNull()
+      .references(() => workoutPrograms.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("workout_superset_program_idx").on(t.programId)],
+);
+
+export const workoutProgramExercises = pgTable(
+  "workout_program_exercise",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    programId: uuid("program_id")
+      .notNull()
+      .references(() => workoutPrograms.id, { onDelete: "cascade" }),
+    exerciseId: uuid("exercise_id")
+      .notNull()
+      .references(() => exercises.id, { onDelete: "restrict" }),
+    supersetId: uuid("superset_id").references(() => workoutSupersets.id, {
+      onDelete: "set null",
+    }),
+    programOrder: integer("program_order").notNull().default(0),
+    supersetOrder: integer("superset_order"),
+    sets: integer("sets").notNull().default(3),
+    reps: integer("reps").notNull().default(8),
+    restSeconds: integer("rest_seconds").notNull().default(90),
+    isBodyweight: boolean("is_bodyweight").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("workout_program_exercise_program_idx").on(t.programId),
+    index("workout_program_exercise_superset_idx").on(t.supersetId),
+  ],
+);
+
+export const workoutSessions = pgTable(
+  "workout_session",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    programId: uuid("program_id").references(() => workoutPrograms.id, { onDelete: "set null" }),
+    programName: text("program_name").notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("workout_session_user_idx").on(t.userId),
+    index("workout_session_user_ended_idx").on(t.userId, t.endedAt),
+  ],
+);
+
+export const workoutSetLogs = pgTable(
+  "workout_set_log",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => workoutSessions.id, { onDelete: "cascade" }),
+    programExerciseId: uuid("program_exercise_id").references(
+      () => workoutProgramExercises.id,
+      { onDelete: "set null" },
+    ),
+    exerciseId: uuid("exercise_id").references(() => exercises.id, { onDelete: "set null" }),
+    exerciseName: text("exercise_name").notNull(),
+    setNumber: integer("set_number").notNull(),
+    isBodyweight: boolean("is_bodyweight").notNull().default(false),
+    weightKg: real("weight_kg"),
+    completedAt: timestamp("completed_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("workout_set_log_session_idx").on(t.sessionId)],
+);
+
+export type WorkoutProgram = typeof workoutPrograms.$inferSelect;
+export type NewWorkoutProgram = typeof workoutPrograms.$inferInsert;
+export type WorkoutProgramExercise = typeof workoutProgramExercises.$inferSelect;
+export type WorkoutSession = typeof workoutSessions.$inferSelect;
+export type WorkoutSetLog = typeof workoutSetLogs.$inferSelect;
+
 
