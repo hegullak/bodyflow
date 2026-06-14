@@ -310,7 +310,8 @@ async function upsertExerciseBatch(
     const primaryMuscle = ex.muscles[0];
     const targetMuscleId = primaryMuscle ? muscleMap.get(primaryMuscle.id) : undefined;
     const primaryEquipment = ex.equipment[0]?.name ?? "body weight";
-    const mainImage = ex.images.find((img) => img.is_main) ?? ex.images[0];
+    const mainImage =
+      ex.images.find((img) => img.image.toLowerCase().endsWith(".png")) ?? null;
 
     const description = translation.description ? stripHtml(translation.description) : "";
     const instructions = description ? [description] : [];
