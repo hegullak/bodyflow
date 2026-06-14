@@ -57,6 +57,7 @@ export async function listExercises(filters: ExerciseFilters = {}) {
         externalId: exercises.externalId,
         slug: exercises.slug,
         name: exercises.name,
+        nameNo: exercises.nameNo,
         equipment: exercises.equipment,
         imageUrl: exercises.imageUrl,
         instructions: exercises.instructions,
@@ -95,6 +96,7 @@ export async function getExerciseById(id: string) {
       externalId: exercises.externalId,
       slug: exercises.slug,
       name: exercises.name,
+      nameNo: exercises.nameNo,
       equipment: exercises.equipment,
       imageUrl: exercises.imageUrl,
       instructions: exercises.instructions,
@@ -155,6 +157,7 @@ type ExerciseRow = {
   externalId: string;
   slug: string;
   name: string;
+  nameNo: string | null;
   equipment: string;
   imageUrl: string | null;
   instructions: string[];
@@ -170,7 +173,8 @@ function formatRow(row: ExerciseRow, secondaryMuscles: Muscle[]) {
     id: row.id,
     externalId: row.externalId,
     slug: row.slug,
-    name: row.name,
+    name: row.nameNo ?? row.name,
+    nameEn: row.name,
     bodyPart: row.categorySlug
       ? { slug: row.categorySlug, name: row.categoryName! }
       : null,

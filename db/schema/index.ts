@@ -532,6 +532,7 @@ export const exercises = pgTable(
       onDelete: "restrict",
     }),
     equipment: text("equipment").notNull(),
+    nameNo: text("name_no"),
     imageUrl: text("image_url"),
     instructions: jsonb("instructions").notNull().$type<string[]>().default([]),
     source: text("source").notNull().default("wger"),

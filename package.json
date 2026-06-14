@@ -20,9 +20,11 @@
     "db:seed-matvaretabellen": "tsx db/seed-matvaretabellen.ts",
     "import:exercises": "tsx scripts/import-exercises.ts",
     "withings:encrypt-tokens": "tsx scripts/encrypt-withings-tokens.ts",
-    "check": "npm run lint && npm run typecheck && npm run test && npm run build"
+    "check": "npm run lint && npm run typecheck && npm run test && npm run build",
+    "translate:exercises": "tsx scripts/translate-exercises.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.104.1",
     "@clerk/nextjs": "^7.4.1",
     "@neondatabase/serverless": "^1.1.0",
     "@zxing/browser": "^0.2.0",
