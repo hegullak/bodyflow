@@ -260,7 +260,7 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
   return (
     <div>
       {/* Header */}
-      <div className="sticky top-0 z-10 -mx-[0.875rem] mb-3 border-b border-[var(--color-border)] bg-[var(--bg)] px-[0.875rem]">
+      <div className="sticky top-0 z-10 mb-3 border-b border-[var(--color-border)] bg-[var(--bg)]">
         <div className="mb-2 flex items-center gap-2">
           <button type="button" onClick={() => router.back()}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]">
@@ -351,9 +351,6 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
                               onClick={() => selectProduct(p)}
                               className="flex w-full items-center gap-3 border-b border-[var(--color-border)] py-2.5 text-left hover:bg-[var(--color-muted)]"
                             >
-                              {p.image
-                                ? <img src={p.image} alt="" className="h-10 w-10 shrink-0 rounded object-cover" />
-                                : <div className="h-10 w-10 shrink-0 rounded bg-[var(--color-muted)]" />}
                               <span className="min-w-0 flex-1">
                                 <span className="block truncate text-sm font-medium">{p.name}</span>
                                 <span className="block truncate text-xs text-[var(--color-muted-foreground)]">
