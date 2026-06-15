@@ -493,7 +493,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
         )}
 
         {/* Rest timer — fixed above bottom nav */}
-        {timer.active && !activeInput && (
+        {timer.active && (
           <RestTimerBar
             seconds={timer.seconds}
             running={timer.running}
