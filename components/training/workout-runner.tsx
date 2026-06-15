@@ -248,11 +248,16 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
       timer.start(ex.restSeconds);
     }
 
-    // If this was the last set in the exercise, jump keyboard to next exercise
+    // Jump keyboard to next uncompleted set, or next exercise if all done
     if (willAllBeCompleted) {
       const nextEx = findNextExercise(ex.id);
       if (nextEx) {
         setTimeout(() => focusInput(nextEx.id, 0, "weight"), 450);
+      }
+    } else {
+      const nextSetIdx = exRows.findIndex((row, i) => i > idx && !row.completed);
+      if (nextSetIdx !== -1) {
+        setTimeout(() => focusInput(ex.id, nextSetIdx, "weight"), 450);
       }
     }
   }
