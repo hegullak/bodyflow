@@ -755,9 +755,15 @@ function SetRowItem({ idx, row, last, isBodyweight, isNextSet, isResting, timerS
   return (
     <div
       className={`grid grid-cols-[2.5rem_1fr_5rem_4.5rem_3rem] items-center px-4 py-2 transition-colors ${
-        isResting ? "bg-[var(--green-light)]" : row.completed ? "bg-[var(--green-light)]" : isNextSet ? "bg-[var(--accent)]/5" : ""
+        isResting
+          ? "bg-[var(--green-light)]"
+          : row.completed
+          ? "bg-[var(--green-light)]"
+          : isNextSet
+          ? "bg-[var(--accent)]/10 border-l-2 border-l-[var(--accent)]"
+          : ""
       }`}
-      onClick={() => { if (!row.completed) onFocusWeight(); }}
+      onClick={() => { if (!row.completed) onToggle(); }}
     >
       {/* Set number / GO / REST */}
       {isResting ? (
