@@ -155,7 +155,8 @@ body {
   min-height: 100%;
 }
 
-html {
+html,
+body {
   scrollbar-gutter: stable;
   overflow-x: hidden;
 }
