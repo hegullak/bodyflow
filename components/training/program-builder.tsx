@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -253,33 +253,35 @@ export function ProgramBuilder({ program: initial, activeSessionId }: Props) {
                         </button>
                       </div>
                       {block.exercises.map((ex, exIdx) => (
-                        <ExerciseRow
-                          key={ex.id}
-                          ex={ex}
-                          onUpdate={(patch) => handleUpdateExercise(ex.id, patch)}
-                          onRemove={() => handleRemoveExercise(ex.id)}
-                          showDivider={exIdx < block.exercises.length - 1}
-                        />
+                        <SwipeableExerciseRow key={ex.id} onDelete={() => handleRemoveExercise(ex.id)}>
+                          <ExerciseRow
+                            ex={ex}
+                            onUpdate={(patch) => handleUpdateExercise(ex.id, patch)}
+                            onRemove={() => handleRemoveExercise(ex.id)}
+                            showDivider={exIdx < block.exercises.length - 1}
+                          />
+                        </SwipeableExerciseRow>
                       ))}
                     </div>
                   ) : (
                     <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)]">
                       {block.exercises.map((ex) => (
-                        <ExerciseRow
-                          key={ex.id}
-                          ex={ex}
-                          onUpdate={(patch) => handleUpdateExercise(ex.id, patch)}
-                          onRemove={() => handleRemoveExercise(ex.id)}
-                          showDivider={false}
-                          canSuperset={program.blocks.length > 1}
-                          adjacentId={
-                            blockIdx + 1 < program.blocks.length &&
-                            program.blocks[blockIdx + 1].type === "exercise"
-                              ? program.blocks[blockIdx + 1].exercises[0].id
-                              : null
-                          }
-                          onCreateSuperset={handleCreateSuperset}
-                        />
+                        <SwipeableExerciseRow key={ex.id} onDelete={() => handleRemoveExercise(ex.id)}>
+                          <ExerciseRow
+                            ex={ex}
+                            onUpdate={(patch) => handleUpdateExercise(ex.id, patch)}
+                            onRemove={() => handleRemoveExercise(ex.id)}
+                            showDivider={false}
+                            canSuperset={program.blocks.length > 1}
+                            adjacentId={
+                              blockIdx + 1 < program.blocks.length &&
+                              program.blocks[blockIdx + 1].type === "exercise"
+                                ? program.blocks[blockIdx + 1].exercises[0].id
+                                : null
+                            }
+                            onCreateSuperset={handleCreateSuperset}
+                          />
+                        </SwipeableExerciseRow>
                       ))}
                     </div>
                   )}
@@ -358,6 +360,74 @@ function SortableBlock({ id, children }: { id: string; children: React.ReactNode
         <GripVertical className="h-4 w-4" />
       </button>
       {children}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Swipeable exercise row — swipe left to reveal delete
+// ---------------------------------------------------------------------------
+
+function SwipeableExerciseRow({ onDelete, children }: { onDelete: () => void; children: React.ReactNode }) {
+  const [offset, setOffset] = useState(0);
+  const [settled, setSettled] = useState(true);
+  const startRef = useRef({ x: 0, y: 0, active: false, locked: false, startOffset: 0 });
+  const DELETE_W = 80;
+
+  function onPointerDown(e: React.PointerEvent) {
+    startRef.current = { x: e.clientX, y: e.clientY, active: true, locked: false, startOffset: offset };
+    setSettled(false);
+  }
+
+  function onPointerMove(e: React.PointerEvent) {
+    const s = startRef.current;
+    if (!s.active || s.locked) return;
+    const dx = e.clientX - s.x;
+    const dy = e.clientY - s.y;
+    if (Math.abs(dy) > Math.abs(dx) + 6) { s.locked = true; setSettled(true); return; }
+    if (Math.abs(dx) < 4) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const newOffset = Math.min(0, Math.max(s.startOffset + dx, -DELETE_W));
+    setOffset(newOffset);
+  }
+
+  function onPointerUp() {
+    startRef.current.active = false;
+    setSettled(true);
+    setOffset((prev) => (prev < -(DELETE_W * 0.5) ? -DELETE_W : 0));
+  }
+
+  function handleDelete() {
+    setOffset(-DELETE_W * 3);
+    setTimeout(onDelete, 200);
+  }
+
+  return (
+    <div className="relative overflow-hidden">
+      <div
+        className="absolute inset-y-0 right-0 flex items-center justify-center bg-[var(--red)]"
+        style={{ width: DELETE_W }}
+      >
+        <button
+          onClick={handleDelete}
+          className="flex h-full w-full items-center justify-center"
+          aria-label="Slett øvelse"
+        >
+          <Trash2 className="h-5 w-5 text-white" />
+        </button>
+      </div>
+      <div
+        style={{
+          transform: `translateX(${offset}px)`,
+          transition: settled ? "transform 0.22s ease" : "none",
+        }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+      >
+        {children}
+      </div>
     </div>
   );
 }

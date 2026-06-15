@@ -278,6 +278,14 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
     return i !== -1 && i < all.length - 1 ? all[i + 1] : null;
   }
 
+  function removeExercise(exId: string) {
+    setBlocks((prev) =>
+      prev
+        .map((b) => ({ ...b, exercises: b.exercises.filter((e) => e.id !== exId) }))
+        .filter((b) => b.exercises.length > 0)
+    );
+  }
+
   // Custom keyboard handlers
   function focusInput(exId: string, setIdx: number, field: "weight" | "reps") {
     const row = rows(exId)[setIdx];
@@ -464,26 +472,28 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
                       </p>
                     )}
                     {block.exercises.map((ex) => (
-                      <div key={ex.id} ref={(el) => setCardRef(ex.id, el)}>
-                        <ExerciseCard
-                          ex={ex}
-                          setRows={rows(ex.id)}
-                          lastSets={session.lastSets[ex.id] ?? []}
-                          nextSetIdx={ex.id === nextExId ? nextExIdx : -1}
-                          timerActive={timer.active}
-                          restingSetIdx={restingSet?.exId === ex.id ? restingSet.setIdx : -1}
-                          timerSeconds={timer.seconds}
-                          activeInput={activeInput?.exId === ex.id ? activeInput : null}
-                          onToggle={(idx) => toggleSet(ex, idx, block)}
-                          onActivateSet={(idx) => { const r = rows(ex.id)[idx]; if (r && !r.completed) { setRestingSet({ exId: ex.id, setIdx: idx }); timer.start(ex.restSeconds); } }}
-                          onWeight={(idx, v) => patchRow(ex.id, idx, { weightKg: v })}
-                          onReps={(idx, v) => patchRow(ex.id, idx, { reps: v })}
-                          onFocusInput={(setIdx, field) => focusInput(ex.id, setIdx, field)}
-                          onAddSet={() => addRow(ex.id)}
-                          onRemoveSet={(idx) => removeRow(ex.id, idx)}
-                          onThumbClick={ex.imageUrl ? () => setFullscreenImage({ url: ex.imageUrl!, name: ex.exerciseName }) : undefined}
-                        />
-                      </div>
+                      <SwipeableExerciseRow key={ex.id} onDelete={() => removeExercise(ex.id)}>
+                        <div ref={(el) => setCardRef(ex.id, el)}>
+                          <ExerciseCard
+                            ex={ex}
+                            setRows={rows(ex.id)}
+                            lastSets={session.lastSets[ex.id] ?? []}
+                            nextSetIdx={ex.id === nextExId ? nextExIdx : -1}
+                            timerActive={timer.active}
+                            restingSetIdx={restingSet?.exId === ex.id ? restingSet.setIdx : -1}
+                            timerSeconds={timer.seconds}
+                            activeInput={activeInput?.exId === ex.id ? activeInput : null}
+                            onToggle={(idx) => toggleSet(ex, idx, block)}
+                            onActivateSet={(idx) => { const r = rows(ex.id)[idx]; if (r && !r.completed) { setRestingSet({ exId: ex.id, setIdx: idx }); timer.start(ex.restSeconds); } }}
+                            onWeight={(idx, v) => patchRow(ex.id, idx, { weightKg: v })}
+                            onReps={(idx, v) => patchRow(ex.id, idx, { reps: v })}
+                            onFocusInput={(setIdx, field) => focusInput(ex.id, setIdx, field)}
+                            onAddSet={() => addRow(ex.id)}
+                            onRemoveSet={(idx) => removeRow(ex.id, idx)}
+                            onThumbClick={ex.imageUrl ? () => setFullscreenImage({ url: ex.imageUrl!, name: ex.exerciseName }) : undefined}
+                          />
+                        </div>
+                      </SwipeableExerciseRow>
                     ))}
                   </div>
                 </SortableWorkoutBlock>
@@ -1012,6 +1022,74 @@ function RestTimerBar({ seconds, running, nextExercise, onAdd, onPause, onSkip }
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Swipeable exercise row — swipe left to reveal delete
+// ---------------------------------------------------------------------------
+
+function SwipeableExerciseRow({ onDelete, children }: { onDelete: () => void; children: React.ReactNode }) {
+  const [offset, setOffset] = useState(0);
+  const [settled, setSettled] = useState(true);
+  const startRef = useRef({ x: 0, y: 0, active: false, locked: false, startOffset: 0 });
+  const DELETE_W = 80;
+
+  function onPointerDown(e: React.PointerEvent) {
+    startRef.current = { x: e.clientX, y: e.clientY, active: true, locked: false, startOffset: offset };
+    setSettled(false);
+  }
+
+  function onPointerMove(e: React.PointerEvent) {
+    const s = startRef.current;
+    if (!s.active || s.locked) return;
+    const dx = e.clientX - s.x;
+    const dy = e.clientY - s.y;
+    if (Math.abs(dy) > Math.abs(dx) + 6) { s.locked = true; setSettled(true); return; }
+    if (Math.abs(dx) < 4) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const newOffset = Math.min(0, Math.max(s.startOffset + dx, -DELETE_W));
+    setOffset(newOffset);
+  }
+
+  function onPointerUp() {
+    startRef.current.active = false;
+    setSettled(true);
+    setOffset((prev) => (prev < -(DELETE_W * 0.5) ? -DELETE_W : 0));
+  }
+
+  function handleDelete() {
+    setOffset(-DELETE_W * 3);
+    setTimeout(onDelete, 200);
+  }
+
+  return (
+    <div className="relative overflow-hidden">
+      <div
+        className="absolute inset-y-0 right-0 flex items-center justify-center bg-[var(--red)]"
+        style={{ width: DELETE_W }}
+      >
+        <button
+          onClick={handleDelete}
+          className="flex h-full w-full items-center justify-center"
+          aria-label="Slett øvelse"
+        >
+          <Trash2 className="h-5 w-5 text-white" />
+        </button>
+      </div>
+      <div
+        style={{
+          transform: `translateX(${offset}px)`,
+          transition: settled ? "transform 0.22s ease" : "none",
+        }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+      >
+        {children}
+      </div>
     </div>
   );
 }
