@@ -279,6 +279,88 @@ export async function quickAddMealItemAction(
   }
 }
 
+export type RecentMealItem = {
+  productName: string;
+  brand: string | null;
+  caloriesKcal: number;
+  quantityGrams: number;
+  kcalPer100g: number;
+  foodProductId: string | null;
+  kassalProductId: number | null;
+  ean: string | null;
+};
+
+export async function getRecentMealItemsAction(): Promise<ActionResult<RecentMealItem[]>> {
+  const userId = await requireUserId();
+  try {
+    const db = getDb();
+    const rows = await db.query.mealLogItems.findMany({
+      where: and(eq(mealLogItems.userId, userId), isNull(mealLogItems.deletedAt)),
+      orderBy: (t, { desc }) => [desc(t.createdAt)],
+      limit: 60,
+    });
+    const seen = new Set<string>();
+    const recent: RecentMealItem[] = [];
+    for (const r of rows) {
+      if (!seen.has(r.productName) && recent.length < 15) {
+        seen.add(r.productName);
+        recent.push({
+          productName: r.productName,
+          brand: r.brand,
+          caloriesKcal: r.caloriesKcal,
+          quantityGrams: r.quantityGrams,
+          kcalPer100g: r.kcalPer100g,
+          foodProductId: r.foodProductId,
+          kassalProductId: r.kassalProductId,
+          ean: r.ean,
+        });
+      }
+    }
+    return { ok: true, data: recent };
+  } catch {
+    return { ok: false, error: "Kunne ikke hente historikk." };
+  }
+}
+
+export async function reAddMealItemAction(
+  logDate: string,
+  mealType: MealType,
+  item: RecentMealItem,
+): Promise<ActionResult> {
+  const userId = await requireUserId();
+  try {
+    const db = getDb();
+    const [inserted] = await db
+      .insert(mealLogItems)
+      .values({
+        userId,
+        logDate,
+        mealType,
+        foodProductId: item.foodProductId,
+        kassalProductId: item.kassalProductId,
+        ean: item.ean,
+        productName: item.productName,
+        brand: item.brand,
+        quantityGrams: item.quantityGrams,
+        kcalPer100g: item.kcalPer100g,
+        caloriesKcal: item.caloriesKcal,
+        updatedAt: new Date(),
+      })
+      .returning({ id: mealLogItems.id });
+    await writeAuditLog({ entityType: "meal_log_item", entityId: inserted.id, action: "create", changedBy: userId });
+    await syncDailyCaloriesFromMeals(userId, logDate);
+    revalidatePath("/meals");
+    revalidatePath("/dashboard");
+    revalidatePath("/check-in");
+    return { ok: true, data: undefined };
+  } catch (error) {
+    logger.error("Meals", "reAddMealItemAction failed", {
+      reason: error instanceof Error ? error.message : "unknown",
+    });
+    return { ok: false, error: "Kunne ikke legge til." };
+  }
+}
+
 export type MealsByType = Record<MealType, Awaited<ReturnType<typeof getMealItemsForDate>>>;
 
 export async function getMealsGroupedByType(

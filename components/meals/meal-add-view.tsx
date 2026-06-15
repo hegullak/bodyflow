@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { useRouter } from "next/navigation";
 import { ArrowLeft, BookOpen, ScanBarcode, Search, Zap } from "lucide-react";
 import type { MealType } from "@/db/schema";
-import { addMealItemAction, quickAddMealItemAction } from "@/lib/actions/meals";
+import { addMealItemAction, quickAddMealItemAction, getRecentMealItemsAction, reAddMealItemAction, type RecentMealItem } from "@/lib/actions/meals";
 import { addSavedMealToLogAction, getSavedMealsAction } from "@/lib/actions/saved-meals";
 import type { FoodProductSummary } from "@/lib/foods/types";
 import { calculateCaloriesFromGrams } from "@/lib/kassal/nutrition";
@@ -70,10 +70,24 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
   const [quickError, setQuickError] = useState<string | null>(null);
   const [quickDone, setQuickDone] = useState(false);
 
+  // Recent items (history)
+  const [recentItems, setRecentItems] = useState<RecentMealItem[]>([]);
+  const [recentLoaded, setRecentLoaded] = useState(false);
+  const [addingRecentName, setAddingRecentName] = useState<string | null>(null);
+
   // Saved meals
   const [savedMeals, setSavedMeals] = useState<Array<{ id: string; name: string; totalKcal: number; totalGrams: number }>>([]);
   const [savedLoaded, setSavedLoaded] = useState(false);
   const [addingSavedId, setAddingSavedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!recentLoaded) {
+      getRecentMealItemsAction().then((res) => {
+        if (res.ok) setRecentItems(res.data);
+        setRecentLoaded(true);
+      });
+    }
+  }, [recentLoaded]);
 
   const stopCamera = useCallback(() => {
     setCameraStream((s) => { s?.getTracks().forEach((t) => t.stop()); return null; });
@@ -178,6 +192,13 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
     });
   }
 
+  async function handleReAdd(item: RecentMealItem) {
+    setAddingRecentName(item.productName);
+    const result = await reAddMealItemAction(logDate, mealType, item);
+    setAddingRecentName(null);
+    if (result.ok) router.back();
+  }
+
   async function handleAddSavedMeal(id: string) {
     setAddingSavedId(id);
     const result = await addSavedMealToLogAction(id, logDate, mealType);
@@ -278,40 +299,76 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
               autoComplete="off"
               enterKeyHint="search"
             />
-            {searchError && <p className="text-xs text-[#9a5b45]">{searchError}</p>}
-            {query.trim().length >= 2 && results.length === 0 && !searchError && (
-              <p className="text-xs text-[var(--color-muted-foreground)]">Ingen resultater.</p>
+
+            {/* Recent history — shown when no query */}
+            {query.trim().length < 2 && recentItems.length > 0 && (
+              <div>
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
+                  Nylig brukt
+                </p>
+                <ul>
+                  {recentItems.map((item) => (
+                    <li key={item.productName} className="flex items-center gap-3 border-b border-[var(--color-border)] py-2.5">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{item.productName}</p>
+                        <p className="text-xs text-[var(--color-muted-foreground)]">
+                          {Math.round(item.caloriesKcal)} kcal · {Math.round(item.quantityGrams)} g
+                          {item.brand ? ` · ${item.brand}` : ""}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleReAdd(item)}
+                        disabled={addingRecentName === item.productName}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-muted)] text-lg font-light text-[var(--color-primary)]"
+                      >
+                        {addingRecentName === item.productName ? "…" : "+"}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
-            <ul className="space-y-px">
-              {groupResults(results).map((group) => (
-                <li key={group.title}>
-                  <p className="mb-1 mt-3 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
-                    {group.title}
-                  </p>
-                  <ul>
-                    {group.items.map((p) => (
-                      <li key={`${p.source}-${p.externalId}`}>
-                        <button
-                          type="button"
-                          onClick={() => selectProduct(p)}
-                          className="flex w-full items-center gap-3 border-b border-[var(--color-border)] py-2.5 text-left hover:bg-[var(--color-muted)]"
-                        >
-                          {p.image
-                            ? <img src={p.image} alt="" className="h-10 w-10 shrink-0 rounded object-cover" />
-                            : <div className="h-10 w-10 shrink-0 rounded bg-[var(--color-muted)]" />}
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-sm font-medium">{p.name}</span>
-                            <span className="block truncate text-xs text-[var(--color-muted-foreground)]">
-                              {p.brand ?? sourceLabel(p)}{p.kcalPer100g != null ? ` · ${p.kcalPer100g} kcal/100g` : ""}
-                            </span>
-                          </span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </li>
-              ))}
-            </ul>
+
+            {/* Search results */}
+            {query.trim().length >= 2 && (
+              <>
+                {searchError && <p className="text-xs text-[#9a5b45]">{searchError}</p>}
+                {results.length === 0 && !searchError && (
+                  <p className="text-xs text-[var(--color-muted-foreground)]">Ingen resultater.</p>
+                )}
+                <ul className="space-y-px">
+                  {groupResults(results).map((group) => (
+                    <li key={group.title}>
+                      <p className="mb-1 mt-3 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
+                        {group.title}
+                      </p>
+                      <ul>
+                        {group.items.map((p) => (
+                          <li key={`${p.source}-${p.externalId}`}>
+                            <button
+                              type="button"
+                              onClick={() => selectProduct(p)}
+                              className="flex w-full items-center gap-3 border-b border-[var(--color-border)] py-2.5 text-left hover:bg-[var(--color-muted)]"
+                            >
+                              {p.image
+                                ? <img src={p.image} alt="" className="h-10 w-10 shrink-0 rounded object-cover" />
+                                : <div className="h-10 w-10 shrink-0 rounded bg-[var(--color-muted)]" />}
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-sm font-medium">{p.name}</span>
+                                <span className="block truncate text-xs text-[var(--color-muted-foreground)]">
+                                  {p.brand ?? sourceLabel(p)}{p.kcalPer100g != null ? ` · ${p.kcalPer100g} kcal/100g` : ""}
+                                </span>
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
           </div>
         )}
 
