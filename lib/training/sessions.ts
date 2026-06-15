@@ -195,6 +195,13 @@ export async function endSession(id: string, userId: string) {
   return updated ?? null;
 }
 
+export async function deleteSession(id: string, userId: string) {
+  const db = getDb();
+  await db
+    .delete(workoutSessions)
+    .where(and(eq(workoutSessions.id, id), eq(workoutSessions.userId, userId)));
+}
+
 export async function logSet(
   sessionId: string,
   userId: string,

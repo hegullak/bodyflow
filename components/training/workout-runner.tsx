@@ -896,37 +896,40 @@ function RestTimerBar({ seconds, running, nextExercise, onAdd, onPause, onSkip }
   const [nextImgError, setNextImgError] = useState(false);
 
   return (
-    <div className="fixed left-4 right-4 z-[200] overflow-hidden rounded-2xl border border-[var(--accent)]/40 bg-[var(--card)] shadow-[0_8px_40px_rgba(0,0,0,0.6)]" style={{ bottom: 'calc(5.5rem + env(safe-area-inset-bottom, 0px))' }}>
+    <div className="fixed left-4 right-4 z-[200] overflow-hidden rounded-3xl border border-[var(--accent)]/40 bg-[var(--card)] shadow-[0_8px_32px_rgba(0,0,0,0.5)]" style={{ bottom: 'calc(5.5rem + env(safe-area-inset-bottom, 0px))' }}>
       <button
         onClick={onPause}
-        className="flex w-full flex-col items-center justify-center bg-[var(--accent)] py-5 active:opacity-90"
+        className="flex w-full items-center justify-between bg-[var(--accent)] px-5 py-3 active:opacity-90"
       >
         <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/60">
-          {running ? "Rest" : "Paused — tap to resume"}
+          {running ? "Rest" : "Paused"}
         </span>
-        <span className="mt-0.5 text-5xl font-bold tabular-nums leading-none text-white">
+        <span className="text-3xl font-bold tabular-nums leading-none text-white">
           {fmtTimer(seconds)}
+        </span>
+        <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/60">
+          tap to {running ? "pause" : "resume"}
         </span>
       </button>
 
       <div className="flex divide-x divide-[var(--border)]">
         <button
           onClick={() => onAdd(-15)}
-          className="flex flex-1 items-center justify-center gap-1.5 py-3.5 text-sm font-medium text-[var(--text2)] active:bg-[var(--card2)]"
+          className="flex flex-1 items-center justify-center gap-1 py-2.5 text-sm font-medium text-[var(--text2)] active:bg-[var(--card2)]"
         >
-          <Minus className="h-3.5 w-3.5" />
+          <Minus className="h-3 w-3" />
           15s
         </button>
         <button
           onClick={() => onAdd(15)}
-          className="flex flex-1 items-center justify-center gap-1.5 py-3.5 text-sm font-medium text-[var(--text2)] active:bg-[var(--card2)]"
+          className="flex flex-1 items-center justify-center gap-1 py-2.5 text-sm font-medium text-[var(--text2)] active:bg-[var(--card2)]"
         >
-          <Plus className="h-3.5 w-3.5" />
+          <Plus className="h-3 w-3" />
           15s
         </button>
         <button
           onClick={onSkip}
-          className="flex flex-1 items-center justify-center py-3.5 text-sm font-semibold text-[var(--accent)] active:bg-[var(--card2)]"
+          className="flex flex-1 items-center justify-center py-2.5 text-sm font-semibold text-[var(--accent)] active:bg-[var(--card2)]"
         >
           Skip
         </button>
