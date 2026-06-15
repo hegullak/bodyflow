@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import type { MealType } from "@/db/schema";
 import { addMealItemAction } from "@/lib/actions/meals";
+import { addSavedMealToLogAction, getSavedMealsAction } from "@/lib/actions/saved-meals";
 import type { FoodProductSummary } from "@/lib/foods/types";
 import { calculateCaloriesFromGrams } from "@/lib/kassal/nutrition";
 import {
@@ -13,10 +14,10 @@ import {
 import { FoodScanWizard } from "@/components/meals/food-scan-wizard";
 import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label } from "@/components/ui/field";
-import { Camera, ScanBarcode, Search, X } from "lucide-react";
+import { BookOpen, Camera, ScanBarcode, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Mode = "search" | "scan" | "photo";
+type Mode = "search" | "scan" | "photo" | "saved";
 
 function sourceLabel(product: FoodProductSummary): string {
   if (product.source === "matvaretabellen") return "Matvaretabellen";
@@ -115,7 +116,9 @@ export function ProductPicker({
       }
       stopCameraStream();
       setMode(id);
+      if (id === "saved") void loadSavedMeals();
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [activateScanMode, stopCameraStream],
   );
 
@@ -222,10 +225,32 @@ export function ProductPicker({
     });
   }
 
+  const [savedMeals, setSavedMeals] = useState<
+    Array<{ id: string; name: string; totalKcal: number; totalGrams: number }>
+  >([]);
+  const [savedMealsLoaded, setSavedMealsLoaded] = useState(false);
+  const [addingSavedId, setAddingSavedId] = useState<string | null>(null);
+
+  async function loadSavedMeals() {
+    if (savedMealsLoaded) return;
+    const result = await getSavedMealsAction();
+    if (result.ok) setSavedMeals(result.data);
+    setSavedMealsLoaded(true);
+  }
+
+  async function handleAddSavedMeal(savedMealId: string) {
+    setAddingSavedId(savedMealId);
+    const result = await addSavedMealToLogAction(savedMealId, logDate, mealType);
+    setAddingSavedId(null);
+    if (result.ok) { onAdded(); onClose(); }
+    else setLookupError(result.error ?? null);
+  }
+
   const modeTabs: Array<{ id: Mode; label: string; icon: typeof Search }> = [
     { id: "search", label: "Søk", icon: Search },
     { id: "scan", label: "Strekkode", icon: ScanBarcode },
     { id: "photo", label: "Bilde", icon: Camera },
+    { id: "saved", label: "Måltider", icon: BookOpen },
   ];
 
   return (
@@ -369,6 +394,40 @@ export function ProductPicker({
                     ) : null}
                   </div>
                 ) : null}
+              </div>
+            ) : mode === "saved" ? (
+              <div className="space-y-2">
+                {!savedMealsLoaded ? (
+                  <p className="text-xs text-[var(--color-muted-foreground)]">Laster…</p>
+                ) : savedMeals.length === 0 ? (
+                  <p className="text-xs text-[var(--color-muted-foreground)]">
+                    Ingen lagrede måltider ennå. Logg et måltid og trykk «+ Legg til som eget måltid».
+                  </p>
+                ) : (
+                  <ul className="space-y-2">
+                    {savedMeals.map((meal) => (
+                      <li key={meal.id}>
+                        <button
+                          type="button"
+                          disabled={addingSavedId === meal.id}
+                          onClick={() => handleAddSavedMeal(meal.id)}
+                          className="flex w-full items-center justify-between gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2.5 text-left hover:bg-[var(--color-muted)]"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium">{meal.name}</p>
+                            <p className="text-xs text-[var(--color-muted-foreground)]">
+                              {meal.totalGrams} g · {meal.totalKcal} kcal
+                            </p>
+                          </div>
+                          <span className="shrink-0 text-xs font-semibold text-[var(--color-primary)]">
+                            {addingSavedId === meal.id ? "..." : "+ Legg til"}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {lookupError ? <p className="text-xs text-[#9a5b45]">{lookupError}</p> : null}
               </div>
             ) : (
               <FoodScanWizard

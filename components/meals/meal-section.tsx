@@ -1,14 +1,23 @@
 "use client";
 
 import { useRef, useTransition, useState } from "react";
+import { Trash2 } from "lucide-react";
 import type { MealLogItem, MealType } from "@/db/schema";
 import { removeMealItemAction, copyMealsFromPreviousDateAction } from "@/lib/actions/meals";
+import { saveMealAction } from "@/lib/actions/saved-meals";
 import { MEAL_LABELS } from "@/lib/meals/constants";
 import { ProductPicker } from "@/components/meals/product-picker";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/field";
 import { addDaysToIsoDate } from "@/lib/utils";
 
-function MealItem({
+// ---------------------------------------------------------------------------
+// Swipeable meal item — pointer events + translateX (same pattern as training)
+// ---------------------------------------------------------------------------
+
+const DELETE_W = 72;
+
+function SwipeableMealItem({
   item,
   removingId,
   onRemove,
@@ -17,69 +26,123 @@ function MealItem({
   removingId: string | null;
   onRemove: (id: string) => void;
 }) {
-  const [swiped, setSwiped] = useState(false);
-  const touchStartX = useRef<number | null>(null);
+  const [offset, setOffset] = useState(0);
+  const [settled, setSettled] = useState(true);
+  const startRef = useRef({ x: 0, y: 0, active: false, locked: false, startOffset: 0 });
 
-  function onTouchStart(e: React.TouchEvent) {
-    e.stopPropagation();
-    touchStartX.current = e.touches[0]?.clientX ?? null;
+  function onPointerDown(e: React.PointerEvent) {
+    startRef.current = { x: e.clientX, y: e.clientY, active: true, locked: false, startOffset: offset };
+    setSettled(false);
   }
 
-  function onTouchEnd(e: React.TouchEvent) {
-    e.stopPropagation();
-    if (touchStartX.current === null) return;
-    const endX = e.changedTouches[0]?.clientX ?? null;
-    if (endX === null) return;
-    const diff = touchStartX.current - endX;
-    if (diff > 50) setSwiped(true);
-    else if (diff < -30) setSwiped(false);
-    touchStartX.current = null;
+  function onPointerMove(e: React.PointerEvent) {
+    const s = startRef.current;
+    if (!s.active || s.locked) return;
+    const dx = e.clientX - s.x;
+    const dy = e.clientY - s.y;
+    if (Math.abs(dy) > Math.abs(dx) + 6) { s.locked = true; setSettled(true); return; }
+    if (Math.abs(dx) < 4) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setOffset(Math.min(0, Math.max(s.startOffset + dx, -DELETE_W)));
+  }
+
+  function onPointerUp() {
+    startRef.current.active = false;
+    setSettled(true);
+    setOffset((prev) => (prev < -(DELETE_W * 0.45) ? -DELETE_W : 0));
+  }
+
+  function handleDelete() {
+    setOffset(-DELETE_W * 4);
+    setTimeout(() => onRemove(item.id), 180);
   }
 
   return (
-    <li
-      className="overflow-hidden rounded-[var(--radius-sm)] bg-[var(--card2)]"
-      onTouchStart={onTouchStart}
-      onTouchEnd={onTouchEnd}
-    >
-      {swiped ? (
-        <div className="flex items-center justify-between gap-2 px-2 py-1.5">
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-[var(--color-muted-foreground)] line-through opacity-50">
-              {item.productName}
-            </p>
-          </div>
-          <div className="flex shrink-0 gap-2">
-            <button
-              type="button"
-              className="text-xs text-[var(--color-muted-foreground)]"
-              onClick={() => setSwiped(false)}
-            >
-              Avbryt
-            </button>
-            <button
-              type="button"
-              className="text-xs font-semibold text-[#9a5b45]"
-              disabled={removingId === item.id}
-              onClick={() => onRemove(item.id)}
-            >
-              {removingId === item.id ? "Sletter..." : "Slett"}
-            </button>
-          </div>
+    <li className="relative overflow-hidden rounded-[var(--radius-sm)]">
+      {/* Red delete button behind */}
+      <div
+        className="absolute inset-y-0 right-0 flex items-center justify-center bg-[var(--red)]"
+        style={{ width: DELETE_W }}
+      >
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={removingId === item.id}
+          className="flex h-full w-full items-center justify-center"
+          aria-label="Slett"
+        >
+          <Trash2 className="h-4 w-4 text-white" />
+        </button>
+      </div>
+
+      {/* Sliding content */}
+      <div
+        className="relative flex items-start justify-between gap-2 bg-[var(--card2)] px-2 py-1.5 touch-pan-y"
+        style={{
+          transform: `translateX(${offset}px)`,
+          transition: settled ? "transform 0.22s ease" : "none",
+        }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+      >
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium">{item.productName}</p>
+          <p className="text-xs text-[var(--color-muted-foreground)]">
+            {Math.round(item.quantityGrams)} g · {Math.round(item.caloriesKcal)} kcal
+          </p>
         </div>
-      ) : (
-        <div className="flex items-start justify-between gap-2 px-2 py-1.5">
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">{item.productName}</p>
-            <p className="text-xs text-[var(--color-muted-foreground)]">
-              {Math.round(item.quantityGrams)} g · {Math.round(item.caloriesKcal)} kcal
-            </p>
-          </div>
-        </div>
-      )}
+      </div>
     </li>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Save-as-meal inline form
+// ---------------------------------------------------------------------------
+
+function SaveMealForm({
+  onSave,
+  onCancel,
+  saving,
+}: {
+  onSave: (name: string) => void;
+  onCancel: () => void;
+  saving: boolean;
+}) {
+  const [name, setName] = useState("");
+  return (
+    <div className="mt-2 flex gap-2">
+      <Input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Navn på måltid…"
+        className="flex-1 text-sm"
+        autoFocus
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && name.trim()) onSave(name);
+          if (e.key === "Escape") onCancel();
+        }}
+      />
+      <Button
+        type="button"
+        size="sm"
+        disabled={saving || !name.trim()}
+        onClick={() => onSave(name)}
+      >
+        {saving ? "..." : "Lagre"}
+      </Button>
+      <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
+        Avbryt
+      </Button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// MealSection
+// ---------------------------------------------------------------------------
 
 export function MealSection({
   logDate,
@@ -98,14 +161,21 @@ export function MealSection({
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
-  const [showPrevMealHint, setShowPrevMealHint] = useState(false);
-  const [pending, startTransition] = useTransition();
-  const sectionTouchStartX = useRef<number | null>(null);
-  const subtotal = Math.round(items.reduce((sum, item) => sum + item.caloriesKcal, 0));
+  const [showSaveForm, setShowSaveForm] = useState(false);
+  const [copyPending, startCopyTransition] = useTransition();
+  const [savePending, startSaveTransition] = useTransition();
 
+  // Section-level swipe (left→right on empty) using pointer events
+  const sectionRef = useRef<HTMLElement>(null);
+  const sectionSwipe = useRef({ x: 0, active: false });
+  const [copyOffset, setCopyOffset] = useState(0);
+  const [copySettled, setCopySettled] = useState(true);
+  const [showCopyButtons, setShowCopyButtons] = useState(false);
+
+  const subtotal = Math.round(items.reduce((sum, i) => sum + i.caloriesKcal, 0));
   const isEmpty = items.length === 0;
-  const previousDayMeals = previousDayItems.filter((item) => item.mealType === mealType);
-  const twoDaysAgoMeals = twoDaysAgoItems.filter((item) => item.mealType === mealType);
+  const previousDayMeals = previousDayItems.filter((i) => i.mealType === mealType);
+  const twoDaysAgoMeals = twoDaysAgoItems.filter((i) => i.mealType === mealType);
   const hasPreviousMeals = previousDayMeals.length > 0 || twoDaysAgoMeals.length > 0;
 
   async function handleRemove(itemId: string) {
@@ -115,42 +185,56 @@ export function MealSection({
     onChanged();
   }
 
-  function handleCopyFromPreviousDay(sourceDate: string) {
+  function handleCopyFromDay(sourceDate: string) {
     const formData = new FormData();
     formData.set("logDate", logDate);
     formData.set("mealType", mealType);
     formData.set("sourceDate", sourceDate);
-
-    startTransition(async () => {
+    startCopyTransition(async () => {
       const result = await copyMealsFromPreviousDateAction(null, formData);
-      if (result.ok) {
-        setShowPrevMealHint(false);
-        onChanged();
-      }
+      if (result.ok) { setShowCopyButtons(false); setCopyOffset(0); onChanged(); }
     });
   }
 
-  function handleSectionTouchStart(e: React.TouchEvent) {
-    sectionTouchStartX.current = e.touches[0]?.clientX ?? null;
+  function handleSaveMeal(name: string) {
+    startSaveTransition(async () => {
+      await saveMealAction(logDate, mealType, name);
+      setShowSaveForm(false);
+    });
   }
 
-  function handleSectionTouchEnd(e: React.TouchEvent) {
-    if (sectionTouchStartX.current === null) return;
-    const endX = e.changedTouches[0]?.clientX ?? null;
-    if (endX === null) return;
-    // left-to-right swipe (endX > startX) on empty section → show previous day hint
-    const diff = endX - sectionTouchStartX.current;
-    if (diff > 50 && isEmpty && hasPreviousMeals) {
-      setShowPrevMealHint(true);
+  // Pointer swipe on empty section — slide right to reveal copy buttons
+  const COPY_SNAP = 140;
+
+  function onSectionPointerDown(e: React.PointerEvent) {
+    if (!isEmpty || !hasPreviousMeals || showCopyButtons) return;
+    sectionSwipe.current = { x: e.clientX, active: true };
+    setCopySettled(false);
+  }
+
+  function onSectionPointerMove(e: React.PointerEvent) {
+    if (!sectionSwipe.current.active) return;
+    const dx = e.clientX - sectionSwipe.current.x;
+    if (dx < 0) return;
+    setCopyOffset(Math.min(dx, COPY_SNAP + 20));
+  }
+
+  function onSectionPointerUp() {
+    if (!sectionSwipe.current.active) return;
+    sectionSwipe.current.active = false;
+    setCopySettled(true);
+    if (copyOffset > COPY_SNAP * 0.5) {
+      setCopyOffset(COPY_SNAP);
+      setShowCopyButtons(true);
+    } else {
+      setCopyOffset(0);
     }
-    sectionTouchStartX.current = null;
   }
 
   return (
     <section
+      ref={sectionRef}
       className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] p-3"
-      onTouchStart={handleSectionTouchStart}
-      onTouchEnd={handleSectionTouchEnd}
     >
       <div className="mb-2 flex items-center justify-between gap-2">
         <div>
@@ -163,53 +247,93 @@ export function MealSection({
       </div>
 
       {isEmpty ? (
-        <div className="space-y-2">
-          {showPrevMealHint && hasPreviousMeals ? (
-            <div className="space-y-2">
-              {previousDayMeals.length > 0 ? (
-                <Button
+        <div className="relative overflow-hidden">
+          {/* Copy panel revealed from left */}
+          {hasPreviousMeals && (
+            <div
+              className="absolute inset-y-0 left-0 flex flex-col justify-center gap-1 py-1"
+              style={{ width: COPY_SNAP }}
+            >
+              {previousDayMeals.length > 0 && (
+                <button
                   type="button"
-                  variant="outline"
-                  size="sm"
-                  className="w-full"
-                  disabled={pending}
-                  onClick={() => handleCopyFromPreviousDay(addDaysToIsoDate(logDate, -1))}
+                  disabled={copyPending}
+                  onClick={() => handleCopyFromDay(addDaysToIsoDate(logDate, -1))}
+                  className="text-left text-xs font-medium text-[var(--color-primary)]"
                 >
-                  {pending ? "..." : "Legg til matvarer fra i går"}
-                </Button>
-              ) : null}
-              {twoDaysAgoMeals.length > 0 ? (
-                <Button
+                  {copyPending ? "..." : "Kopier fra i går"}
+                </button>
+              )}
+              {twoDaysAgoMeals.length > 0 && (
+                <button
                   type="button"
-                  variant="outline"
-                  size="sm"
-                  className="w-full"
-                  disabled={pending}
-                  onClick={() => handleCopyFromPreviousDay(addDaysToIsoDate(logDate, -2))}
+                  disabled={copyPending}
+                  onClick={() => handleCopyFromDay(addDaysToIsoDate(logDate, -2))}
+                  className="text-left text-xs font-medium text-[var(--color-primary)]"
                 >
-                  {pending ? "..." : "Legg til matvarer fra i forgårs"}
-                </Button>
-              ) : null}
+                  {copyPending ? "..." : "Kopier fra i forgårs"}
+                </button>
+              )}
             </div>
-          ) : (
-            <p className="text-xs text-[var(--color-muted-foreground)]">
-              {hasPreviousMeals
-                ? "Sveip høyre for å kopiere fra tidligere."
-                : "Ingen produkter ennå."}
-            </p>
           )}
+
+          {/* Sliding empty-state text */}
+          <div
+            style={{
+              transform: `translateX(${copyOffset}px)`,
+              transition: copySettled ? "transform 0.22s ease" : "none",
+            }}
+            onPointerDown={onSectionPointerDown}
+            onPointerMove={onSectionPointerMove}
+            onPointerUp={onSectionPointerUp}
+            onPointerCancel={onSectionPointerUp}
+          >
+            {showCopyButtons ? (
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  className="text-xs text-[var(--color-muted-foreground)]"
+                  onClick={() => { setShowCopyButtons(false); setCopyOffset(0); }}
+                >
+                  Lukk
+                </button>
+              </div>
+            ) : (
+              <p className="text-xs text-[var(--color-muted-foreground)]">
+                {hasPreviousMeals ? "Sveip høyre for å kopiere fra tidligere." : "Ingen produkter ennå."}
+              </p>
+            )}
+          </div>
         </div>
       ) : (
-        <ul className="space-y-2">
-          {items.map((item) => (
-            <MealItem
-              key={item.id}
-              item={item}
-              removingId={removingId}
-              onRemove={handleRemove}
+        <>
+          <ul className="space-y-2">
+            {items.map((item) => (
+              <SwipeableMealItem
+                key={item.id}
+                item={item}
+                removingId={removingId}
+                onRemove={handleRemove}
+              />
+            ))}
+          </ul>
+
+          {showSaveForm ? (
+            <SaveMealForm
+              onSave={handleSaveMeal}
+              onCancel={() => setShowSaveForm(false)}
+              saving={savePending}
             />
-          ))}
-        </ul>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowSaveForm(true)}
+              className="mt-2 text-xs text-[var(--color-muted-foreground)] hover:text-[var(--color-primary)]"
+            >
+              + Legg til som eget måltid
+            </button>
+          )}
+        </>
       )}
 
       {pickerOpen ? (

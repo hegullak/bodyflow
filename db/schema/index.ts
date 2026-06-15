@@ -26,6 +26,8 @@ import {
 
 } from "drizzle-orm/pg-core";
 
+import { relations } from "drizzle-orm";
+
 
 
 /**
@@ -675,5 +677,56 @@ export type NewWorkoutProgram = typeof workoutPrograms.$inferInsert;
 export type WorkoutProgramExercise = typeof workoutProgramExercises.$inferSelect;
 export type WorkoutSession = typeof workoutSessions.$inferSelect;
 export type WorkoutSetLog = typeof workoutSetLogs.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Saved Meals
+// User-defined named meal templates for quick reuse.
+// ---------------------------------------------------------------------------
+
+export const savedMeals = pgTable(
+  "saved_meal",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    name: text("name").notNull(),
+    totalKcal: real("total_kcal").notNull(),
+    totalGrams: real("total_grams").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (t) => [index("saved_meal_user_idx").on(t.userId)],
+);
+
+export const savedMealItems = pgTable(
+  "saved_meal_item",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    savedMealId: uuid("saved_meal_id")
+      .notNull()
+      .references(() => savedMeals.id, { onDelete: "cascade" }),
+    foodProductId: uuid("food_product_id").references(() => foodProducts.id, {
+      onDelete: "set null",
+    }),
+    productName: text("product_name").notNull(),
+    brand: text("brand"),
+    quantityGrams: real("quantity_grams").notNull(),
+    kcalPer100g: real("kcal_per_100g").notNull(),
+    caloriesKcal: real("calories_kcal").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("saved_meal_item_meal_idx").on(t.savedMealId)],
+);
+
+export const savedMealsRelations = relations(savedMeals, ({ many }) => ({
+  items: many(savedMealItems),
+}));
+
+export const savedMealItemsRelations = relations(savedMealItems, ({ one }) => ({
+  meal: one(savedMeals, { fields: [savedMealItems.savedMealId], references: [savedMeals.id] }),
+}));
+
+export type SavedMeal = typeof savedMeals.$inferSelect;
+export type SavedMealItem = typeof savedMealItems.$inferSelect;
 
 
