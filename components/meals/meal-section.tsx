@@ -1,12 +1,85 @@
 "use client";
 
-import { useTransition, useState } from "react";
+import { useRef, useTransition, useState } from "react";
 import type { MealLogItem, MealType } from "@/db/schema";
 import { removeMealItemAction, copyMealsFromPreviousDateAction } from "@/lib/actions/meals";
 import { MEAL_LABELS } from "@/lib/meals/constants";
 import { ProductPicker } from "@/components/meals/product-picker";
 import { Button } from "@/components/ui/button";
 import { addDaysToIsoDate } from "@/lib/utils";
+
+function MealItem({
+  item,
+  removingId,
+  onRemove,
+}: {
+  item: MealLogItem;
+  removingId: string | null;
+  onRemove: (id: string) => void;
+}) {
+  const [swiped, setSwiped] = useState(false);
+  const touchStartX = useRef<number | null>(null);
+
+  function onTouchStart(e: React.TouchEvent) {
+    e.stopPropagation();
+    touchStartX.current = e.touches[0]?.clientX ?? null;
+  }
+
+  function onTouchEnd(e: React.TouchEvent) {
+    e.stopPropagation();
+    if (touchStartX.current === null) return;
+    const endX = e.changedTouches[0]?.clientX ?? null;
+    if (endX === null) return;
+    const diff = touchStartX.current - endX;
+    if (diff > 50) setSwiped(true);
+    else if (diff < -30) setSwiped(false);
+    touchStartX.current = null;
+  }
+
+  return (
+    <li
+      className="overflow-hidden rounded-[var(--radius-sm)] bg-[var(--card2)]"
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
+      {swiped ? (
+        <div className="flex items-center justify-between gap-2 px-2 py-1.5">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-[var(--color-muted-foreground)] line-through opacity-50">
+              {item.productName}
+            </p>
+          </div>
+          <div className="flex shrink-0 gap-2">
+            <button
+              type="button"
+              className="text-xs text-[var(--color-muted-foreground)]"
+              onClick={() => setSwiped(false)}
+            >
+              Avbryt
+            </button>
+            <button
+              type="button"
+              className="text-xs font-semibold text-[#9a5b45]"
+              disabled={removingId === item.id}
+              onClick={() => onRemove(item.id)}
+            >
+              {removingId === item.id ? "Sletter..." : "Slett"}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-start justify-between gap-2 px-2 py-1.5">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium">{item.productName}</p>
+            <p className="text-xs text-[var(--color-muted-foreground)]">
+              {Math.round(item.quantityGrams)} g · {Math.round(item.caloriesKcal)} kcal
+            </p>
+          </div>
+        </div>
+      )}
+    </li>
+  );
+}
 
 export function MealSection({
   logDate,
@@ -25,10 +98,9 @@ export function MealSection({
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
-  const [swipeStart, setSwipeStart] = useState<number | null>(null);
   const [showPrevMealHint, setShowPrevMealHint] = useState(false);
-  const [swipingItemId, setSwipingItemId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const sectionTouchStartX = useRef<number | null>(null);
   const subtotal = Math.round(items.reduce((sum, item) => sum + item.caloriesKcal, 0));
 
   const isEmpty = items.length === 0;
@@ -58,46 +130,27 @@ export function MealSection({
     });
   }
 
-  function handleTouchStart(e: React.TouchEvent) {
-    setSwipeStart(e.touches[0]?.clientX ?? null);
+  function handleSectionTouchStart(e: React.TouchEvent) {
+    sectionTouchStartX.current = e.touches[0]?.clientX ?? null;
   }
 
-  function handleTouchEnd(e: React.TouchEvent) {
-    if (swipeStart === null) return;
-    const swipeEnd = e.changedTouches[0]?.clientX ?? null;
-    if (swipeEnd === null) return;
-
-    const diff = swipeStart - swipeEnd;
+  function handleSectionTouchEnd(e: React.TouchEvent) {
+    if (sectionTouchStartX.current === null) return;
+    const endX = e.changedTouches[0]?.clientX ?? null;
+    if (endX === null) return;
+    // left-to-right swipe (endX > startX) on empty section → show previous day hint
+    const diff = endX - sectionTouchStartX.current;
     if (diff > 50 && isEmpty && hasPreviousMeals) {
       setShowPrevMealHint(true);
     }
-
-    setSwipeStart(null);
-  }
-
-  function handleItemTouchStart(e: React.TouchEvent) {
-    setSwipingItemId(null);
-    setSwipeStart(e.touches[0]?.clientX ?? null);
-  }
-
-  function handleItemTouchEnd(e: React.TouchEvent, itemId: string) {
-    if (swipeStart === null) return;
-    const swipeEnd = e.changedTouches[0]?.clientX ?? null;
-    if (swipeEnd === null) return;
-
-    const diff = swipeEnd - swipeStart;
-    if (diff > 50) {
-      setSwipingItemId(itemId);
-    }
-
-    setSwipeStart(null);
+    sectionTouchStartX.current = null;
   }
 
   return (
     <section
       className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] p-3"
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
+      onTouchStart={handleSectionTouchStart}
+      onTouchEnd={handleSectionTouchEnd}
     >
       <div className="mb-2 flex items-center justify-between gap-2">
         <div>
@@ -109,7 +162,7 @@ export function MealSection({
         </Button>
       </div>
 
-      {items.length === 0 ? (
+      {isEmpty ? (
         <div className="space-y-2">
           {showPrevMealHint && hasPreviousMeals ? (
             <div className="space-y-2">
@@ -140,49 +193,21 @@ export function MealSection({
             </div>
           ) : (
             <p className="text-xs text-[var(--color-muted-foreground)]">
-              {hasPreviousMeals ? "Sveip fra venstre for å legge til fra tidligere." : "Ingen produkter ennå."}
+              {hasPreviousMeals
+                ? "Sveip høyre for å kopiere fra tidligere."
+                : "Ingen produkter ennå."}
             </p>
           )}
         </div>
       ) : (
         <ul className="space-y-2">
           {items.map((item) => (
-            <li
+            <MealItem
               key={item.id}
-              className="rounded-[var(--radius-sm)] bg-[var(--card2)]"
-              onTouchStart={handleItemTouchStart}
-              onTouchEnd={(e) => handleItemTouchEnd(e, item.id)}
-            >
-              {swipingItemId === item.id ? (
-                <div className="flex items-center justify-end px-2 py-1.5">
-                  <button
-                    type="button"
-                    className="text-xs font-medium text-[#9a5b45] hover:text-[#8b4a38]"
-                    disabled={removingId === item.id}
-                    onClick={() => handleRemove(item.id)}
-                  >
-                    {removingId === item.id ? "Sletter..." : "Slett"}
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-start justify-between gap-2 px-2 py-1.5">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{item.productName}</p>
-                    <p className="text-xs text-[var(--color-muted-foreground)]">
-                      {Math.round(item.quantityGrams)} g · {Math.round(item.caloriesKcal)} kcal
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    className="shrink-0 text-xs text-[var(--color-muted-foreground)] hover:text-[#9a5b45]"
-                    disabled={removingId === item.id}
-                    onClick={() => handleRemove(item.id)}
-                  >
-                    {removingId === item.id ? "..." : "Fjern"}
-                  </button>
-                </div>
-              )}
-            </li>
+              item={item}
+              removingId={removingId}
+              onRemove={handleRemove}
+            />
           ))}
         </ul>
       )}

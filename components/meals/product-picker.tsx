@@ -68,6 +68,14 @@ export function ProductPicker({
 }) {
   const [mode, setMode] = useState<Mode>("search");
   const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
   const [results, setResults] = useState<FoodProductSummary[]>([]);
   const [selected, setSelected] = useState<FoodProductSummary | null>(null);
   const [quantityGrams, setQuantityGrams] = useState("");
@@ -222,7 +230,7 @@ export function ProductPicker({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
-      <div className="flex max-h-[min(88dvh,100%)] w-full max-w-[640px] flex-col overflow-hidden rounded-t-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-card)] shadow-lg sm:max-h-[90dvh] sm:rounded-[var(--radius-lg)]">
+      <div className="flex max-h-[min(88svh,100%)] w-full max-w-[640px] flex-col overflow-hidden rounded-t-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-card)] shadow-lg sm:max-h-[90svh] sm:rounded-[var(--radius-lg)]">
         <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[var(--color-border)] px-3 py-2">
           {!selected ? (
             <div className="flex gap-0.5">
@@ -257,7 +265,7 @@ export function ProductPicker({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]" onTouchMove={(e) => e.stopPropagation()}>
         {!selected ? (
           <>
             {mode === "search" ? (
@@ -271,7 +279,7 @@ export function ProductPicker({
                   enterKeyHint="search"
                 />
                 {searchError ? <p className="text-xs text-[#9a5b45]">{searchError}</p> : null}
-                <ul className="max-h-[min(40dvh,16rem)] space-y-2 overflow-y-auto">
+                <ul className="max-h-[min(40svh,16rem)] space-y-2 overflow-y-auto">
                   {groupResults(results).map((group) => (
                     <li key={group.title}>
                       <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
