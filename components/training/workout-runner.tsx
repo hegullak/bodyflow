@@ -514,6 +514,15 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
           />
         )}
 
+        {/* Add exercise button */}
+        <a
+          href={`/training/programs/${session.programId}/add-exercise`}
+          className="flex items-center justify-center gap-2 rounded-[var(--radius-md)] border border-dashed border-[var(--border)] py-4 text-[var(--text2)] active:bg-[var(--card)]"
+        >
+          <Plus className="h-5 w-5" />
+          Legg til øvelse
+        </a>
+
         {/* Always-visible end workout button */}
         <button
           onClick={handleEnd}
