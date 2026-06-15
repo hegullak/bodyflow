@@ -169,6 +169,78 @@ export async function getMealItemsForDate(userId: string, logDate: string) {
   });
 }
 
+export async function copyMealsFromPreviousDateAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const userId = await requireUserId();
+  const logDate = formData.get("logDate") as string;
+  const mealType = formData.get("mealType") as MealType;
+  const sourceDate = formData.get("sourceDate") as string;
+
+  if (!logDate || !mealType || !sourceDate) {
+    return { ok: false, error: "Missing required fields." };
+  }
+
+  try {
+    const db = getDb();
+
+    const sourceItems = await db.query.mealLogItems.findMany({
+      where: and(
+        eq(mealLogItems.userId, userId),
+        eq(mealLogItems.logDate, sourceDate),
+        eq(mealLogItems.mealType, mealType as MealType),
+        isNull(mealLogItems.deletedAt),
+      ),
+    });
+
+    if (!sourceItems.length) {
+      return { ok: false, error: "No meals found from that date." };
+    }
+
+    const newItems = await db
+      .insert(mealLogItems)
+      .values(
+        sourceItems.map((item) => ({
+          userId,
+          logDate,
+          mealType: item.mealType,
+          foodProductId: item.foodProductId,
+          kassalProductId: item.kassalProductId,
+          ean: item.ean,
+          productName: item.productName,
+          brand: item.brand,
+          quantityGrams: item.quantityGrams,
+          kcalPer100g: item.kcalPer100g,
+          caloriesKcal: item.caloriesKcal,
+          updatedAt: new Date(),
+        })),
+      )
+      .returning({ id: mealLogItems.id });
+
+    for (const item of newItems) {
+      await writeAuditLog({
+        entityType: "meal_log_item",
+        entityId: item.id,
+        action: "create",
+        changedBy: userId,
+      });
+    }
+
+    await syncDailyCaloriesFromMeals(userId, logDate);
+
+    revalidatePath("/meals");
+    revalidatePath("/dashboard");
+    revalidatePath("/check-in");
+    return { ok: true, data: undefined };
+  } catch (error) {
+    logger.error("Meals", "copyMealsFromPreviousDateAction failed", {
+      reason: error instanceof Error ? error.message : "unknown",
+    });
+    return { ok: false, error: "Could not copy meals. Please try again." };
+  }
+}
+
 export type MealsByType = Record<MealType, Awaited<ReturnType<typeof getMealItemsForDate>>>;
 
 export async function getMealsGroupedByType(

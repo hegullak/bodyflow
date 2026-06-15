@@ -1,9 +1,9 @@
 import { MealsView } from "@/components/meals/meals-view";
 import { getProfileForUser } from "@/lib/actions/profile";
-import { getMealsGroupedByType } from "@/lib/actions/meals";
+import { getMealsGroupedByType, getMealItemsForDate } from "@/lib/actions/meals";
 import { requireUserId } from "@/lib/auth/current-user";
 import { isKassalConfigured } from "@/lib/kassal/config";
-import { todayIsoDate } from "@/lib/utils";
+import { addDaysToIsoDate, todayIsoDate } from "@/lib/utils";
 
 export default async function MealsPage({
   searchParams,
@@ -13,9 +13,11 @@ export default async function MealsPage({
   const userId = await requireUserId();
   const params = await searchParams;
   const logDate = params.date?.match(/^\d{4}-\d{2}-\d{2}$/) ? params.date : todayIsoDate();
-  const [{ byMeal, totalKcal }, profile] = await Promise.all([
+  const [{ byMeal, totalKcal }, profile, previousDayMeals, twoDaysAgoMeals] = await Promise.all([
     getMealsGroupedByType(userId, logDate),
     getProfileForUser(userId),
+    getMealItemsForDate(userId, addDaysToIsoDate(logDate, -1)),
+    getMealItemsForDate(userId, addDaysToIsoDate(logDate, -2)),
   ]);
   const kassalReady = isKassalConfigured();
 
@@ -35,6 +37,8 @@ export default async function MealsPage({
         byMeal={byMeal}
         totalKcal={totalKcal}
         dailyTarget={profile?.dailyCalorieTarget ?? null}
+        previousDayMeals={previousDayMeals}
+        twoDaysAgoMeals={twoDaysAgoMeals}
       />
     </div>
   );

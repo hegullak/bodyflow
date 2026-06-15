@@ -15,5 +15,5 @@ export const MEAL_LABELS: Record<MealType, string> = {
   snack: "Mellommåltid",
   dinner: "Middag",
   evening: "Kvelds",
-  smoke: "Røk på en smell",
+  smoke: "Min utfordring",
 };

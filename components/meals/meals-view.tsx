@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import type { MealLogItem } from "@/db/schema";
 import type { MealsByType } from "@/lib/actions/meals";
 import { MEAL_TYPES } from "@/lib/meals/constants";
 import { CalorieBudgetCard } from "@/components/meals/calorie-budget-card";
@@ -13,11 +14,15 @@ export function MealsView({
   byMeal,
   totalKcal,
   dailyTarget,
+  previousDayMeals,
+  twoDaysAgoMeals,
 }: {
   logDate: string;
   byMeal: MealsByType;
   totalKcal: number;
   dailyTarget: number | null;
+  previousDayMeals: MealLogItem[];
+  twoDaysAgoMeals: MealLogItem[];
 }) {
   const router = useRouter();
   const today = todayIsoDate();
@@ -67,6 +72,8 @@ export function MealsView({
           logDate={logDate}
           mealType={mealType}
           items={byMeal[mealType]}
+          previousDayItems={previousDayMeals}
+          twoDaysAgoItems={twoDaysAgoMeals}
           onChanged={() => router.refresh()}
         />
       ))}
