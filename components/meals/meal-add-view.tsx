@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Camera, ScanBarcode, Search, Zap } from "lucide-react";
+import { ArrowLeft, BookOpen, ScanBarcode, Search, Zap } from "lucide-react";
 import type { MealType } from "@/db/schema";
 import { addMealItemAction, quickAddMealItemAction } from "@/lib/actions/meals";
 import { addSavedMealToLogAction, getSavedMealsAction } from "@/lib/actions/saved-meals";
@@ -189,7 +189,7 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
     { id: "search", label: "Søk", icon: Search },
     { id: "scan", label: "Strekkode", icon: ScanBarcode },
     { id: "quick", label: "Hurtig", icon: Zap },
-    { id: "saved", label: "Måltider", icon: Camera }, // reuse icon slot
+    { id: "saved", label: "Måltider", icon: BookOpen },
   ];
 
   // ---------- Selected product confirm ----------
@@ -237,7 +237,7 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
   }
 
   return (
-    <div className="flex flex-col" style={{ minHeight: "calc(100dvh - 6rem)" }}>
+    <div className="flex flex-col">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-[var(--bg)] px-4 pb-0 pt-3">
         <div className="mb-3 flex items-center gap-2">
@@ -249,16 +249,16 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 border-b border-[var(--color-border)] pb-0">
-          {tabs.map(({ id, label }) => (
-            <button key={id} type="button" onClick={() => switchTab(id)}
+        <div className="flex border-b border-[var(--color-border)]">
+          {tabs.map(({ id, label, icon: Icon }) => (
+            <button key={id} type="button" aria-label={label} onClick={() => switchTab(id)}
               className={cn(
-                "px-3 py-2 text-sm font-medium transition-colors",
+                "flex flex-1 items-center justify-center py-2.5 transition-colors",
                 tab === id
                   ? "border-b-2 border-[var(--color-primary)] text-[var(--color-primary)]"
                   : "text-[var(--color-muted-foreground)]",
               )}>
-              {label}
+              <Icon className="h-5 w-5" />
             </button>
           ))}
         </div>
@@ -277,7 +277,6 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
               placeholder="Søk matvare…"
               autoComplete="off"
               enterKeyHint="search"
-              autoFocus
             />
             {searchError && <p className="text-xs text-[#9a5b45]">{searchError}</p>}
             {query.trim().length >= 2 && results.length === 0 && !searchError && (

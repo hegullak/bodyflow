@@ -115,7 +115,6 @@ function SaveMealForm({ onSave, onCancel, saving }: {
         onChange={(e) => setName(e.target.value)}
         placeholder="Navn på måltid…"
         className="flex-1 text-sm"
-        autoFocus
         onKeyDown={(e) => {
           if (e.key === "Enter" && name.trim()) onSave(name);
           if (e.key === "Escape") onCancel();
