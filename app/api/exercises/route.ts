@@ -23,7 +23,9 @@ export async function GET(req: Request) {
 
   try {
     const result = await listExercises({ search, bodyPart, targetMuscle, equipment, limit, offset });
-    return NextResponse.json(result);
+    return NextResponse.json(result, {
+      headers: { "Cache-Control": "private, max-age=300, stale-while-revalidate=3600" },
+    });
   } catch (err) {
     logger.error("ExerciseCatalog", "listExercises failed", {
       reason: err instanceof Error ? err.message : String(err),

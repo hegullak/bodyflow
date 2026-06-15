@@ -40,7 +40,7 @@ export function ExerciseLibrary() {
 
   useEffect(() => {
     if (debounce.current) clearTimeout(debounce.current);
-    debounce.current = setTimeout(() => search(0), 300);
+    debounce.current = setTimeout(() => search(0), query ? 300 : 0);
     return () => { if (debounce.current) clearTimeout(debounce.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, bodyPart]);

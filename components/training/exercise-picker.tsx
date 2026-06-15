@@ -40,6 +40,7 @@ export function ExercisePicker({ programId, programName }: Props) {
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    if (!query && !bodyPart) { setResults([]); return; }
     if (debounce.current) clearTimeout(debounce.current);
     debounce.current = setTimeout(search, 300);
     return () => { if (debounce.current) clearTimeout(debounce.current); };
