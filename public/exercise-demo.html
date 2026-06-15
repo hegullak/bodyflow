@@ -7,58 +7,58 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: system-ui, sans-serif; background: #f5f5f3; color: #1a1a18; padding: 2rem; }
-  h1 { font-size: 1.2rem; font-weight: 500; color: #555; margin-bottom: 1.5rem; }
+  h1 { font-size: 1.1rem; font-weight: 500; color: #888; margin-bottom: 1.5rem; }
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; max-width: 720px; }
   .card { background: #fff; border: 0.5px solid #ddd; border-radius: 12px; overflow: hidden; }
-  .img-box { background: #f0eeea; height: 200px; display: flex; align-items: center; justify-content: center; position: relative; }
-  .img-box img { max-height: 180px; max-width: 100%; object-fit: contain; }
+  .img-box { background: #f0eeea; height: 220px; display: flex; align-items: center; justify-content: center; position: relative; }
+  .img-box img { max-height: 200px; max-width: 100%; object-fit: contain; }
   .badge { position: absolute; top: 10px; right: 10px; background: #fff; border: 0.5px solid #ddd; border-radius: 6px; font-size: 11px; color: #666; padding: 3px 8px; }
   .body { padding: 1rem 1.25rem; }
   .label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
-  h2 { font-size: 17px; font-weight: 500; margin-bottom: 8px; }
+  h2 { font-size: 17px; font-weight: 500; margin-bottom: 8px; text-transform: capitalize; }
   .tags { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
-  .tag { font-size: 12px; padding: 3px 10px; border-radius: 6px; background: #f0eeea; color: #555; border: 0.5px solid #ddd; }
+  .tag { font-size: 12px; padding: 3px 10px; border-radius: 6px; background: #f0eeea; color: #555; border: 0.5px solid #ddd; text-transform: capitalize; }
   p { font-size: 13px; color: #666; line-height: 1.6; }
-  .footer { margin-top: 1.5rem; font-size: 12px; color: #999; }
+  .footer { margin-top: 1.5rem; max-width: 720px; font-size: 12px; color: #999; }
 </style>
 </head>
 <body>
-<h1>852 øvelser importert fra wger.de · 174 med PNG-illustrasjon · CC BY-SA 3.0</h1>
+<h1>1500 øvelser · ExerciseDB OSS · MIT · 3D-animasjoner</h1>
 <div class="grid">
 
   <div class="card">
     <div class="img-box">
-      <img src="https://wger.de/media/exercise-images/184/1709c405-620a-4d07-9658-fade2b66a2df.jpeg" alt="Deadlifts" />
-      <span class="badge">Rygg</span>
+      <img src="https://static.exercisedb.dev/media/ila4NZS.gif" alt="Barbell Deadlift" />
+      <span class="badge">upper legs</span>
     </div>
     <div class="body">
       <div class="label">Markløft</div>
-      <h2>Deadlifts</h2>
+      <h2>barbell deadlift</h2>
       <div class="tags">
-        <span class="tag">Barbell</span>
-        <span class="tag">Lats</span>
+        <span class="tag">barbell</span>
+        <span class="tag">glutes</span>
       </div>
-      <p>Stand firmly, with your feet slightly more than shoulder wide apart. Stand directly behind the bar where it should barely touch your shin. Bend down with a straight back, grab the bar with a shoulder wide grip, one underhand, one reverse grip. Pull the weight up.</p>
+      <p>Stand with your feet hip-width apart, toes pointing forward. Bend at your hips and knees and grasp the barbell with an overhand grip. Keep your back straight and chest up as you lift the barbell.</p>
     </div>
   </div>
 
   <div class="card">
     <div class="img-box">
-      <img src="https://wger.de/media/exercise-images/192/Bench-press-1.png" alt="Bench Press" />
-      <span class="badge">Bryst</span>
+      <img src="https://static.exercisedb.dev/media/EIeI8Vf.gif" alt="Barbell Bench Press" />
+      <span class="badge">chest</span>
     </div>
     <div class="body">
       <div class="label">Benkpress</div>
-      <h2>Bench Press</h2>
+      <h2>barbell bench press</h2>
       <div class="tags">
-        <span class="tag">Barbell</span>
-        <span class="tag">Chest</span>
+        <span class="tag">barbell</span>
+        <span class="tag">pectorals</span>
       </div>
-      <p>Lay down on a bench, the bar should be directly above your eyes. Grab the bar more than shoulder wide. Bring it slowly down till it briefly touches your chest at the height of your nipples. Push the bar up.</p>
+      <p>Lie flat on a bench with your feet flat on the ground. Grasp the barbell slightly wider than shoulder-width apart. Lower the barbell slowly towards your chest, then push back up.</p>
     </div>
   </div>
 
 </div>
-<p class="footer">Kilde: <a href="https://wger.de" target="_blank">wger.de</a> · Lisens: CC BY-SA 3.0</p>
+<p class="footer">Kilde: <a href="https://github.com/bootstrapping-lab/exercisedb-api" target="_blank">bootstrapping-lab/exercisedb-api</a> · MIT License</p>
 </body>
 </html>

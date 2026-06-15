@@ -1,34 +1,62 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ChevronDown,
+  ChevronLeft,
   ChevronUp,
   Copy,
   Dumbbell,
+  GripVertical,
   Link2,
   Link2Off,
   Minus,
+  Play,
   Plus,
   Trash2,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import type { ProgramDetail, ProgramExerciseRow } from "@/lib/training/programs";
+import {
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import type { ProgramDetail, ProgramBlock, ProgramExerciseRow } from "@/lib/training/programs";
 
 interface Props {
   program: ProgramDetail;
+  activeSessionId: string | null;
 }
 
-export function ProgramBuilder({ program: initial }: Props) {
+function blockDragId(block: ProgramBlock) {
+  return block.exercises[0].id;
+}
+
+export function ProgramBuilder({ program: initial, activeSessionId }: Props) {
   const router = useRouter();
   const [program, setProgram] = useState(initial);
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(initial.name);
-  const [isPending, startTransition] = useTransition();
   const [deleting, setDeleting] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
+  const [starting, setStarting] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+  );
 
   async function saveName() {
     const name = nameValue.trim();
@@ -68,31 +96,44 @@ export function ProgramBuilder({ program: initial }: Props) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
     });
-    startTransition(() => router.refresh());
+    setProgram((p) => ({
+      ...p,
+      blocks: p.blocks.map((b) => ({
+        ...b,
+        exercises: b.exercises.map((e) => (e.id === exerciseId ? { ...e, ...patch } : e)),
+      })),
+    }));
   }
 
   async function handleRemoveExercise(exerciseId: string) {
     await fetch(`/api/training/programs/${program.id}/exercises/${exerciseId}`, {
       method: "DELETE",
     });
-    startTransition(() => router.refresh());
+    setProgram((p) => {
+      const blocks = p.blocks
+        .map((b) => ({ ...b, exercises: b.exercises.filter((e) => e.id !== exerciseId) }))
+        .filter((b) => b.exercises.length > 0);
+      return { ...p, blocks };
+    });
   }
 
-  async function handleMoveExercise(exerciseId: string, direction: "up" | "down") {
-    // Collect all exercise IDs in current order (standalone and within supersets)
-    const allIds = program.blocks.flatMap((b) => b.exercises.map((e) => e.id));
-    const idx = allIds.indexOf(exerciseId);
-    if (idx === -1) return;
-    const newIdx = direction === "up" ? idx - 1 : idx + 1;
-    if (newIdx < 0 || newIdx >= allIds.length) return;
-    const reordered = [...allIds];
-    [reordered[idx], reordered[newIdx]] = [reordered[newIdx], reordered[idx]];
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIdx = program.blocks.findIndex((b) => blockDragId(b) === active.id);
+    const newIdx = program.blocks.findIndex((b) => blockDragId(b) === over.id);
+    if (oldIdx === -1 || newIdx === -1) return;
+
+    const newBlocks = arrayMove(program.blocks, oldIdx, newIdx);
+    setProgram((p) => ({ ...p, blocks: newBlocks }));
+
+    const orderedIds = newBlocks.flatMap((b) => b.exercises.map((e) => e.id));
     await fetch(`/api/training/programs/${program.id}/reorder`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderedIds: reordered }),
+      body: JSON.stringify({ orderedIds }),
     });
-    startTransition(() => router.refresh());
   }
 
   async function handleCreateSuperset(ids: string[]) {
@@ -101,7 +142,20 @@ export function ProgramBuilder({ program: initial }: Props) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ exerciseIds: ids }),
     });
-    startTransition(() => router.refresh());
+    router.refresh();
+  }
+
+  async function handleStart() {
+    setStarting(true);
+    try {
+      await fetch("/api/training/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ programId: program.id }),
+      });
+    } finally {
+      router.push("/training/workout");
+    }
   }
 
   async function handleRemoveSuperset(supersetId: string) {
@@ -110,34 +164,23 @@ export function ProgramBuilder({ program: initial }: Props) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ supersetId }),
     });
-    startTransition(() => router.refresh());
+    router.refresh();
   }
 
-  const allBlocks = program.blocks;
-  const totalExercises = allBlocks.reduce((n, b) => n + b.exercises.length, 0);
+  const totalExercises = program.blocks.reduce((n, b) => n + b.exercises.length, 0);
+  const blockIds = program.blocks.map(blockDragId);
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-2">
-        {editingName ? (
-          <input
-            autoFocus
-            value={nameValue}
-            onChange={(e) => setNameValue(e.target.value)}
-            onBlur={saveName}
-            onKeyDown={(e) => e.key === "Enter" && saveName()}
-            className="flex-1 rounded-[var(--radius-sm)] border border-[var(--accent)] bg-[var(--card)] px-3 py-1 text-xl font-bold text-[var(--text1)] focus:outline-none"
-          />
-        ) : (
-          <button
-            onClick={() => setEditingName(true)}
-            className="flex-1 text-left text-xl font-bold text-[var(--text1)] underline-offset-2 hover:underline"
-          >
-            {program.name}
-          </button>
-        )}
-        <div className="flex shrink-0 gap-1">
+      {/* Back nav + actions */}
+      <div className="flex items-center justify-between">
+        <Link
+          href="/training/programs"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent)] text-white shadow-md"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </Link>
+        <div className="flex gap-1">
           <button
             onClick={handleDuplicate}
             disabled={duplicating}
@@ -157,6 +200,33 @@ export function ProgramBuilder({ program: initial }: Props) {
         </div>
       </div>
 
+      {/* Program name */}
+      <div className="flex items-center gap-2">
+        {activeSessionId && (
+          <span className="relative flex h-2.5 w-2.5 shrink-0">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--green)] opacity-75" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[var(--green)]" />
+          </span>
+        )}
+        {editingName ? (
+          <input
+            autoFocus
+            value={nameValue}
+            onChange={(e) => setNameValue(e.target.value)}
+            onBlur={saveName}
+            onKeyDown={(e) => e.key === "Enter" && saveName()}
+            className="flex-1 rounded-[var(--radius-sm)] border border-[var(--accent)] bg-[var(--card)] px-3 py-1 text-xl font-bold text-[var(--text1)] focus:outline-none"
+          />
+        ) : (
+          <button
+            onClick={() => setEditingName(true)}
+            className="flex-1 text-left text-xl font-bold text-[var(--text1)] underline-offset-2 hover:underline"
+          >
+            {program.name}
+          </button>
+        )}
+      </div>
+
       {/* Exercise blocks */}
       {totalExercises === 0 ? (
         <div className="py-8 text-center text-[var(--text3)]">
@@ -164,68 +234,86 @@ export function ProgramBuilder({ program: initial }: Props) {
           <p>Ingen øvelser ennå.</p>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          {allBlocks.map((block, blockIdx) => (
-            <div key={`${block.programOrder}-${block.supersetId ?? "solo"}`}>
-              {block.type === "superset" ? (
-                <div className="rounded-[var(--radius-md)] border border-[var(--accent)]/30 bg-[var(--card)]">
-                  <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-2">
-                    <span className="text-xs font-medium uppercase tracking-wide text-[var(--accent)]">
-                      Supersett
-                    </span>
-                    <button
-                      onClick={() => block.supersetId && handleRemoveSuperset(block.supersetId)}
-                      className="flex items-center gap-1 text-xs text-[var(--text3)] hover:text-[var(--text1)]"
-                    >
-                      <Link2Off className="h-3 w-3" /> Løs opp
-                    </button>
-                  </div>
-                  {block.exercises.map((ex, exIdx) => (
-                    <ExerciseRow
-                      key={ex.id}
-                      ex={ex}
-                      isFirst={blockIdx === 0 && exIdx === 0}
-                      isLast={
-                        blockIdx === allBlocks.length - 1 &&
-                        exIdx === block.exercises.length - 1
-                      }
-                      onUpdate={(patch) => handleUpdateExercise(ex.id, patch)}
-                      onRemove={() => handleRemoveExercise(ex.id)}
-                      onMove={(dir) => handleMoveExercise(ex.id, dir)}
-                      showDivider={exIdx < block.exercises.length - 1}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)]">
-                  {block.exercises.map((ex) => (
-                    <ExerciseRow
-                      key={ex.id}
-                      ex={ex}
-                      isFirst={blockIdx === 0}
-                      isLast={blockIdx === allBlocks.length - 1}
-                      onUpdate={(patch) => handleUpdateExercise(ex.id, patch)}
-                      onRemove={() => handleRemoveExercise(ex.id)}
-                      onMove={(dir) => handleMoveExercise(ex.id, dir)}
-                      showDivider={false}
-                      canSuperset={
-                        allBlocks.length > 1 &&
-                        block.exercises.length === 1
-                      }
-                      adjacentId={
-                        blockIdx + 1 < allBlocks.length &&
-                        allBlocks[blockIdx + 1].type === "exercise"
-                          ? allBlocks[blockIdx + 1].exercises[0].id
-                          : null
-                      }
-                      onCreateSuperset={handleCreateSuperset}
-                    />
-                  ))}
-                </div>
-              )}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={blockIds} strategy={verticalListSortingStrategy}>
+            <div className="flex flex-col gap-3">
+              {program.blocks.map((block, blockIdx) => (
+                <SortableBlock key={blockDragId(block)} id={blockDragId(block)}>
+                  {block.type === "superset" ? (
+                    <div className="rounded-[var(--radius-md)] border border-[var(--accent)]/30 bg-[var(--card)]">
+                      <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-2">
+                        <span className="text-xs font-medium uppercase tracking-wide text-[var(--accent)]">
+                          Supersett
+                        </span>
+                        <button
+                          onClick={() => block.supersetId && handleRemoveSuperset(block.supersetId)}
+                          className="flex items-center gap-1 text-xs text-[var(--text3)] hover:text-[var(--text1)]"
+                        >
+                          <Link2Off className="h-3 w-3" /> Løs opp
+                        </button>
+                      </div>
+                      {block.exercises.map((ex, exIdx) => (
+                        <ExerciseRow
+                          key={ex.id}
+                          ex={ex}
+                          onUpdate={(patch) => handleUpdateExercise(ex.id, patch)}
+                          onRemove={() => handleRemoveExercise(ex.id)}
+                          showDivider={exIdx < block.exercises.length - 1}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)]">
+                      {block.exercises.map((ex) => (
+                        <ExerciseRow
+                          key={ex.id}
+                          ex={ex}
+                          onUpdate={(patch) => handleUpdateExercise(ex.id, patch)}
+                          onRemove={() => handleRemoveExercise(ex.id)}
+                          showDivider={false}
+                          canSuperset={program.blocks.length > 1}
+                          adjacentId={
+                            blockIdx + 1 < program.blocks.length &&
+                            program.blocks[blockIdx + 1].type === "exercise"
+                              ? program.blocks[blockIdx + 1].exercises[0].id
+                              : null
+                          }
+                          onCreateSuperset={handleCreateSuperset}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </SortableBlock>
+              ))}
             </div>
-          ))}
-        </div>
+          </SortableContext>
+        </DndContext>
+      )}
+
+      {/* Start / Continue workout */}
+      {totalExercises > 0 && (
+        <button
+          onClick={handleStart}
+          disabled={starting}
+          className={`flex w-full items-center justify-center gap-2 rounded-[var(--radius-md)] py-3.5 font-semibold text-white disabled:opacity-60 ${
+            activeSessionId ? "bg-[var(--green)]" : "bg-[var(--accent)]"
+          }`}
+        >
+          {activeSessionId ? (
+            <>
+              <span className="relative flex h-2 w-2 shrink-0">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
+              </span>
+              {starting ? "Åpner…" : "Fortsett treningsøkt"}
+            </>
+          ) : (
+            <>
+              <Play className="h-4 w-4 fill-white" />
+              {starting ? "Starter…" : "Start treningsøkt"}
+            </>
+          )}
+        </button>
       )}
 
       {/* Add exercise */}
@@ -237,11 +325,39 @@ export function ProgramBuilder({ program: initial }: Props) {
         Legg til øvelse
       </Link>
 
-      <div className="pb-2">
-        <Link href="/training/programs" className="text-sm text-[var(--text3)] hover:text-[var(--text2)]">
-          ← Tilbake til programmer
-        </Link>
-      </div>
+      <div className="pb-4" />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Sortable block wrapper
+// ---------------------------------------------------------------------------
+
+function SortableBlock({ id, children }: { id: string; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+        position: "relative",
+      }}
+    >
+      {/* Drag handle — positioned absolutely on the left edge */}
+      <button
+        {...attributes}
+        {...listeners}
+        className="absolute -left-1 top-1/2 z-10 -translate-y-1/2 cursor-grab touch-none rounded p-1 text-[var(--text3)] active:cursor-grabbing"
+        tabIndex={-1}
+        aria-label="Drag to reorder"
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+      {children}
     </div>
   );
 }
@@ -252,31 +368,17 @@ export function ProgramBuilder({ program: initial }: Props) {
 
 interface ExerciseRowProps {
   ex: ProgramExerciseRow;
-  isFirst: boolean;
-  isLast: boolean;
   onUpdate: (patch: { sets?: number; reps?: number; restSeconds?: number; isBodyweight?: boolean }) => void;
   onRemove: () => void;
-  onMove: (dir: "up" | "down") => void;
   showDivider: boolean;
   canSuperset?: boolean;
   adjacentId?: string | null;
   onCreateSuperset?: (ids: string[]) => void;
 }
 
-function ExerciseRow({
-  ex,
-  isFirst,
-  isLast,
-  onUpdate,
-  onRemove,
-  onMove,
-  showDivider,
-  canSuperset,
-  adjacentId,
-  onCreateSuperset,
-}: ExerciseRowProps) {
+function ExerciseRow({ ex, onUpdate, onRemove, showDivider, canSuperset, adjacentId, onCreateSuperset }: ExerciseRowProps) {
   const [expanded, setExpanded] = useState(false);
-  const name = ex.exerciseName;
+  const [imgError, setImgError] = useState(false);
 
   return (
     <div className={showDivider ? "border-b border-[var(--border)]" : ""}>
@@ -284,8 +386,23 @@ function ExerciseRow({
         onClick={() => setExpanded((v) => !v)}
         className="flex w-full items-center gap-3 px-4 py-3 text-left"
       >
+        {/* Thumbnail */}
+        {ex.imageUrl && !imgError ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={ex.imageUrl}
+            alt={ex.exerciseName}
+            loading="lazy"
+            onError={() => setImgError(true)}
+            className="h-10 w-10 shrink-0 rounded-[var(--radius-sm)] bg-[var(--card2)] object-cover"
+          />
+        ) : (
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--card2)]">
+            <Dumbbell className="h-4 w-4 text-[var(--text3)]" />
+          </div>
+        )}
         <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate font-medium text-[var(--text1)]">{name}</span>
+          <span className="truncate font-medium text-[var(--text1)]">{ex.exerciseName}</span>
           <span className="text-xs text-[var(--text3)]">
             {ex.sets} sett × {ex.reps} reps · {ex.restSeconds}s hvile
             {ex.isBodyweight ? " · Kroppsvekt" : ""}
@@ -300,14 +417,12 @@ function ExerciseRow({
 
       {expanded && (
         <div className="flex flex-col gap-3 border-t border-[var(--border)] px-4 py-3">
-          {/* Sets / Reps / Rest */}
           <div className="grid grid-cols-3 gap-2">
             <Stepper label="Sett" value={ex.sets} min={1} max={20} onChange={(v) => onUpdate({ sets: v })} />
             <Stepper label="Reps" value={ex.reps} min={1} max={100} onChange={(v) => onUpdate({ reps: v })} />
             <Stepper label="Hvile (s)" value={ex.restSeconds} min={0} max={600} step={15} onChange={(v) => onUpdate({ restSeconds: v })} />
           </div>
 
-          {/* Bodyweight toggle */}
           <label className="flex items-center gap-3">
             <input
               type="checkbox"
@@ -318,22 +433,7 @@ function ExerciseRow({
             <span className="text-sm text-[var(--text2)]">Kroppsvekt</span>
           </label>
 
-          {/* Controls */}
           <div className="flex flex-wrap gap-2 pt-1">
-            <button
-              onClick={() => onMove("up")}
-              disabled={isFirst}
-              className="flex items-center gap-1 rounded-full px-3 py-1.5 text-xs text-[var(--text3)] hover:bg-[var(--card2)] disabled:opacity-30"
-            >
-              <ChevronUp className="h-3 w-3" /> Opp
-            </button>
-            <button
-              onClick={() => onMove("down")}
-              disabled={isLast}
-              className="flex items-center gap-1 rounded-full px-3 py-1.5 text-xs text-[var(--text3)] hover:bg-[var(--card2)] disabled:opacity-30"
-            >
-              <ChevronDown className="h-3 w-3" /> Ned
-            </button>
             {canSuperset && adjacentId && onCreateSuperset && (
               <button
                 onClick={() => onCreateSuperset([ex.id, adjacentId])}

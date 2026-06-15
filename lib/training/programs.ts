@@ -49,6 +49,16 @@ export interface ProgramDetail {
 // Queries
 // ---------------------------------------------------------------------------
 
+export async function getProgramMeta(id: string, userId: string) {
+  const db = getDb();
+  const [program] = await db
+    .select({ id: workoutPrograms.id, name: workoutPrograms.name })
+    .from(workoutPrograms)
+    .where(and(eq(workoutPrograms.id, id), eq(workoutPrograms.userId, userId)))
+    .limit(1);
+  return program ?? null;
+}
+
 export async function listPrograms(userId: string) {
   const db = getDb();
   return db
@@ -66,42 +76,41 @@ export async function listPrograms(userId: string) {
 export async function getProgram(id: string, userId: string): Promise<ProgramDetail | null> {
   const db = getDb();
 
-  const program = await db
-    .select({ id: workoutPrograms.id, name: workoutPrograms.name, sortOrder: workoutPrograms.sortOrder })
-    .from(workoutPrograms)
-    .where(and(eq(workoutPrograms.id, id), eq(workoutPrograms.userId, userId)))
-    .limit(1);
+  const [programRows, exerciseRows] = await Promise.all([
+    db
+      .select({ id: workoutPrograms.id, name: workoutPrograms.name, sortOrder: workoutPrograms.sortOrder })
+      .from(workoutPrograms)
+      .where(and(eq(workoutPrograms.id, id), eq(workoutPrograms.userId, userId)))
+      .limit(1),
+    db
+      .select({
+        id: workoutProgramExercises.id,
+        exerciseId: workoutProgramExercises.exerciseId,
+        exerciseName: exercises.name,
+        exerciseNameNo: exercises.nameNo,
+        supersetId: workoutProgramExercises.supersetId,
+        programOrder: workoutProgramExercises.programOrder,
+        supersetOrder: workoutProgramExercises.supersetOrder,
+        sets: workoutProgramExercises.sets,
+        reps: workoutProgramExercises.reps,
+        restSeconds: workoutProgramExercises.restSeconds,
+        isBodyweight: workoutProgramExercises.isBodyweight,
+        categoryName: exerciseCategories.name,
+        targetMuscleName: exerciseMuscles.name,
+        equipment: exercises.equipment,
+        imageUrl: exercises.imageUrl,
+      })
+      .from(workoutProgramExercises)
+      .innerJoin(exercises, eq(workoutProgramExercises.exerciseId, exercises.id))
+      .leftJoin(exerciseCategories, eq(exercises.categoryId, exerciseCategories.id))
+      .leftJoin(exerciseMuscles, eq(exercises.targetMuscleId, exerciseMuscles.id))
+      .where(eq(workoutProgramExercises.programId, id))
+      .orderBy(asc(workoutProgramExercises.programOrder), asc(workoutProgramExercises.supersetOrder)),
+  ]);
 
-  if (program.length === 0) return null;
+  if (programRows.length === 0) return null;
 
-  const rows = await db
-    .select({
-      id: workoutProgramExercises.id,
-      exerciseId: workoutProgramExercises.exerciseId,
-      exerciseName: exercises.name,
-      exerciseNameNo: exercises.nameNo,
-      supersetId: workoutProgramExercises.supersetId,
-      programOrder: workoutProgramExercises.programOrder,
-      supersetOrder: workoutProgramExercises.supersetOrder,
-      sets: workoutProgramExercises.sets,
-      reps: workoutProgramExercises.reps,
-      restSeconds: workoutProgramExercises.restSeconds,
-      isBodyweight: workoutProgramExercises.isBodyweight,
-      categoryName: exerciseCategories.name,
-      targetMuscleName: exerciseMuscles.name,
-      equipment: exercises.equipment,
-      imageUrl: exercises.imageUrl,
-    })
-    .from(workoutProgramExercises)
-    .innerJoin(exercises, eq(workoutProgramExercises.exerciseId, exercises.id))
-    .leftJoin(exerciseCategories, eq(exercises.categoryId, exerciseCategories.id))
-    .leftJoin(exerciseMuscles, eq(exercises.targetMuscleId, exerciseMuscles.id))
-    .where(eq(workoutProgramExercises.programId, id))
-    .orderBy(asc(workoutProgramExercises.programOrder), asc(workoutProgramExercises.supersetOrder));
-
-  const blocks = buildBlocks(rows);
-
-  return { ...program[0], blocks };
+  return { ...programRows[0], blocks: buildBlocks(exerciseRows) };
 }
 
 function buildBlocks(rows: ProgramExerciseRow[]): ProgramBlock[] {

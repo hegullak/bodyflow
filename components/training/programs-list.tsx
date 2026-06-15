@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronRight, Plus, Dumbbell } from "lucide-react";
+import { ChevronRight, Play, Plus, Dumbbell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Program {
@@ -85,12 +85,21 @@ export function ProgramsList({ programs, startMode, activeSessionProgramId }: Pr
                     disabled={starting === p.id}
                     className="flex w-full items-center overflow-hidden rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] text-left active:bg-[var(--card2)] disabled:opacity-60"
                   >
-                    <span className="w-1 self-stretch shrink-0 bg-[var(--accent)]" />
+                    <div className={`flex w-12 shrink-0 items-center justify-center self-stretch ${isActive ? "bg-[var(--green)]" : "bg-[var(--accent)]"}`}>
+                      {isActive ? (
+                        <span className="relative flex h-4 w-4 items-center justify-center">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-60" />
+                          <Play className="relative h-4 w-4 fill-white text-white" />
+                        </span>
+                      ) : (
+                        <Play className="h-5 w-5 fill-white text-white" />
+                      )}
+                    </div>
                     <div className="flex flex-1 items-center justify-between px-4 py-4">
                       <div>
                         <p className="font-medium text-[var(--text1)]">{p.name}</p>
                         {isActive && (
-                          <p className="text-xs text-[var(--green)]">Active session running</p>
+                          <p className="text-xs font-medium text-[var(--green)]">Pågående økt ·  trykk for å fortsette</p>
                         )}
                       </div>
                       <ChevronRight className="h-4 w-4 text-[var(--text3)]" />
@@ -99,9 +108,11 @@ export function ProgramsList({ programs, startMode, activeSessionProgramId }: Pr
                 ) : (
                   <Link
                     href={`/training/programs/${p.id}`}
-                    className="flex items-center justify-between overflow-hidden rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] active:bg-[var(--card2)]"
+                    className="flex items-center overflow-hidden rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] active:bg-[var(--card2)]"
                   >
-                    <span className="w-1 self-stretch shrink-0 bg-[var(--accent)]" />
+                    <div className="flex w-12 shrink-0 items-center justify-center self-stretch bg-[var(--accent)]">
+                      <ChevronRight className="h-5 w-5 text-white" />
+                    </div>
                     <div className="flex flex-1 items-center justify-between px-4 py-4">
                       <div>
                         <p className="font-medium text-[var(--text1)]">{p.name}</p>

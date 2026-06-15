@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Loader2, Search, X } from "lucide-react";
+import { Check, Dumbbell, Loader2, Search, SlidersHorizontal, X } from "lucide-react";
 
 interface Exercise {
   id: string;
@@ -10,6 +10,7 @@ interface Exercise {
   bodyPart: { slug: string; name: string } | null;
   targetMuscle: { slug: string; name: string } | null;
   equipment: string;
+  imageUrl: string | null;
 }
 
 interface Props {
@@ -37,6 +38,7 @@ export function ExercisePicker({ programId, programName }: Props) {
   const [adding, setAdding] = useState<string | null>(null);
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
   const [addedCount, setAddedCount] = useState(0);
+  const [showFilters, setShowFilters] = useState(false);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -74,7 +76,6 @@ export function ExercisePicker({ programId, programName }: Props) {
       });
       setAddedIds((prev) => new Set([...prev, exercise.id]));
       setAddedCount((n) => n + 1);
-      // reset the check after 2s so it can be re-added if needed
       setTimeout(() => {
         setAddedIds((prev) => {
           const next = new Set(prev);
@@ -90,6 +91,8 @@ export function ExercisePicker({ programId, programName }: Props) {
   function handleDone() {
     router.push(`/training/programs/${programId}`);
   }
+
+  const activeFilter = bodyPart !== "";
 
   return (
     <div className="flex flex-col gap-2">
@@ -122,36 +125,74 @@ export function ExercisePicker({ programId, programName }: Props) {
         </div>
       )}
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text3)]" />
-        <input
-          autoFocus
-          placeholder="Search exercises…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] py-2 pl-9 pr-3 text-sm text-[var(--text1)] placeholder:text-[var(--text3)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
-        />
+      {/* Search + filter button */}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text3)]" />
+          <input
+            autoFocus
+            placeholder="Search exercises…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] py-2 pl-9 pr-3 text-sm text-[var(--text1)] placeholder:text-[var(--text3)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
+          />
+        </div>
+        <button
+          onClick={() => setShowFilters((v) => !v)}
+          className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border transition-colors ${
+            showFilters || activeFilter
+              ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--bg)]"
+              : "border-[var(--border)] bg-[var(--card)] text-[var(--text2)]"
+          }`}
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+          {activeFilter && (
+            <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[var(--red)] text-[8px] font-bold text-white">
+              1
+            </span>
+          )}
+        </button>
       </div>
 
-      {/* Body part filter */}
-      <div className="-mx-4 overflow-x-auto px-4">
-        <div className="flex gap-1.5 pb-1" style={{ width: "max-content" }}>
-          {BODY_PARTS.map((bp) => (
-            <button
-              key={bp.value}
-              onClick={() => setBodyPart(bp.value)}
-              className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                bodyPart === bp.value
-                  ? "bg-[var(--accent)] text-[var(--bg)]"
-                  : "bg-[var(--card)] text-[var(--text2)] hover:bg-[var(--card2)]"
-              }`}
-            >
-              {bp.label}
-            </button>
-          ))}
+      {/* Filter panel */}
+      {showFilters && (
+        <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] p-3">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--text3)]">Body part</p>
+          <div className="flex flex-wrap gap-1.5">
+            {BODY_PARTS.map((bp) => (
+              <button
+                key={bp.value}
+                onClick={() => {
+                  setBodyPart(bp.value);
+                  setShowFilters(false);
+                }}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  bodyPart === bp.value
+                    ? "bg-[var(--accent)] text-[var(--bg)]"
+                    : "bg-[var(--bg)] text-[var(--text2)] hover:bg-[var(--card2)]"
+                }`}
+              >
+                {bp.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Active filter pill */}
+      {activeFilter && !showFilters && (
+        <div className="flex items-center gap-1.5">
+          <span className="rounded-full bg-[var(--accent)]/10 px-2.5 py-0.5 text-xs font-medium text-[var(--accent)]">
+            {BODY_PARTS.find((b) => b.value === bodyPart)?.label}
+          </span>
+          <button
+            onClick={() => setBodyPart("")}
+            className="text-[var(--text3)] hover:text-[var(--text1)]"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      )}
 
       {/* Results */}
       {loading ? (
@@ -172,13 +213,14 @@ export function ExercisePicker({ programId, programName }: Props) {
                 <button
                   onClick={() => handleAdd(ex)}
                   disabled={isAdding}
-                  className={`flex w-full items-center justify-between rounded-[var(--radius-sm)] border px-4 py-2.5 text-left transition-colors disabled:opacity-60 ${
+                  className={`flex w-full items-center gap-3 rounded-[var(--radius-sm)] border px-3 py-2 text-left transition-colors disabled:opacity-60 ${
                     isAdded
                       ? "border-[var(--green)]/40 bg-[var(--green-light)]"
                       : "border-[var(--border)] bg-[var(--card)] active:bg-[var(--card2)]"
                   }`}
                 >
-                  <span className={`text-sm font-medium ${isAdded ? "text-[var(--green)]" : "text-[var(--text1)]"}`}>
+                  <ExerciseThumb imageUrl={ex.imageUrl} name={ex.name} />
+                  <span className={`flex-1 truncate text-sm font-medium ${isAdded ? "text-[var(--green)]" : "text-[var(--text1)]"}`}>
                     {ex.name}
                   </span>
                   {isAdding ? (
@@ -195,5 +237,28 @@ export function ExercisePicker({ programId, programName }: Props) {
         </ul>
       )}
     </div>
+  );
+}
+
+function ExerciseThumb({ imageUrl, name }: { imageUrl: string | null; name: string }) {
+  const [error, setError] = useState(false);
+
+  if (!imageUrl || error) {
+    return (
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--card2)]">
+        <Dumbbell className="h-4 w-4 text-[var(--text3)]" />
+      </div>
+    );
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={imageUrl}
+      alt={name}
+      loading="lazy"
+      onError={() => setError(true)}
+      className="h-10 w-10 shrink-0 rounded-[var(--radius-sm)] bg-[var(--card2)] object-cover"
+    />
   );
 }
