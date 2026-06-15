@@ -239,7 +239,7 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
   return (
     <div>
       {/* Header */}
-      <div className="-mx-[0.875rem] mb-3 border-b border-[var(--color-border)] bg-[var(--bg)] px-[0.875rem]">
+      <div className="sticky top-0 z-10 -mx-[0.875rem] mb-3 border-b border-[var(--color-border)] bg-[var(--bg)] px-[0.875rem]">
         <div className="mb-2 flex items-center gap-2">
           <button type="button" onClick={() => router.back()}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]">

@@ -179,7 +179,7 @@ a {
 /* ─── Layout utilities ───────────────────────────────────────────────────── */
 
 .app-shell {
-  min-height: 100dvh;
+  min-height: 100lvh;
   display: flex;
   flex-direction: column;
   max-width: 640px;

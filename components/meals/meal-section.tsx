@@ -74,7 +74,7 @@ function SwipeableMealItem({
         </button>
       </div>
       <div
-        className="relative flex items-center gap-2 py-1.5 touch-pan-y"
+        className="relative flex items-center gap-2 py-1.5"
         style={{
           transform: `translateX(${offset}px)`,
           transition: settled ? "transform 0.22s ease" : "none",
