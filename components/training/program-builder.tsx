@@ -276,7 +276,7 @@ function ExerciseRow({
   onCreateSuperset,
 }: ExerciseRowProps) {
   const [expanded, setExpanded] = useState(false);
-  const name = ex.exerciseNameNo ?? ex.exerciseName;
+  const name = ex.exerciseName;
 
   return (
     <div className={showDivider ? "border-b border-[var(--border)]" : ""}>

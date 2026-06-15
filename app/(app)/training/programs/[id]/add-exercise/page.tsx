@@ -11,9 +11,8 @@ export default async function AddExercisePage({ params }: { params: Promise<{ id
 
   return (
     <div>
-      <h1 className="page-title">Legg til øvelse</h1>
-      <p className="mb-4 text-sm text-[var(--text3)]">Program: {program.name}</p>
-      <ExercisePicker programId={id} />
+      <h1 className="page-title">Add exercises</h1>
+      <ExercisePicker programId={id} programName={program.name} />
     </div>
   );
 }

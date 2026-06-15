@@ -173,7 +173,7 @@ function formatRow(row: ExerciseRow, secondaryMuscles: Muscle[]) {
     id: row.id,
     externalId: row.externalId,
     slug: row.slug,
-    name: row.nameNo ?? row.name,
+    name: row.name,
     nameEn: row.name,
     bodyPart: row.categorySlug
       ? { slug: row.categorySlug, name: row.categoryName! }

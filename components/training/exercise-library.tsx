@@ -7,24 +7,22 @@ import { ChevronRight, Loader2, Search } from "lucide-react";
 interface Exercise {
   id: string;
   name: string;
-  nameEn: string;
   bodyPart: { slug: string; name: string } | null;
   targetMuscle: { slug: string; name: string } | null;
   equipment: string;
 }
 
 const BODY_PARTS = [
-  { value: "", label: "Alle" },
-  { value: "chest", label: "Bryst" },
-  { value: "back", label: "Rygg" },
-  { value: "shoulders", label: "Skuldre" },
-  { value: "upper-arms", label: "Overarmer" },
-  { value: "lower-arms", label: "Underarmer" },
-  { value: "upper-legs", label: "Lår" },
-  { value: "lower-legs", label: "Legg" },
-  { value: "waist", label: "Mage/kjernen" },
+  { value: "", label: "All" },
+  { value: "chest", label: "Chest" },
+  { value: "back", label: "Back" },
+  { value: "shoulders", label: "Shoulders" },
+  { value: "upper-arms", label: "Arms" },
+  { value: "upper-legs", label: "Legs" },
+  { value: "lower-legs", label: "Calves" },
+  { value: "waist", label: "Core" },
   { value: "cardio", label: "Cardio" },
-  { value: "neck", label: "Nakke" },
+  { value: "neck", label: "Neck" },
 ];
 
 export function ExerciseLibrary() {
@@ -44,13 +42,13 @@ export function ExerciseLibrary() {
     if (debounce.current) clearTimeout(debounce.current);
     debounce.current = setTimeout(() => search(0), 300);
     return () => { if (debounce.current) clearTimeout(debounce.current); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, bodyPart]);
 
   async function search(off: number) {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ limit: "30", offset: String(off) });
+      const params = new URLSearchParams({ limit: "40", offset: String(off) });
       if (query) params.set("search", query);
       if (bodyPart) params.set("bodyPart", bodyPart);
       const res = await fetch(`/api/exercises?${params}`);
@@ -69,61 +67,54 @@ export function ExerciseLibrary() {
     }
   }
 
-  function loadMore() {
-    search(offset);
-  }
-
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2">
+      {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text3)]" />
         <input
           autoFocus
-          placeholder="Søk etter øvelse…"
+          placeholder="Search exercises…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] py-3 pl-10 pr-4 text-[var(--text1)] placeholder:text-[var(--text3)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
+          className="w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] py-2 pl-9 pr-3 text-sm text-[var(--text1)] placeholder:text-[var(--text3)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
         />
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {BODY_PARTS.map((bp) => (
-          <button
-            key={bp.value}
-            onClick={() => setBodyPart(bp.value)}
-            className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-              bodyPart === bp.value
-                ? "bg-[var(--accent)] text-[var(--bg)]"
-                : "bg-[var(--card)] text-[var(--text2)] hover:bg-[var(--card2)]"
-            }`}
-          >
-            {bp.label}
-          </button>
-        ))}
+      {/* Body part filter — contained scroll, no bleed */}
+      <div className="-mx-4 overflow-x-auto px-4">
+        <div className="flex gap-1.5 pb-1" style={{ width: "max-content" }}>
+          {BODY_PARTS.map((bp) => (
+            <button
+              key={bp.value}
+              onClick={() => setBodyPart(bp.value)}
+              className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                bodyPart === bp.value
+                  ? "bg-[var(--accent)] text-[var(--bg)]"
+                  : "bg-[var(--card)] text-[var(--text2)] hover:bg-[var(--card2)]"
+              }`}
+            >
+              {bp.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {loading && results.length === 0 ? (
-        <div className="flex justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin text-[var(--text3)]" />
+        <div className="flex justify-center py-6">
+          <Loader2 className="h-5 w-5 animate-spin text-[var(--text3)]" />
         </div>
       ) : (
         <>
-          <p className="text-xs text-[var(--text3)]">{total} øvelser</p>
+          <p className="text-xs text-[var(--text3)]">{total} exercises</p>
           <ul className="flex flex-col gap-1">
             {results.map((ex) => (
               <li key={ex.id}>
                 <Link
                   href={`/training/exercises/${ex.id}`}
-                  className="flex items-center justify-between rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] px-4 py-3 active:bg-[var(--card2)]"
+                  className="flex items-center justify-between rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 active:bg-[var(--card2)]"
                 >
-                  <div className="min-w-0">
-                    <p className="truncate font-medium text-[var(--text1)]">{ex.name}</p>
-                    <p className="truncate text-xs text-[var(--text3)]">
-                      {[ex.bodyPart?.name, ex.targetMuscle?.name, ex.equipment]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  </div>
+                  <span className="truncate text-sm font-medium text-[var(--text1)]">{ex.name}</span>
                   <ChevronRight className="ml-2 h-4 w-4 shrink-0 text-[var(--text3)]" />
                 </Link>
               </li>
@@ -131,11 +122,11 @@ export function ExerciseLibrary() {
           </ul>
           {results.length < total && (
             <button
-              onClick={loadMore}
+              onClick={() => search(offset)}
               disabled={loading}
-              className="mt-2 rounded-[var(--radius-md)] border border-[var(--border)] py-3 text-sm text-[var(--text2)] hover:bg-[var(--card)] disabled:opacity-50"
+              className="mt-1 rounded-[var(--radius-sm)] border border-[var(--border)] py-2.5 text-sm text-[var(--text2)] hover:bg-[var(--card)] disabled:opacity-50"
             >
-              {loading ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : "Last inn flere"}
+              {loading ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : "Load more"}
             </button>
           )}
         </>

@@ -162,7 +162,7 @@ export function WorkoutRunner({ session }: Props) {
             >
               <div className="px-4 pt-3 pb-1">
                 <p className="font-medium text-[var(--text1)]">
-                  {ex.exerciseNameNo ?? ex.exerciseName}
+                  {ex.exerciseName}
                 </p>
                 <p className="text-xs text-[var(--text3)]">
                   {ex.sets} sett × {ex.reps} reps

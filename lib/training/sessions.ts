@@ -177,7 +177,7 @@ export async function logSet(
       sessionId,
       programExerciseId,
       exerciseId: pe.exerciseId,
-      exerciseName: pe.exerciseNameNo ?? pe.exerciseName,
+      exerciseName: pe.exerciseName,
       setNumber,
       isBodyweight: pe.isBodyweight,
     })
