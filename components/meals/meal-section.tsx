@@ -1,18 +1,18 @@
 "use client";
 
 import { useRef, useTransition, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import type { MealLogItem, MealType } from "@/db/schema";
 import { removeMealItemAction, copyMealsFromPreviousDateAction } from "@/lib/actions/meals";
 import { saveMealAction } from "@/lib/actions/saved-meals";
 import { MEAL_LABELS } from "@/lib/meals/constants";
-import { ProductPicker } from "@/components/meals/product-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
 import { addDaysToIsoDate } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
-// Swipeable meal item — pointer events + translateX (same pattern as training)
+// Swipeable meal item — pointer events + translateX
 // ---------------------------------------------------------------------------
 
 const DELETE_W = 72;
@@ -58,8 +58,7 @@ function SwipeableMealItem({
   }
 
   return (
-    <li className="relative overflow-hidden rounded-[var(--radius-sm)]">
-      {/* Red delete button behind */}
+    <li className="relative overflow-hidden">
       <div
         className="absolute inset-y-0 right-0 flex items-center justify-center bg-[var(--red)]"
         style={{ width: DELETE_W }}
@@ -74,10 +73,8 @@ function SwipeableMealItem({
           <Trash2 className="h-4 w-4 text-white" />
         </button>
       </div>
-
-      {/* Sliding content */}
       <div
-        className="relative flex items-start justify-between gap-2 bg-[var(--card2)] px-2 py-1.5 touch-pan-y"
+        className="relative flex items-center gap-2 py-1.5 touch-pan-y"
         style={{
           transform: `translateX(${offset}px)`,
           transition: settled ? "transform 0.22s ease" : "none",
@@ -90,7 +87,10 @@ function SwipeableMealItem({
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{item.productName}</p>
           <p className="text-xs text-[var(--color-muted-foreground)]">
-            {Math.round(item.quantityGrams)} g · {Math.round(item.caloriesKcal)} kcal
+            {Math.round(item.caloriesKcal)} kcal
+            {item.foodProductId || item.quantityGrams !== 100
+              ? ` · ${Math.round(item.quantityGrams)} g`
+              : null}
           </p>
         </div>
       </div>
@@ -102,11 +102,7 @@ function SwipeableMealItem({
 // Save-as-meal inline form
 // ---------------------------------------------------------------------------
 
-function SaveMealForm({
-  onSave,
-  onCancel,
-  saving,
-}: {
+function SaveMealForm({ onSave, onCancel, saving }: {
   onSave: (name: string) => void;
   onCancel: () => void;
   saving: boolean;
@@ -125,12 +121,7 @@ function SaveMealForm({
           if (e.key === "Escape") onCancel();
         }}
       />
-      <Button
-        type="button"
-        size="sm"
-        disabled={saving || !name.trim()}
-        onClick={() => onSave(name)}
-      >
+      <Button type="button" size="sm" disabled={saving || !name.trim()} onClick={() => onSave(name)}>
         {saving ? "..." : "Lagre"}
       </Button>
       <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
@@ -159,14 +150,12 @@ export function MealSection({
   twoDaysAgoItems: MealLogItem[];
   onChanged: () => void;
 }) {
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const router = useRouter();
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [showSaveForm, setShowSaveForm] = useState(false);
   const [copyPending, startCopyTransition] = useTransition();
   const [savePending, startSaveTransition] = useTransition();
 
-  // Section-level swipe (left→right on empty) using pointer events
-  const sectionRef = useRef<HTMLElement>(null);
   const sectionSwipe = useRef({ x: 0, active: false });
   const [copyOffset, setCopyOffset] = useState(0);
   const [copySettled, setCopySettled] = useState(true);
@@ -186,12 +175,12 @@ export function MealSection({
   }
 
   function handleCopyFromDay(sourceDate: string) {
-    const formData = new FormData();
-    formData.set("logDate", logDate);
-    formData.set("mealType", mealType);
-    formData.set("sourceDate", sourceDate);
+    const fd = new FormData();
+    fd.set("logDate", logDate);
+    fd.set("mealType", mealType);
+    fd.set("sourceDate", sourceDate);
     startCopyTransition(async () => {
-      const result = await copyMealsFromPreviousDateAction(null, formData);
+      const result = await copyMealsFromPreviousDateAction(null, fd);
       if (result.ok) { setShowCopyButtons(false); setCopyOffset(0); onChanged(); }
     });
   }
@@ -203,7 +192,6 @@ export function MealSection({
     });
   }
 
-  // Pointer swipe on empty section — slide right to reveal copy buttons
   const COPY_SNAP = 140;
 
   function onSectionPointerDown(e: React.PointerEvent) {
@@ -232,52 +220,42 @@ export function MealSection({
   }
 
   return (
-    <section
-      ref={sectionRef}
-      className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] p-3"
-    >
-      <div className="mb-2 flex items-center justify-between gap-2">
+    <section className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] p-3">
+      <div className="mb-1 flex items-center justify-between gap-2">
         <div>
           <h3 className="text-sm font-semibold">{MEAL_LABELS[mealType]}</h3>
           <p className="text-xs text-[var(--color-muted-foreground)]">{subtotal} kcal</p>
         </div>
-        <Button type="button" variant="secondary" size="sm" onClick={() => setPickerOpen(true)}>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={() => router.push(`/meals/add?date=${logDate}&type=${mealType}`)}
+        >
           + Legg til
         </Button>
       </div>
 
       {isEmpty ? (
         <div className="relative overflow-hidden">
-          {/* Copy panel revealed from left */}
           {hasPreviousMeals && (
-            <div
-              className="absolute inset-y-0 left-0 flex flex-col justify-center gap-1 py-1"
-              style={{ width: COPY_SNAP }}
-            >
+            <div className="absolute inset-y-0 left-0 flex flex-col justify-center gap-1" style={{ width: COPY_SNAP }}>
               {previousDayMeals.length > 0 && (
-                <button
-                  type="button"
-                  disabled={copyPending}
+                <button type="button" disabled={copyPending}
                   onClick={() => handleCopyFromDay(addDaysToIsoDate(logDate, -1))}
-                  className="text-left text-xs font-medium text-[var(--color-primary)]"
-                >
+                  className="text-left text-xs font-medium text-[var(--color-primary)]">
                   {copyPending ? "..." : "Kopier fra i går"}
                 </button>
               )}
               {twoDaysAgoMeals.length > 0 && (
-                <button
-                  type="button"
-                  disabled={copyPending}
+                <button type="button" disabled={copyPending}
                   onClick={() => handleCopyFromDay(addDaysToIsoDate(logDate, -2))}
-                  className="text-left text-xs font-medium text-[var(--color-primary)]"
-                >
+                  className="text-left text-xs font-medium text-[var(--color-primary)]">
                   {copyPending ? "..." : "Kopier fra i forgårs"}
                 </button>
               )}
             </div>
           )}
-
-          {/* Sliding empty-state text */}
           <div
             style={{
               transform: `translateX(${copyOffset}px)`,
@@ -289,15 +267,10 @@ export function MealSection({
             onPointerCancel={onSectionPointerUp}
           >
             {showCopyButtons ? (
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  className="text-xs text-[var(--color-muted-foreground)]"
-                  onClick={() => { setShowCopyButtons(false); setCopyOffset(0); }}
-                >
-                  Lukk
-                </button>
-              </div>
+              <button type="button" className="text-xs text-[var(--color-muted-foreground)]"
+                onClick={() => { setShowCopyButtons(false); setCopyOffset(0); }}>
+                Lukk
+              </button>
             ) : (
               <p className="text-xs text-[var(--color-muted-foreground)]">
                 {hasPreviousMeals ? "Sveip høyre for å kopiere fra tidligere." : "Ingen produkter ennå."}
@@ -307,7 +280,7 @@ export function MealSection({
         </div>
       ) : (
         <>
-          <ul className="space-y-2">
+          <ul className="divide-y divide-[var(--color-border)]">
             {items.map((item) => (
               <SwipeableMealItem
                 key={item.id}
@@ -317,33 +290,16 @@ export function MealSection({
               />
             ))}
           </ul>
-
           {showSaveForm ? (
-            <SaveMealForm
-              onSave={handleSaveMeal}
-              onCancel={() => setShowSaveForm(false)}
-              saving={savePending}
-            />
+            <SaveMealForm onSave={handleSaveMeal} onCancel={() => setShowSaveForm(false)} saving={savePending} />
           ) : (
-            <button
-              type="button"
-              onClick={() => setShowSaveForm(true)}
-              className="mt-2 text-xs text-[var(--color-muted-foreground)] hover:text-[var(--color-primary)]"
-            >
+            <button type="button" onClick={() => setShowSaveForm(true)}
+              className="mt-2 text-xs text-[var(--color-muted-foreground)] hover:text-[var(--color-primary)]">
               + Legg til som eget måltid
             </button>
           )}
         </>
       )}
-
-      {pickerOpen ? (
-        <ProductPicker
-          logDate={logDate}
-          mealType={mealType}
-          onClose={() => setPickerOpen(false)}
-          onAdded={onChanged}
-        />
-      ) : null}
     </section>
   );
 }

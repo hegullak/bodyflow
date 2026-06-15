@@ -241,6 +241,44 @@ export async function copyMealsFromPreviousDateAction(
   }
 }
 
+export async function quickAddMealItemAction(
+  logDate: string,
+  mealType: MealType,
+  name: string,
+  caloriesKcal: number,
+): Promise<ActionResult> {
+  const userId = await requireUserId();
+  if (!caloriesKcal || caloriesKcal <= 0) return { ok: false, error: "Ugyldig kaloriverdi." };
+  try {
+    const db = getDb();
+    const [inserted] = await db
+      .insert(mealLogItems)
+      .values({
+        userId,
+        logDate,
+        mealType,
+        productName: name.trim() || "Egendefinert",
+        quantityGrams: 100,
+        kcalPer100g: caloriesKcal,
+        caloriesKcal,
+        updatedAt: new Date(),
+      })
+      .returning({ id: mealLogItems.id });
+
+    await writeAuditLog({ entityType: "meal_log_item", entityId: inserted.id, action: "create", changedBy: userId });
+    await syncDailyCaloriesFromMeals(userId, logDate);
+    revalidatePath("/meals");
+    revalidatePath("/dashboard");
+    revalidatePath("/check-in");
+    return { ok: true, data: undefined };
+  } catch (error) {
+    logger.error("Meals", "quickAddMealItemAction failed", {
+      reason: error instanceof Error ? error.message : "unknown",
+    });
+    return { ok: false, error: "Kunne ikke legge til." };
+  }
+}
+
 export type MealsByType = Record<MealType, Awaited<ReturnType<typeof getMealItemsForDate>>>;
 
 export async function getMealsGroupedByType(
