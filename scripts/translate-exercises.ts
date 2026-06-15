@@ -303,7 +303,6 @@ const DICTIONARY: Record<string, string> = {
   "barbell full squat": "fullt knebøy med stang",
   "barbell front squat": "frontknebøy med stang",
   "barbell hack squat": "hack squat med stang",
-  "barbell sumo deadlift": "sumo markløft med stang",
   "barbell lunge": "utfall med stang",
   "barbell rear lunge": "bakre utfall med stang",
   "barbell lateral lunge": "sideutfall med stang",
