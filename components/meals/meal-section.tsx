@@ -27,6 +27,7 @@ export function MealSection({
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [swipeStart, setSwipeStart] = useState<number | null>(null);
   const [showPrevMealHint, setShowPrevMealHint] = useState(false);
+  const [swipingItemId, setSwipingItemId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const subtotal = Math.round(items.reduce((sum, item) => sum + item.caloriesKcal, 0));
 
@@ -69,6 +70,24 @@ export function MealSection({
     const diff = swipeStart - swipeEnd;
     if (diff > 50 && isEmpty && hasPreviousMeals) {
       setShowPrevMealHint(true);
+    }
+
+    setSwipeStart(null);
+  }
+
+  function handleItemTouchStart(e: React.TouchEvent) {
+    setSwipingItemId(null);
+    setSwipeStart(e.touches[0]?.clientX ?? null);
+  }
+
+  function handleItemTouchEnd(e: React.TouchEvent, itemId: string) {
+    if (swipeStart === null) return;
+    const swipeEnd = e.changedTouches[0]?.clientX ?? null;
+    if (swipeEnd === null) return;
+
+    const diff = swipeEnd - swipeStart;
+    if (diff > 50) {
+      setSwipingItemId(itemId);
     }
 
     setSwipeStart(null);
@@ -130,22 +149,39 @@ export function MealSection({
           {items.map((item) => (
             <li
               key={item.id}
-              className="flex items-start justify-between gap-2 rounded-[var(--radius-sm)] bg-[var(--card2)] px-2 py-1.5"
+              className="rounded-[var(--radius-sm)] bg-[var(--card2)]"
+              onTouchStart={handleItemTouchStart}
+              onTouchEnd={(e) => handleItemTouchEnd(e, item.id)}
             >
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{item.productName}</p>
-                <p className="text-xs text-[var(--color-muted-foreground)]">
-                  {Math.round(item.quantityGrams)} g · {Math.round(item.caloriesKcal)} kcal
-                </p>
-              </div>
-              <button
-                type="button"
-                className="shrink-0 text-xs text-[var(--color-muted-foreground)] hover:text-[#9a5b45]"
-                disabled={removingId === item.id}
-                onClick={() => handleRemove(item.id)}
-              >
-                {removingId === item.id ? "..." : "Fjern"}
-              </button>
+              {swipingItemId === item.id ? (
+                <div className="flex items-center justify-end px-2 py-1.5">
+                  <button
+                    type="button"
+                    className="text-xs font-medium text-[#9a5b45] hover:text-[#8b4a38]"
+                    disabled={removingId === item.id}
+                    onClick={() => handleRemove(item.id)}
+                  >
+                    {removingId === item.id ? "Sletter..." : "Slett"}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-start justify-between gap-2 px-2 py-1.5">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{item.productName}</p>
+                    <p className="text-xs text-[var(--color-muted-foreground)]">
+                      {Math.round(item.quantityGrams)} g · {Math.round(item.caloriesKcal)} kcal
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="shrink-0 text-xs text-[var(--color-muted-foreground)] hover:text-[#9a5b45]"
+                    disabled={removingId === item.id}
+                    onClick={() => handleRemove(item.id)}
+                  >
+                    {removingId === item.id ? "..." : "Fjern"}
+                  </button>
+                </div>
+              )}
             </li>
           ))}
         </ul>
