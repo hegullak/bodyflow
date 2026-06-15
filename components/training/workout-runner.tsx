@@ -475,6 +475,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
                           timerSeconds={timer.seconds}
                           activeInput={activeInput?.exId === ex.id ? activeInput : null}
                           onToggle={(idx) => toggleSet(ex, idx, block)}
+                          onActivateSet={(idx) => { const r = rows(ex.id)[idx]; if (r && !r.completed) { setRestingSet({ exId: ex.id, setIdx: idx }); timer.start(ex.restSeconds); } }}
                           onWeight={(idx, v) => patchRow(ex.id, idx, { weightKg: v })}
                           onReps={(idx, v) => patchRow(ex.id, idx, { reps: v })}
                           onFocusInput={(setIdx, field) => focusInput(ex.id, setIdx, field)}
@@ -572,6 +573,7 @@ interface ExerciseCardProps {
   timerSeconds: number;
   activeInput: ActiveInput | null;
   onToggle: (idx: number) => void;
+  onActivateSet: (idx: number) => void;
   onWeight: (idx: number, v: number) => void;
   onReps: (idx: number, v: number) => void;
   onFocusInput: (setIdx: number, field: "weight" | "reps") => void;
@@ -580,7 +582,7 @@ interface ExerciseCardProps {
   onThumbClick?: () => void;
 }
 
-function ExerciseCard({ ex, setRows, lastSets, nextSetIdx, timerActive, restingSetIdx, timerSeconds, activeInput, onToggle, onWeight, onReps, onFocusInput, onAddSet, onRemoveSet, onThumbClick }: ExerciseCardProps) {
+function ExerciseCard({ ex, setRows, lastSets, nextSetIdx, timerActive, restingSetIdx, timerSeconds, activeInput, onToggle, onActivateSet, onWeight, onReps, onFocusInput, onAddSet, onRemoveSet, onThumbClick }: ExerciseCardProps) {
   const [imgError, setImgError] = useState(false);
   const name = ex.exerciseName;
   const meta = [ex.categoryName, ex.targetMuscleName].filter(Boolean).join(" · ");
@@ -639,6 +641,7 @@ function ExerciseCard({ ex, setRows, lastSets, nextSetIdx, timerActive, restingS
             isActiveReps={activeInput?.setIdx === idx && activeInput?.field === "reps"}
             activeValue={activeInput?.setIdx === idx ? activeInput.value : ""}
             activeSelected={activeInput?.setIdx === idx ? activeInput.selected : false}
+            onActivateSet={() => onActivateSet(idx)}
             onToggle={() => onToggle(idx)}
             onFocusWeight={() => onFocusInput(idx, "weight")}
             onFocusReps={() => onFocusInput(idx, "reps")}
@@ -743,12 +746,13 @@ interface SetRowItemProps {
   isActiveReps: boolean;
   activeValue: string;
   activeSelected: boolean;
+  onActivateSet: () => void;
   onToggle: () => void;
   onFocusWeight: () => void;
   onFocusReps: () => void;
 }
 
-function SetRowItem({ idx, row, last, isBodyweight, isNextSet, isResting, timerSeconds, isActiveWeight, isActiveReps, activeValue, activeSelected, onToggle, onFocusWeight, onFocusReps }: SetRowItemProps) {
+function SetRowItem({ idx, row, last, isBodyweight, isNextSet, isResting, timerSeconds, isActiveWeight, isActiveReps, activeValue, activeSelected, onActivateSet, onToggle, onFocusWeight, onFocusReps }: SetRowItemProps) {
   const weightDisplay = isActiveWeight ? activeValue : (row.weightKg ? String(row.weightKg) : "");
   const repsDisplay = isActiveReps ? activeValue : (row.reps ? String(row.reps) : "");
 
@@ -763,7 +767,7 @@ function SetRowItem({ idx, row, last, isBodyweight, isNextSet, isResting, timerS
           ? "bg-[var(--accent)]/10 border-l-2 border-l-[var(--accent)]"
           : ""
       }`}
-      onClick={() => { if (!row.completed) onToggle(); }}
+      onClick={() => { if (!row.completed) onActivateSet(); }}
     >
       {/* Set number / GO / REST */}
       {isResting ? (
