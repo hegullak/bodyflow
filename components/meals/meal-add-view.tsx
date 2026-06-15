@@ -237,10 +237,10 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
   }
 
   return (
-    <div className="flex flex-col">
+    <div>
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-[var(--bg)] px-4 pb-0 pt-3">
-        <div className="mb-3 flex items-center gap-2">
+      <div className="-mx-[0.875rem] mb-3 border-b border-[var(--color-border)] bg-[var(--bg)] px-[0.875rem]">
+        <div className="mb-2 flex items-center gap-2">
           <button type="button" onClick={() => router.back()}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]">
             <ArrowLeft className="h-5 w-5" />
@@ -249,7 +249,7 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-[var(--color-border)]">
+        <div className="flex">
           {tabs.map(({ id, label, icon: Icon }) => (
             <button key={id} type="button" aria-label={label} onClick={() => switchTab(id)}
               className={cn(
@@ -264,8 +264,8 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto px-4 py-3">
+      {/* Content — page scrolls naturally, app-shell padding-bottom clears bottom nav */}
+      <div>
 
         {/* ---- SEARCH ---- */}
         {tab === "search" && (
