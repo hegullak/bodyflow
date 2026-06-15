@@ -663,6 +663,7 @@ export const workoutSetLogs = pgTable(
     setNumber: integer("set_number").notNull(),
     isBodyweight: boolean("is_bodyweight").notNull().default(false),
     weightKg: real("weight_kg"),
+    reps: integer("reps"),
     completedAt: timestamp("completed_at", { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

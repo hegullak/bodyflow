@@ -8,11 +8,18 @@ export async function POST(req: Request, { params }: Params) {
   const userId = await requireUserId();
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
-  const { programExerciseId, setNumber } = body;
+  const { programExerciseId, setNumber, weightKg, reps } = body;
   if (!programExerciseId || typeof setNumber !== "number") {
     return NextResponse.json({ error: "programExerciseId and setNumber required" }, { status: 400 });
   }
-  const log = await logSet(id, userId, programExerciseId, setNumber);
+  const log = await logSet(
+    id,
+    userId,
+    programExerciseId,
+    setNumber,
+    typeof weightKg === "number" ? weightKg : null,
+    typeof reps === "number" ? reps : null,
+  );
   if (!log) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(log, { status: 201 });
 }

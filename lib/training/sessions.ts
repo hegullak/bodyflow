@@ -1,9 +1,7 @@
-import { and, asc, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, not } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import {
   exercises,
-  exerciseCategories,
-  exerciseMuscles,
   workoutPrograms,
   workoutProgramExercises,
   workoutSessions,
@@ -15,6 +13,21 @@ import { getProgram, type ProgramBlock } from "./programs";
 // Types
 // ---------------------------------------------------------------------------
 
+export interface CompletedSet {
+  programExerciseId: string | null;
+  setNumber: number;
+  weightKg: number | null;
+  reps: number | null;
+}
+
+export interface LastSetRow {
+  programExerciseId: string;
+  setNumber: number;
+  weightKg: number | null;
+  reps: number | null;
+  completedAt: Date;
+}
+
 export interface ActiveSession {
   id: string;
   programId: string | null;
@@ -22,11 +35,8 @@ export interface ActiveSession {
   startedAt: Date;
   blocks: ProgramBlock[];
   completedSets: CompletedSet[];
-}
-
-export interface CompletedSet {
-  programExerciseId: string | null;
-  setNumber: number;
+  /** programExerciseId → sets ordered by setNumber, from most recent completed session */
+  lastSets: Record<string, LastSetRow[]>;
 }
 
 export interface SessionHistoryItem {
@@ -53,22 +63,64 @@ export async function getActiveSession(userId: string): Promise<ActiveSession | 
 
   if (!session) return null;
 
-  // Load program blocks
-  let blocks: ProgramBlock[] = [];
-  if (session.programId) {
-    const prog = await getProgram(session.programId, userId);
-    blocks = prog?.blocks ?? [];
-  }
+  const blocks: ProgramBlock[] = session.programId
+    ? (await getProgram(session.programId, userId))?.blocks ?? []
+    : [];
 
-  // Load completed sets
   const setRows = await db
     .select({
       programExerciseId: workoutSetLogs.programExerciseId,
       setNumber: workoutSetLogs.setNumber,
+      weightKg: workoutSetLogs.weightKg,
+      reps: workoutSetLogs.reps,
     })
     .from(workoutSetLogs)
     .where(eq(workoutSetLogs.sessionId, session.id))
     .orderBy(asc(workoutSetLogs.completedAt));
+
+  // Last completed session for the same program (for LAST column)
+  const lastSets: Record<string, LastSetRow[]> = {};
+  if (session.programId) {
+    const [lastSession] = await db
+      .select({ id: workoutSessions.id })
+      .from(workoutSessions)
+      .where(
+        and(
+          eq(workoutSessions.userId, userId),
+          eq(workoutSessions.programId, session.programId),
+          not(isNull(workoutSessions.endedAt)),
+        ),
+      )
+      .orderBy(desc(workoutSessions.startedAt))
+      .limit(1);
+
+    if (lastSession) {
+      const rows = await db
+        .select({
+          programExerciseId: workoutSetLogs.programExerciseId,
+          setNumber: workoutSetLogs.setNumber,
+          weightKg: workoutSetLogs.weightKg,
+          reps: workoutSetLogs.reps,
+          completedAt: workoutSetLogs.completedAt,
+        })
+        .from(workoutSetLogs)
+        .where(eq(workoutSetLogs.sessionId, lastSession.id))
+        .orderBy(asc(workoutSetLogs.setNumber));
+
+      for (const r of rows) {
+        if (!r.programExerciseId) continue;
+        const list = lastSets[r.programExerciseId] ?? [];
+        list.push({
+          programExerciseId: r.programExerciseId,
+          setNumber: r.setNumber,
+          weightKg: r.weightKg,
+          reps: r.reps,
+          completedAt: r.completedAt,
+        });
+        lastSets[r.programExerciseId] = list;
+      }
+    }
+  }
 
   return {
     id: session.id,
@@ -79,7 +131,10 @@ export async function getActiveSession(userId: string): Promise<ActiveSession | 
     completedSets: setRows.map((r) => ({
       programExerciseId: r.programExerciseId,
       setNumber: r.setNumber,
+      weightKg: r.weightKg,
+      reps: r.reps,
     })),
+    lastSets,
   };
 }
 
@@ -94,7 +149,7 @@ export async function getSessionHistory(userId: string, limit = 30): Promise<Ses
       endedAt: workoutSessions.endedAt,
     })
     .from(workoutSessions)
-    .where(and(eq(workoutSessions.userId, userId)))
+    .where(eq(workoutSessions.userId, userId))
     .orderBy(desc(workoutSessions.startedAt))
     .limit(limit);
 
@@ -103,10 +158,9 @@ export async function getSessionHistory(userId: string, limit = 30): Promise<Ses
     programName: r.programName,
     startedAt: r.startedAt,
     endedAt: r.endedAt,
-    durationMinutes:
-      r.endedAt
-        ? Math.round((r.endedAt.getTime() - r.startedAt.getTime()) / 60000)
-        : null,
+    durationMinutes: r.endedAt
+      ? Math.round((r.endedAt.getTime() - r.startedAt.getTime()) / 60000)
+      : null,
   }));
 }
 
@@ -146,10 +200,11 @@ export async function logSet(
   userId: string,
   programExerciseId: string,
   setNumber: number,
+  weightKg?: number | null,
+  reps?: number | null,
 ) {
   const db = getDb();
 
-  // Verify session belongs to user
   const [session] = await db
     .select({ id: workoutSessions.id })
     .from(workoutSessions)
@@ -157,12 +212,10 @@ export async function logSet(
     .limit(1);
   if (!session) return null;
 
-  // Get exercise info from program exercise
   const [pe] = await db
     .select({
       exerciseId: workoutProgramExercises.exerciseId,
       exerciseName: exercises.name,
-      exerciseNameNo: exercises.nameNo,
       isBodyweight: workoutProgramExercises.isBodyweight,
     })
     .from(workoutProgramExercises)
@@ -180,6 +233,8 @@ export async function logSet(
       exerciseName: pe.exerciseName,
       setNumber,
       isBodyweight: pe.isBodyweight,
+      weightKg: pe.isBodyweight ? null : (weightKg ?? null),
+      reps: reps ?? null,
     })
     .returning();
   return log;

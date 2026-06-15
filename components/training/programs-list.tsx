@@ -83,28 +83,34 @@ export function ProgramsList({ programs, startMode, activeSessionProgramId }: Pr
                   <button
                     onClick={() => handleStart(p.id, isActive)}
                     disabled={starting === p.id}
-                    className="flex w-full items-center justify-between rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] px-5 py-4 text-left active:bg-[var(--card2)] disabled:opacity-60"
+                    className="flex w-full items-center overflow-hidden rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] text-left active:bg-[var(--card2)] disabled:opacity-60"
                   >
-                    <div>
-                      <p className="font-medium text-[var(--text1)]">{p.name}</p>
-                      {isActive && (
-                        <p className="text-xs text-[var(--green)]">Aktiv økt pågår</p>
-                      )}
+                    <span className="w-1 self-stretch shrink-0 bg-[var(--accent)]" />
+                    <div className="flex flex-1 items-center justify-between px-4 py-4">
+                      <div>
+                        <p className="font-medium text-[var(--text1)]">{p.name}</p>
+                        {isActive && (
+                          <p className="text-xs text-[var(--green)]">Active session running</p>
+                        )}
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-[var(--text3)]" />
                     </div>
-                    <ChevronRight className="h-4 w-4 text-[var(--text3)]" />
                   </button>
                 ) : (
                   <Link
                     href={`/training/programs/${p.id}`}
-                    className="flex items-center justify-between rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] px-5 py-4 active:bg-[var(--card2)]"
+                    className="flex items-center justify-between overflow-hidden rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] active:bg-[var(--card2)]"
                   >
-                    <div>
-                      <p className="font-medium text-[var(--text1)]">{p.name}</p>
-                      {isActive && (
-                        <p className="text-xs text-[var(--green)]">Aktiv økt pågår</p>
-                      )}
+                    <span className="w-1 self-stretch shrink-0 bg-[var(--accent)]" />
+                    <div className="flex flex-1 items-center justify-between px-4 py-4">
+                      <div>
+                        <p className="font-medium text-[var(--text1)]">{p.name}</p>
+                        {isActive && (
+                          <p className="text-xs text-[var(--green)]">Active session running</p>
+                        )}
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-[var(--text3)]" />
                     </div>
-                    <ChevronRight className="h-4 w-4 text-[var(--text3)]" />
                   </Link>
                 )}
               </li>
