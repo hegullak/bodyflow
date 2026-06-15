@@ -945,7 +945,7 @@ function RestTimerBar({ seconds, running, nextExercise, onAdd, onPause, onSkip }
   const [nextImgError, setNextImgError] = useState(false);
 
   return (
-    <div className="fixed left-4 right-4 z-[200] overflow-hidden rounded-3xl border border-[var(--accent)]/40 bg-[var(--card)] shadow-[0_8px_32px_rgba(0,0,0,0.5)]" style={{ bottom: 'calc(5.5rem + env(safe-area-inset-bottom, 0px))' }}>
+    <div className="fixed left-4 right-4 z-[200] overflow-hidden rounded-3xl border border-[var(--accent)]/40 bg-[var(--card)] shadow-[0_8px_32px_rgba(0,0,0,0.5)]" style={{ bottom: 'calc(6.5rem + env(safe-area-inset-bottom, 0px))' }}>
       <button
         onClick={onPause}
         className="flex w-full items-center justify-between bg-[var(--accent)] px-5 py-3 active:opacity-90"
