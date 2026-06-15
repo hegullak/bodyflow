@@ -39,6 +39,7 @@ interface ActiveInput {
   setIdx: number;
   field: "weight" | "reps";
   value: string;
+  selected: boolean; // if true, next key press replaces the entire value
 }
 
 // ---------------------------------------------------------------------------
@@ -210,6 +211,10 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
       return;
     }
 
+    // Check before patching (state not yet updated)
+    const exRows = rows(ex.id);
+    const willAllBeCompleted = exRows.every((row, i) => i === idx || row.completed);
+
     patchRow(ex.id, idx, { completed: true });
     cardRefs.current.get(ex.id)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
 
@@ -242,6 +247,14 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
       setRestingSet({ exId: ex.id, setIdx: idx });
       timer.start(ex.restSeconds);
     }
+
+    // If this was the last set in the exercise, jump keyboard to next exercise
+    if (willAllBeCompleted) {
+      const nextEx = findNextExercise(ex.id);
+      if (nextEx) {
+        setTimeout(() => focusInput(nextEx.id, 0, "weight"), 450);
+      }
+    }
   }
 
   // Find exercise + block by exerciseId
@@ -253,6 +266,13 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
     return null;
   }
 
+  // Find the next exercise in flat order across all blocks
+  function findNextExercise(exId: string): ProgramExerciseRow | null {
+    const all = blocks.flatMap((b) => b.exercises);
+    const i = all.findIndex((e) => e.id === exId);
+    return i !== -1 && i < all.length - 1 ? all[i + 1] : null;
+  }
+
   // Custom keyboard handlers
   function focusInput(exId: string, setIdx: number, field: "weight" | "reps") {
     const row = rows(exId)[setIdx];
@@ -260,22 +280,21 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
     const value = field === "weight"
       ? (row.weightKg ? String(row.weightKg) : "")
       : (row.reps ? String(row.reps) : "");
-    setActiveInput({ exId, setIdx, field, value });
+    setActiveInput({ exId, setIdx, field, value, selected: true });
   }
 
   function handleKeyboardKey(key: string) {
     if (!activeInput) return;
-    const { exId, setIdx, field, value } = activeInput;
+    const { exId, setIdx, field, value, selected } = activeInput;
     let newVal: string;
 
     if (key === "⌫") {
-      newVal = value.slice(0, -1);
-    } else if (key === "." && (value.includes(".") || field === "reps")) {
+      newVal = selected ? "" : value.slice(0, -1);
+    } else if (key === "." && ((value.includes(".") && !selected) || field === "reps")) {
+      setActiveInput({ ...activeInput, selected: false });
       return;
-    } else if (value === "0" && key !== ".") {
-      newVal = key;
     } else {
-      newVal = value + key;
+      newVal = selected ? key : (value === "0" && key !== "." ? key : value + key);
     }
 
     const numVal = parseFloat(newVal) || 0;
@@ -284,7 +303,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
     } else {
       patchRow(exId, setIdx, { reps: Math.round(parseFloat(newVal) || 0) });
     }
-    setActiveInput({ ...activeInput, value: newVal });
+    setActiveInput({ ...activeInput, value: newVal, selected: false });
   }
 
   function handleKeyboardNext() {
@@ -313,11 +332,11 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
     if (field === "weight") {
       const newVal = Math.round(((row.weightKg || 0) + 2.5) * 100) / 100;
       patchRow(exId, setIdx, { weightKg: newVal });
-      setActiveInput({ ...activeInput, value: String(newVal) });
+      setActiveInput({ ...activeInput, value: String(newVal), selected: true });
     } else {
       const newVal = (row.reps || 0) + 1;
       patchRow(exId, setIdx, { reps: newVal });
-      setActiveInput({ ...activeInput, value: String(newVal) });
+      setActiveInput({ ...activeInput, value: String(newVal), selected: true });
     }
   }
 
@@ -329,11 +348,11 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
     if (field === "weight") {
       const newVal = Math.max(0, Math.round(((row.weightKg || 0) - 2.5) * 100) / 100);
       patchRow(exId, setIdx, { weightKg: newVal });
-      setActiveInput({ ...activeInput, value: String(newVal) });
+      setActiveInput({ ...activeInput, value: String(newVal), selected: true });
     } else {
       const newVal = Math.max(0, (row.reps || 0) - 1);
       patchRow(exId, setIdx, { reps: newVal });
-      setActiveInput({ ...activeInput, value: String(newVal) });
+      setActiveInput({ ...activeInput, value: String(newVal), selected: true });
     }
   }
 
@@ -478,6 +497,15 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
             onSkip={timer.skip}
           />
         )}
+
+        {/* Always-visible end workout button */}
+        <button
+          onClick={handleEnd}
+          disabled={ending}
+          className="mt-2 w-full rounded-[var(--radius-md)] border border-[var(--border)] py-4 text-sm font-medium text-[var(--text2)] active:bg-[var(--card)] disabled:opacity-50"
+        >
+          {ending ? "Avslutter…" : "Avslutt økt"}
+        </button>
       </div>
 
       {/* Custom workout keyboard */}
@@ -605,6 +633,7 @@ function ExerciseCard({ ex, setRows, lastSets, nextSetIdx, timerActive, restingS
             isActiveWeight={activeInput?.setIdx === idx && activeInput?.field === "weight"}
             isActiveReps={activeInput?.setIdx === idx && activeInput?.field === "reps"}
             activeValue={activeInput?.setIdx === idx ? activeInput.value : ""}
+            activeSelected={activeInput?.setIdx === idx ? activeInput.selected : false}
             onToggle={() => onToggle(idx)}
             onFocusWeight={() => onFocusInput(idx, "weight")}
             onFocusReps={() => onFocusInput(idx, "reps")}
@@ -708,12 +737,13 @@ interface SetRowItemProps {
   isActiveWeight: boolean;
   isActiveReps: boolean;
   activeValue: string;
+  activeSelected: boolean;
   onToggle: () => void;
   onFocusWeight: () => void;
   onFocusReps: () => void;
 }
 
-function SetRowItem({ idx, row, last, isBodyweight, isNextSet, isResting, timerSeconds, isActiveWeight, isActiveReps, activeValue, onToggle, onFocusWeight, onFocusReps }: SetRowItemProps) {
+function SetRowItem({ idx, row, last, isBodyweight, isNextSet, isResting, timerSeconds, isActiveWeight, isActiveReps, activeValue, activeSelected, onToggle, onFocusWeight, onFocusReps }: SetRowItemProps) {
   const weightDisplay = isActiveWeight ? activeValue : (row.weightKg ? String(row.weightKg) : "");
   const repsDisplay = isActiveReps ? activeValue : (row.reps ? String(row.reps) : "");
 
@@ -760,30 +790,34 @@ function SetRowItem({ idx, row, last, isBodyweight, isNextSet, isResting, timerS
       ) : (
         <div
           onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onFocusWeight(); }}
-          className={`flex h-8 items-center justify-end rounded px-1 text-sm font-medium ${
-            isActiveWeight
-              ? "bg-[var(--accent)]/10 ring-1 ring-[var(--accent)]"
+          className={`flex h-8 items-center justify-end rounded px-1 text-sm font-medium transition-colors ${
+            isActiveWeight && activeSelected
+              ? "bg-[var(--accent)] text-white ring-1 ring-[var(--accent)]"
+              : isActiveWeight
+              ? "bg-[var(--accent)]/10 text-[var(--accent)] ring-1 ring-[var(--accent)]"
               : row.completed
               ? "text-[var(--green)]"
               : "text-[var(--text1)]"
           }`}
         >
-          {weightDisplay || <span className="text-[var(--text3)]">0</span>}
+          {weightDisplay || <span className="opacity-40">0</span>}
         </div>
       )}
 
       {/* Reps */}
       <div
         onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onFocusReps(); }}
-        className={`flex h-8 items-center justify-end rounded px-1 text-sm font-medium ${
-          isActiveReps
-            ? "bg-[var(--accent)]/10 ring-1 ring-[var(--accent)]"
+        className={`flex h-8 items-center justify-end rounded px-1 text-sm font-medium transition-colors ${
+          isActiveReps && activeSelected
+            ? "bg-[var(--accent)] text-white ring-1 ring-[var(--accent)]"
+            : isActiveReps
+            ? "bg-[var(--accent)]/10 text-[var(--accent)] ring-1 ring-[var(--accent)]"
             : row.completed
             ? "text-[var(--green)]"
             : "text-[var(--text1)]"
         }`}
       >
-        {repsDisplay || <span className="text-[var(--text3)]">0</span>}
+        {repsDisplay || <span className="opacity-40">0</span>}
       </div>
 
       {/* Complete button */}
