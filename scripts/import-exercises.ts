@@ -8,7 +8,7 @@
  */
 
 import dotenv from "dotenv";
-import { existsSync, mkdirSync, appendFileSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, appendFileSync } from "fs";
 import { join } from "path";
 
 dotenv.config({ path: ".env.local" });

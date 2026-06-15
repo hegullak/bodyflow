@@ -30,7 +30,7 @@ describe("addMealItemSchema", () => {
   });
 
   it("rejects when no product reference is provided", () => {
-    const { foodProductId, ...rest } = baseByFoodId;
+    const { foodProductId: _foodProductId, ...rest } = baseByFoodId;
     expect(addMealItemSchema.safeParse({ ...rest, foodProductId: "" }).success).toBe(false);
   });
 

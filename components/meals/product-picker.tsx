@@ -108,6 +108,19 @@ export function ProductPicker({
     }
   }, [stopCameraStream]);
 
+  const [savedMeals, setSavedMeals] = useState<
+    Array<{ id: string; name: string; totalKcal: number; totalGrams: number }>
+  >([]);
+  const [savedMealsLoaded, setSavedMealsLoaded] = useState(false);
+  const [addingSavedId, setAddingSavedId] = useState<string | null>(null);
+
+  async function loadSavedMeals() {
+    if (savedMealsLoaded) return;
+    const result = await getSavedMealsAction();
+    if (result.ok) setSavedMeals(result.data);
+    setSavedMealsLoaded(true);
+  }
+
   const switchMode = useCallback(
     (id: Mode) => {
       if (id === "scan") {
@@ -223,19 +236,6 @@ export function ProductPicker({
         setLookupError(result.error);
       }
     });
-  }
-
-  const [savedMeals, setSavedMeals] = useState<
-    Array<{ id: string; name: string; totalKcal: number; totalGrams: number }>
-  >([]);
-  const [savedMealsLoaded, setSavedMealsLoaded] = useState(false);
-  const [addingSavedId, setAddingSavedId] = useState<string | null>(null);
-
-  async function loadSavedMeals() {
-    if (savedMealsLoaded) return;
-    const result = await getSavedMealsAction();
-    if (result.ok) setSavedMeals(result.data);
-    setSavedMealsLoaded(true);
   }
 
   async function handleAddSavedMeal(savedMealId: string) {

@@ -55,7 +55,7 @@ describe("upsertProfileAction", () => {
   });
 
   it("returns error for missing heightCm", async () => {
-    const { heightCm, ...rest } = validFields;
+    const { heightCm: _heightCm, ...rest } = validFields;
     const result = await upsertProfileAction(null, makeFormData(rest));
     expect(result.ok).toBe(false);
   });

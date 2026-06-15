@@ -13,7 +13,7 @@ describe("horizontal viewport overflow prevention", () => {
     const css = read("app/globals.css");
     // Must appear together — body alone is not enough on mobile Chrome,
     // html alone is not enough when body overflows.
-    expect(css).toMatch(/html[^{]*,\s*\nbody\s*\{[^}]*overflow-x:\s*hidden/s);
+    expect(css).toMatch(/html[^{]*,\s*\nbody\s*\{[^}]*overflow-x:\s*hidden/);
   });
 
   it("Input component does not use focus:ring which creates an overflowing box-shadow", () => {

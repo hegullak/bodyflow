@@ -1,18 +1,10 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 // ---------------------------------------------------------------------------
 // Mock db/client before any imports that transitively pull it in
 // ---------------------------------------------------------------------------
 
-const mockWhere = vi.fn();
-const mockLimit = vi.fn();
-const mockOffset = vi.fn();
-const mockOrderBy = vi.fn();
-const mockLeftJoin = vi.fn();
-const mockInnerJoin = vi.fn();
-const mockFrom = vi.fn();
 const mockSelect = vi.fn();
-const mockCount = vi.fn(() => Promise.resolve([{ total: 0 }]));
 
 vi.mock("@/db/client", () => ({
   getDb: vi.fn(() => ({

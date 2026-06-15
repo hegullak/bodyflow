@@ -134,6 +134,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!timer.active) setRestingSet(null);
   }, [timer.active]);
 
@@ -601,7 +602,7 @@ interface ExerciseCardProps {
   onThumbClick?: () => void;
 }
 
-function ExerciseCard({ ex, setRows, lastSets, nextSetIdx, timerActive, restingSetIdx, timerSeconds, activeInput, onToggle, onActivateSet, onWeight, onReps, onFocusInput, onAddSet, onRemoveSet, onThumbClick }: ExerciseCardProps) {
+function ExerciseCard({ ex, setRows, lastSets, nextSetIdx, timerActive, restingSetIdx, timerSeconds, activeInput, onToggle, onActivateSet, onWeight: _onWeight, onReps: _onReps, onFocusInput, onAddSet, onRemoveSet, onThumbClick }: ExerciseCardProps) {
   const [imgError, setImgError] = useState(false);
   const name = ex.exerciseName;
   const meta = [ex.categoryName, ex.targetMuscleName].filter(Boolean).join(" · ");

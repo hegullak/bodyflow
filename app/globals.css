@@ -144,6 +144,14 @@
   --gold-light:   rgba(245, 158,  11, 0.14);
 }
 
+/* ─── iOS auto-zoom prevention ───────────────────────────────────────────── */
+/* iOS Safari zooms when a focused input has font-size < 16px. */
+@media (hover: none) {
+  input, select, textarea {
+    font-size: 16px;
+  }
+}
+
 /* ─── Base styles ─────────────────────────────────────────────────────────── */
 
 * {

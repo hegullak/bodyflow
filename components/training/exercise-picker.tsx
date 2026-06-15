@@ -41,14 +41,6 @@ export function ExercisePicker({ programId, programName }: Props) {
   const [showFilters, setShowFilters] = useState(false);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    if (!query && !bodyPart) { setResults([]); return; }
-    if (debounce.current) clearTimeout(debounce.current);
-    debounce.current = setTimeout(search, 300);
-    return () => { if (debounce.current) clearTimeout(debounce.current); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, bodyPart]);
-
   async function search() {
     setLoading(true);
     try {
@@ -64,6 +56,15 @@ export function ExercisePicker({ programId, programName }: Props) {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!query && !bodyPart) { setResults([]); return; }
+    if (debounce.current) clearTimeout(debounce.current);
+    debounce.current = setTimeout(search, 300);
+    return () => { if (debounce.current) clearTimeout(debounce.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, bodyPart]);
 
   async function handleAdd(exercise: Exercise) {
     if (adding || addedIds.has(exercise.id)) return;

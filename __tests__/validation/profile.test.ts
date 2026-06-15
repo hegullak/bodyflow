@@ -17,13 +17,13 @@ describe("profileFormSchema", () => {
   });
 
   it("accepts optional fields omitted", () => {
-    const { sex, birthYear, ...minimal } = valid;
+    const { sex: _sex, birthYear: _birthYear, ...minimal } = valid;
     const result = profileFormSchema.safeParse(minimal);
     expect(result.success).toBe(true);
   });
 
   it("rejects missing heightCm", () => {
-    const { heightCm, ...rest } = valid;
+    const { heightCm: _heightCm, ...rest } = valid;
     const result = profileFormSchema.safeParse(rest);
     expect(result.success).toBe(false);
   });

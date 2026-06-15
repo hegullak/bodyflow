@@ -99,6 +99,7 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     const trimmed = query.trim();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (trimmed.length < 2) { setResults([]); setSearchError(null); return; }
     debounceRef.current = setTimeout(async () => {
       try {
