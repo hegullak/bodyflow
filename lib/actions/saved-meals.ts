@@ -54,10 +54,14 @@ export async function saveMealAction(
 
     return { ok: true, data: undefined };
   } catch (error) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cause = (error as any)?.cause;
     logger.error("SavedMeals", "saveMealAction failed", {
       reason: error instanceof Error ? error.message : String(error),
+      pgCode: cause?.code,
+      pgMsg: cause?.message,
     });
-    return { ok: false, error: "Kunne ikke lagre måltid. Prøv igjen." };
+    return { ok: false, error: cause?.message ? `[lagre] ${cause.message}` : "Kunne ikke lagre måltid. Prøv igjen." };
   }
 }
 
@@ -82,10 +86,14 @@ export async function getSavedMealsAction(): Promise<
       })),
     };
   } catch (error) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cause = (error as any)?.cause;
     logger.error("SavedMeals", "getSavedMealsAction failed", {
       reason: error instanceof Error ? error.message : String(error),
+      pgCode: cause?.code,
+      pgMsg: cause?.message,
     });
-    return { ok: false, error: "Kunne ikke hente lagrede måltider." };
+    return { ok: false, error: cause?.message ? `[hente] ${cause.message}` : "Kunne ikke hente lagrede måltider." };
   }
 }
 
