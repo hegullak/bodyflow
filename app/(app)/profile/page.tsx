@@ -1,17 +1,31 @@
 import { ProfileForm } from "@/components/forms/profile-form";
+import { WithingsCard } from "@/components/integrations/withings-card";
 import { Card } from "@/components/ui/card";
 import { ReminderSettingsForm } from "@/components/reminders/reminder-settings-form";
 import { getReminderForUser } from "@/lib/actions/reminders";
 import { getProfileForUser } from "@/lib/actions/profile";
 import { getCurrentUserDisplayName, requireUserId } from "@/lib/auth/current-user";
+import { getWithingsConnection } from "@/lib/withings/sync";
+import { isWithingsConfigured } from "@/lib/withings/config";
 
-export default async function ProfilePage() {
+export default async function ProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ withings?: string }>;
+}) {
   const userId = await requireUserId();
-  const [profile, weighInReminder, displayName] = await Promise.all([
+  const params = await searchParams;
+  const [profile, weighInReminder, displayName, withingsConn] = await Promise.all([
     getProfileForUser(userId),
     getReminderForUser(userId, "weigh_in"),
     getCurrentUserDisplayName(),
+    getWithingsConnection(userId),
   ]);
+
+  const withingsPublic = {
+    connected: Boolean(withingsConn),
+    lastSyncAt: withingsConn?.lastSyncAt ?? null,
+  };
 
   return (
     <div>
@@ -20,6 +34,15 @@ export default async function ProfilePage() {
 
       <Card className="card-compact">
         <ProfileForm profile={profile} />
+      </Card>
+
+      <Card className="card-compact mt-3">
+        <WithingsCard
+          connection={withingsPublic}
+          configured={isWithingsConfigured()}
+          status={params.withings ?? null}
+          embedded
+        />
       </Card>
 
       <details className="group mt-3">
