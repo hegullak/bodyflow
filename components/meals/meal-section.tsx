@@ -4,7 +4,7 @@ import { useRef, useTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import type { MealLogItem, MealType } from "@/db/schema";
-import { removeMealItemAction, copyMealsFromPreviousDateAction, updateMealItemAction } from "@/lib/actions/meals";
+import { removeMealItemAction, copyMealsFromPreviousDateAction } from "@/lib/actions/meals";
 import { saveMealAction } from "@/lib/actions/saved-meals";
 import { MEAL_LABELS } from "@/lib/meals/constants";
 import { Button } from "@/components/ui/button";
@@ -12,35 +12,29 @@ import { Input } from "@/components/ui/field";
 import { addDaysToIsoDate } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
-// Swipeable meal item — pointer events + translateX
+// Swipeable meal item — tap to edit, swipe left to delete
 // ---------------------------------------------------------------------------
 
-const DELETE_W = 72;
+const SNAP_W = 72;       // px swiped before snapping to reveal delete zone
+const FULL_DELETE = 220; // px swiped to trigger auto-delete on release
 
 function SwipeableMealItem({
   item,
+  logDate,
   removingId,
-  isEditing,
   onRemove,
-  onStartEdit,
-  onCancelEdit,
-  onSaveEdit,
 }: {
   item: MealLogItem;
+  logDate: string;
   removingId: string | null;
-  isEditing: boolean;
   onRemove: (id: string) => void;
-  onStartEdit: (id: string) => void;
-  onCancelEdit: () => void;
-  onSaveEdit: (id: string, newGrams: number) => void;
 }) {
+  const router = useRouter();
   const [offset, setOffset] = useState(0);
   const [settled, setSettled] = useState(true);
-  const [editGrams, setEditGrams] = useState(String(Math.round(item.quantityGrams)));
   const startRef = useRef({ x: 0, y: 0, active: false, locked: false, startOffset: 0 });
 
   function onPointerDown(e: React.PointerEvent) {
-    if (isEditing) return;
     startRef.current = { x: e.clientX, y: e.clientY, active: true, locked: false, startOffset: offset };
     setSettled(false);
   }
@@ -53,7 +47,7 @@ function SwipeableMealItem({
     if (Math.abs(dy) > Math.abs(dx) + 6) { s.locked = true; setSettled(true); return; }
     if (Math.abs(dx) < 4) return;
     e.currentTarget.setPointerCapture(e.pointerId);
-    setOffset(Math.min(0, Math.max(s.startOffset + dx, -DELETE_W)));
+    setOffset(Math.min(0, s.startOffset + dx));
   }
 
   function onPointerUp(e: React.PointerEvent) {
@@ -65,103 +59,61 @@ function SwipeableMealItem({
     const dx = Math.abs(e.clientX - s.x);
     const dy = Math.abs(e.clientY - s.y);
 
-    // Tap detection: minimal movement, item at rest position
-    if (dx < 5 && dy < 5 && !s.locked && s.startOffset === 0) {
-      setEditGrams(String(Math.round(item.quantityGrams)));
-      onStartEdit(item.id);
+    // Tap: navigate to detail page, or close swipe state
+    if (dx < 5 && dy < 5 && !s.locked) {
+      if (s.startOffset === 0) {
+        router.push(`/meals/item/${item.id}?date=${logDate}`);
+      } else {
+        setOffset(0);
+      }
       return;
     }
 
-    setOffset((prev) => (prev < -(DELETE_W * 0.45) ? -DELETE_W : 0));
-  }
+    // Full swipe left → auto-delete
+    if (offset <= -FULL_DELETE) {
+      setOffset(-800);
+      setTimeout(() => onRemove(item.id), 220);
+      return;
+    }
 
-  function handleDelete() {
-    setOffset(-DELETE_W * 4);
-    setTimeout(() => onRemove(item.id), 180);
-  }
-
-  function handleSaveEdit() {
-    const grams = parseFloat(editGrams);
-    if (!grams || grams <= 0) return;
-    onCancelEdit();
-    onSaveEdit(item.id, grams);
+    // Snap to reveal delete zone or close
+    setOffset(offset < -(SNAP_W * 0.45) ? -SNAP_W : 0);
   }
 
   const showGrams = Boolean(item.foodProductId) || item.quantityGrams !== 100;
 
   return (
     <li className="relative overflow-hidden">
-      {isEditing ? (
-        <div className="py-2">
+      {/* Full-width red background — revealed as content slides left */}
+      <div className="absolute inset-0 flex items-center justify-end bg-[var(--red)] pr-5">
+        <Trash2 className="h-5 w-5 text-white" />
+      </div>
+
+      <div
+        className="relative flex items-center gap-2 py-1.5 bg-[var(--card)]"
+        style={{
+          transform: `translateX(${offset}px)`,
+          transition: settled ? "transform 0.22s ease" : "none",
+          opacity: removingId === item.id ? 0.4 : 1,
+        }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={() => {
+          startRef.current.active = false;
+          setSettled(true);
+          setOffset((p) => (p < -(SNAP_W * 0.45) ? -SNAP_W : 0));
+        }}
+      >
+        <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{item.productName}</p>
-          <div className="mt-1.5 flex items-center gap-2">
-            <input
-              type="number"
-              inputMode="decimal"
-              value={editGrams}
-              onChange={(e) => setEditGrams(e.target.value)}
-              className="w-20 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-sm"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleSaveEdit();
-                if (e.key === "Escape") onCancelEdit();
-              }}
-              autoFocus
-            />
-            <span className="text-xs text-[var(--color-muted-foreground)]">g</span>
-            <button
-              type="button"
-              onClick={handleSaveEdit}
-              className="rounded-[var(--radius-sm)] bg-[var(--color-primary)] px-3 py-1 text-xs font-medium text-white"
-            >
-              OK
-            </button>
-            <button
-              type="button"
-              onClick={onCancelEdit}
-              className="text-xs text-[var(--color-muted-foreground)]"
-            >
-              Avbryt
-            </button>
-          </div>
+          <p className="text-xs text-[var(--color-muted-foreground)]">
+            {Math.round(item.caloriesKcal)} kcal
+            {showGrams ? ` · ${Math.round(item.quantityGrams)} g` : null}
+          </p>
         </div>
-      ) : (
-        <>
-          <div
-            className="absolute inset-y-0 right-0 flex items-center justify-center bg-[var(--red)]"
-            style={{ width: DELETE_W }}
-          >
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={removingId === item.id}
-              className="flex h-full w-full items-center justify-center"
-              aria-label="Slett"
-            >
-              <Trash2 className="h-4 w-4 text-white" />
-            </button>
-          </div>
-          <div
-            className="relative flex items-center gap-2 py-1.5 bg-[var(--card)]"
-            style={{
-              transform: `translateX(${offset}px)`,
-              transition: settled ? "transform 0.22s ease" : "none",
-            }}
-            onPointerDown={onPointerDown}
-            onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-            onPointerCancel={() => { startRef.current.active = false; setSettled(true); setOffset((p) => (p < -(DELETE_W * 0.45) ? -DELETE_W : 0)); }}
-          >
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{item.productName}</p>
-              <p className="text-xs text-[var(--color-muted-foreground)]">
-                {Math.round(item.caloriesKcal)} kcal
-                {showGrams ? ` · ${Math.round(item.quantityGrams)} g` : null}
-              </p>
-            </div>
-            <span className="shrink-0 text-xs text-[var(--color-muted-foreground)] opacity-40">›</span>
-          </div>
-        </>
-      )}
+        <span className="shrink-0 text-xs text-[var(--color-muted-foreground)] opacity-40">›</span>
+      </div>
     </li>
   );
 }
@@ -219,13 +171,11 @@ export function MealSection({
 }) {
   const router = useRouter();
   const [removingId, setRemovingId] = useState<string | null>(null);
-  const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [showSaveForm, setShowSaveForm] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [copyPending, startCopyTransition] = useTransition();
   const [savePending, startSaveTransition] = useTransition();
   const [, startRemoveTransition] = useTransition();
-  const [, startEditTransition] = useTransition();
 
   const sectionSwipe = useRef({ x: 0, active: false });
   const [copyOffset, setCopyOffset] = useState(0);
@@ -253,13 +203,6 @@ export function MealSection({
       } finally {
         setRemovingId(null);
       }
-    });
-  }
-
-  function handleEdit(itemId: string, newGrams: number) {
-    startEditTransition(async () => {
-      await updateMealItemAction(itemId, newGrams, logDate);
-      onChanged();
     });
   }
 
@@ -371,12 +314,9 @@ export function MealSection({
               <SwipeableMealItem
                 key={item.id}
                 item={item}
+                logDate={logDate}
                 removingId={removingId}
-                isEditing={editingItemId === item.id}
                 onRemove={handleRemove}
-                onStartEdit={(id) => setEditingItemId(id)}
-                onCancelEdit={() => setEditingItemId(null)}
-                onSaveEdit={handleEdit}
               />
             ))}
           </ul>

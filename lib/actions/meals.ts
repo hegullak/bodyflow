@@ -419,6 +419,17 @@ export async function updateMealItemAction(
   }
 }
 
+export async function getMealItemByIdAction(itemId: string) {
+  const userId = await requireUserId();
+  const db = getDb();
+  const [item] = await db
+    .select()
+    .from(mealLogItems)
+    .where(and(eq(mealLogItems.id, itemId), eq(mealLogItems.userId, userId), isNull(mealLogItems.deletedAt)))
+    .limit(1);
+  return item ?? null;
+}
+
 export type MealsByType = Record<MealType, Awaited<ReturnType<typeof getMealItemsForDate>>>;
 
 export async function getMealsGroupedByType(
