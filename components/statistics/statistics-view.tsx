@@ -1,104 +1,118 @@
-import { Card, CardHint, CardTitle, CardValue } from "@/components/ui/card";
+import { Card, CardTitle } from "@/components/ui/card";
 import type { StatisticsData } from "@/lib/queries/statistics";
-import { formatDate } from "@/lib/utils";
 
 function fmt(value: number | null, suffix = ""): string {
   if (value == null) return "—";
   return `${value}${suffix}`;
 }
 
+function fmtDate(dateStr: string): string {
+  return new Date(dateStr + "T12:00:00").toLocaleDateString("nb-NO", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 export function StatisticsView({ data }: { data: StatisticsData }) {
   return (
     <div className="space-y-4">
+      {/* Summary counts */}
       <div className="grid grid-cols-2 gap-3">
         <Card>
-          <CardTitle>Weight logs</CardTitle>
-          <CardValue>{data.totalWeightLogs}</CardValue>
-          <CardHint>Since 2020</CardHint>
+          <CardTitle>Vektmålinger</CardTitle>
+          <p className="mt-1 text-2xl font-bold">{data.totalWeightLogs}</p>
+          <p className="text-xs text-[var(--text3)]">siden 2020</p>
         </Card>
         <Card>
-          <CardTitle>Measurement logs</CardTitle>
-          <CardValue>{data.totalMeasurements}</CardValue>
-          <CardHint>Since 2020</CardHint>
+          <CardTitle>Kroppsmål</CardTitle>
+          <p className="mt-1 text-2xl font-bold">{data.totalMeasurements}</p>
+          <p className="text-xs text-[var(--text3)]">siden 2020</p>
         </Card>
       </div>
 
-      <Card>
-        <CardTitle>Yearly averages</CardTitle>
-        <div className="mt-3 overflow-x-auto">
-          <table className="w-full min-w-[28rem] text-left text-sm">
-            <thead>
-              <tr className="text-[var(--color-muted-foreground)]">
-                <th className="py-2 pr-3 font-medium">Year</th>
-                <th className="py-2 pr-3 font-medium">Weight</th>
-                <th className="py-2 pr-3 font-medium">Waist</th>
-                <th className="py-2 pr-3 font-medium">Chest</th>
-                <th className="py-2 font-medium">Hip</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.yearly.map((row) => (
-                <tr key={row.year} className="border-t border-[var(--color-border)]">
-                  <td className="py-2 pr-3 font-medium">{row.year}</td>
-                  <td className="py-2 pr-3">{fmt(row.avgWeightKg, " kg")}</td>
-                  <td className="py-2 pr-3">{fmt(row.avgWaistCm, " cm")}</td>
-                  <td className="py-2 pr-3">{fmt(row.avgChestCm, " cm")}</td>
-                  <td className="py-2">{fmt(row.avgHipCm, " cm")}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-
-      <Card>
-        <CardTitle>Monthly averages</CardTitle>
-        <div className="mt-3 max-h-96 overflow-y-auto">
-          <table className="w-full min-w-[28rem] text-left text-sm">
-            <thead className="sticky top-0 bg-[var(--color-card)]">
-              <tr className="text-[var(--color-muted-foreground)]">
-                <th className="py-2 pr-3 font-medium">Month</th>
-                <th className="py-2 pr-3 font-medium">Weight</th>
-                <th className="py-2 pr-3 font-medium">Waist</th>
-                <th className="py-2 pr-3 font-medium">Chest</th>
-                <th className="py-2 font-medium">Hip</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.monthly.map((row) => (
-                <tr key={`${row.year}-${row.month}`} className="border-t border-[var(--color-border)]">
-                  <td className="py-2 pr-3 font-medium">{row.label}</td>
-                  <td className="py-2 pr-3">{fmt(row.avgWeightKg, " kg")}</td>
-                  <td className="py-2 pr-3">{fmt(row.avgWaistCm, " cm")}</td>
-                  <td className="py-2 pr-3">{fmt(row.avgChestCm, " cm")}</td>
-                  <td className="py-2">{fmt(row.avgHipCm, " cm")}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-
-      {data.latestMeasurement ? (
+      {/* All individual weight entries */}
+      {data.allWeightEntries.length > 0 && (
         <Card>
-          <CardTitle>Latest measurements</CardTitle>
-          <CardHint className="mt-2">{formatDate(data.latestMeasurement.measuredOn)}</CardHint>
-          <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
-            <div>
-              <p className="text-[var(--color-muted-foreground)]">Waist</p>
-              <p className="font-medium">{fmt(data.latestMeasurement.waistCm, " cm")}</p>
-            </div>
-            <div>
-              <p className="text-[var(--color-muted-foreground)]">Chest</p>
-              <p className="font-medium">{fmt(data.latestMeasurement.chestCm, " cm")}</p>
-            </div>
-            <div>
-              <p className="text-[var(--color-muted-foreground)]">Hip</p>
-              <p className="font-medium">{fmt(data.latestMeasurement.hipCm, " cm")}</p>
-            </div>
+          <CardTitle>Alle vektmålinger</CardTitle>
+          <div className="mt-3 max-h-[28rem] overflow-y-auto -mx-4 px-4">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-[var(--card)]">
+                <tr className="text-left text-[var(--text3)]">
+                  <th className="pb-2 font-medium">Dato</th>
+                  <th className="pb-2 text-right font-medium">Vekt</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border)]">
+                {data.allWeightEntries.map((entry) => (
+                  <tr key={entry.date}>
+                    <td className="py-2 text-[var(--text2)]">{fmtDate(entry.date)}</td>
+                    <td className="py-2 text-right font-medium">{fmt(entry.value, " kg")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </Card>
-      ) : null}
+      )}
+
+      {/* All individual body measurement entries */}
+      {data.allMeasurementEntries.length > 0 && (
+        <Card>
+          <CardTitle>Alle kroppsmål</CardTitle>
+          <div className="mt-3 max-h-[28rem] overflow-y-auto -mx-4 px-4">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-[var(--card)]">
+                <tr className="text-left text-[var(--text3)]">
+                  <th className="pb-2 font-medium">Dato</th>
+                  <th className="pb-2 text-right font-medium">Midje</th>
+                  <th className="pb-2 text-right font-medium">Bryst</th>
+                  <th className="pb-2 text-right font-medium">Hofte</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border)]">
+                {data.allMeasurementEntries.map((entry) => (
+                  <tr key={entry.measuredOn}>
+                    <td className="py-2 text-[var(--text2)]">{fmtDate(entry.measuredOn)}</td>
+                    <td className="py-2 text-right">{fmt(entry.waistCm, " cm")}</td>
+                    <td className="py-2 text-right">{fmt(entry.chestCm, " cm")}</td>
+                    <td className="py-2 text-right">{fmt(entry.hipCm, " cm")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      {/* Yearly summary */}
+      <Card>
+        <CardTitle>Årsgjennomsnitt</CardTitle>
+        <div className="mt-3 overflow-x-auto -mx-4 px-4">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-[var(--text3)]">
+                <th className="pb-2 font-medium">År</th>
+                <th className="pb-2 text-right font-medium">Vekt</th>
+                <th className="pb-2 text-right font-medium">Midje</th>
+                <th className="pb-2 text-right font-medium">Bryst</th>
+                <th className="pb-2 text-right font-medium">Hofte</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--border)]">
+              {data.yearly.slice().reverse().map((row) => (
+                <tr key={row.year}>
+                  <td className="py-2 font-medium">{row.year}</td>
+                  <td className="py-2 text-right">{fmt(row.avgWeightKg, " kg")}</td>
+                  <td className="py-2 text-right">{fmt(row.avgWaistCm, " cm")}</td>
+                  <td className="py-2 text-right">{fmt(row.avgChestCm, " cm")}</td>
+                  <td className="py-2 text-right">{fmt(row.avgHipCm, " cm")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
     </div>
   );
 }

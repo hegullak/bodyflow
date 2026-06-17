@@ -52,6 +52,10 @@ export async function getStatisticsData(userId: string) {
   const latestMeasurement = measurements.at(-1) ?? null;
   const latestWeight = weights.filter((w) => w.weightKg != null).at(-1) ?? null;
 
+  // Raw individual points for the detailed view, newest first
+  const allWeightEntries = [...weightPoints].reverse();
+  const allMeasurementEntries = [...measurementPoints].reverse();
+
   return {
     monthly,
     yearly,
@@ -59,6 +63,8 @@ export async function getStatisticsData(userId: string) {
     latestWeight,
     totalMeasurements: measurements.length,
     totalWeightLogs: weightPoints.length,
+    allWeightEntries,
+    allMeasurementEntries,
   };
 }
 
