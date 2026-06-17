@@ -18,11 +18,17 @@ const mockUpdateWhere = vi.fn(() => ({ returning: mockUpdateReturning }));
 const mockUpdateSet = vi.fn((_data: unknown) => ({ where: mockUpdateWhere }));
 const mockUpdate = vi.fn(() => ({ set: mockUpdateSet }));
 
-const mockSelectWhere = vi.fn(() => Promise.resolve([{ total: 500 }]));
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function chain(v: unknown[] = []): any {
+  const p = Promise.resolve(v);
+  return Object.assign(p, { orderBy: () => chain(v), limit: () => chain(v) });
+}
+
+const mockSelectWhere = vi.fn(() => chain([{ total: 500 }]));
 const mockSelectFrom = vi.fn(() => ({ where: mockSelectWhere }));
 const mockSelect = vi.fn(() => ({ from: mockSelectFrom }));
 
-const mockFindMany = vi.fn(() => Promise.resolve([]));
+const mockFindMany = vi.fn<() => Promise<unknown[]>>(() => Promise.resolve([]));
 
 vi.mock("@/db/client", () => ({
   getDb: vi.fn(() => ({
@@ -194,7 +200,7 @@ describe("quickAddMealItemAction", () => {
 
   it("inserts with default name when name is blank", async () => {
     await quickAddMealItemAction("2026-06-12", "lunch", "  ", 300);
-    const insertedValues = mockInsertValues.mock.calls[0]?.[0] as { productName: string };
+    const insertedValues = (mockInsertValues.mock.calls as unknown[][])[0]?.[0] as { productName: string };
     expect(insertedValues.productName).toBe("Egendefinert");
   });
 
@@ -215,6 +221,7 @@ describe("quickAddMealItemAction", () => {
 describe("getRecentMealItemsAction", () => {
   beforeEach(() => {
     vi.mocked(requireUserId).mockResolvedValue("user_test");
+    mockSelectWhere.mockReturnValue(chain([]));
   });
 
   afterEach(() => vi.clearAllMocks());
@@ -225,18 +232,17 @@ describe("getRecentMealItemsAction", () => {
   });
 
   it("returns empty array when no items exist", async () => {
-    mockFindMany.mockResolvedValue([]);
     const result = await getRecentMealItemsAction();
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.data).toHaveLength(0);
   });
 
   it("de-duplicates by productName, keeping only the most recent", async () => {
-    mockFindMany.mockResolvedValue([
+    mockSelectWhere.mockReturnValue(chain([
       { ...mockMealRow, productName: "Havregryn", createdAt: new Date("2026-06-12") },
       { ...mockMealRow, productName: "Havregryn", createdAt: new Date("2026-06-10") },
       { ...mockMealRow, productName: "Egg", createdAt: new Date("2026-06-11") },
-    ]);
+    ]));
     const result = await getRecentMealItemsAction();
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -250,14 +256,14 @@ describe("getRecentMealItemsAction", () => {
       ...mockMealRow,
       productName: `Food ${i}`,
     }));
-    mockFindMany.mockResolvedValue(rows);
+    mockSelectWhere.mockReturnValue(chain(rows));
     const result = await getRecentMealItemsAction();
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.data).toHaveLength(15);
   });
 
   it("returns error on DB failure without leaking internals", async () => {
-    mockFindMany.mockRejectedValue(new Error("DB connection failed: secret"));
+    mockSelectWhere.mockReturnValue(Promise.reject(new Error("DB connection failed: secret")));
     const result = await getRecentMealItemsAction();
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).not.toMatch(/secret/i);
@@ -279,6 +285,7 @@ describe("reAddMealItemAction", () => {
   beforeEach(() => {
     vi.mocked(requireUserId).mockResolvedValue("user_test");
     mockInsertReturning.mockResolvedValue([{ id: "re-add-uuid" }]);
+    mockSelectWhere.mockReturnValue(chain([{ total: 500 }]));
   });
 
   afterEach(() => vi.clearAllMocks());
@@ -291,7 +298,7 @@ describe("reAddMealItemAction", () => {
   it("calls db.insert with item data and returns ok", async () => {
     const result = await reAddMealItemAction("2026-06-12", "breakfast", recentItem);
     expect(mockInsert).toHaveBeenCalled();
-    const insertedValues = mockInsertValues.mock.calls[0]?.[0] as { productName: string; caloriesKcal: number };
+    const insertedValues = (mockInsertValues.mock.calls as unknown[][])[0]?.[0] as { productName: string; caloriesKcal: number };
     expect(insertedValues.productName).toBe("Havregryn");
     expect(insertedValues.caloriesKcal).toBe(350);
     expect(result.ok).toBe(true);
@@ -315,7 +322,7 @@ describe("copyMealsFromPreviousDateAction", () => {
   beforeEach(() => {
     vi.mocked(requireUserId).mockResolvedValue("user_test");
     mockInsertReturning.mockResolvedValue([{ id: "copy-uuid" }]);
-    mockFindMany.mockResolvedValue([mockMealRow]);
+    mockSelectWhere.mockReturnValue(chain([mockMealRow]));
   });
 
   afterEach(() => vi.clearAllMocks());
@@ -332,7 +339,7 @@ describe("copyMealsFromPreviousDateAction", () => {
   });
 
   it("returns error when no source items exist for that date/type", async () => {
-    mockFindMany.mockResolvedValue([]);
+    mockSelectWhere.mockReturnValue(chain([]));
     const result = await copyMealsFromPreviousDateAction(null, makeFormData(validCopyFields));
     expect(result.ok).toBe(false);
     expect((result as { ok: false; error: string }).error).toMatch(/no meals found/i);
@@ -345,7 +352,7 @@ describe("copyMealsFromPreviousDateAction", () => {
   });
 
   it("returns error on DB failure without leaking internals", async () => {
-    mockFindMany.mockRejectedValue(new Error("pg secret error"));
+    mockSelectWhere.mockReturnValue(Promise.reject(new Error("pg secret error")));
     const result = await copyMealsFromPreviousDateAction(null, makeFormData(validCopyFields));
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).not.toMatch(/secret/i);

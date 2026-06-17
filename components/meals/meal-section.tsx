@@ -155,6 +155,7 @@ export function MealSection({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [copyPending, startCopyTransition] = useTransition();
   const [savePending, startSaveTransition] = useTransition();
+  const [, startRemoveTransition] = useTransition();
 
   const sectionSwipe = useRef({ x: 0, active: false });
   const [copyOffset, setCopyOffset] = useState(0);
@@ -173,11 +174,16 @@ export function MealSection({
   const copyLabel = previousDayMeals.length > 0 ? "Kopier fra i går" : "Kopier fra i forgårs";
   const hasPreviousMeals = copySourceDate !== null;
 
-  async function handleRemove(itemId: string) {
+  function handleRemove(itemId: string) {
     setRemovingId(itemId);
-    await removeMealItemAction(itemId, logDate);
-    setRemovingId(null);
-    onChanged();
+    startRemoveTransition(async () => {
+      try {
+        await removeMealItemAction(itemId, logDate);
+        onChanged();
+      } finally {
+        setRemovingId(null);
+      }
+    });
   }
 
   function handleCopyFromDay(sourceDate: string) {

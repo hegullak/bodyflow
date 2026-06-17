@@ -381,8 +381,12 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
   async function handleEnd() {
     if (!confirm("End workout?")) return;
     setEnding(true);
-    await fetch(`/api/training/sessions/${session.id}`, { method: "PUT" });
-    router.push("/training/history");
+    try {
+      await fetch(`/api/training/sessions/${session.id}`, { method: "PUT" });
+      router.push("/training/history");
+    } catch {
+      setEnding(false);
+    }
   }
 
   const blockIds = blocks.map(blockDragId);

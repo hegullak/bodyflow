@@ -73,16 +73,24 @@ export function ProgramBuilder({ program: initial, activeSessionId }: Props) {
   async function handleDelete() {
     if (!confirm(`Slett "${program.name}"?`)) return;
     setDeleting(true);
-    await fetch(`/api/training/programs/${program.id}`, { method: "DELETE" });
-    router.push("/training/programs");
+    try {
+      await fetch(`/api/training/programs/${program.id}`, { method: "DELETE" });
+      router.push("/training/programs");
+    } catch {
+      setDeleting(false);
+    }
   }
 
   async function handleDuplicate() {
     setDuplicating(true);
-    const res = await fetch(`/api/training/programs/${program.id}/duplicate`, { method: "POST" });
-    if (res.ok) {
-      const copy = await res.json();
-      router.push(`/training/programs/${copy.id}`);
+    try {
+      const res = await fetch(`/api/training/programs/${program.id}/duplicate`, { method: "POST" });
+      if (res.ok) {
+        const copy = await res.json() as { id: string };
+        router.push(`/training/programs/${copy.id}`);
+      }
+    } catch {
+      // fall through — duplicating resets to false below
     }
     setDuplicating(false);
   }

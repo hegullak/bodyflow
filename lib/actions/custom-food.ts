@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { upsertCustomFoodProduct } from "@/lib/foods/catalog";
+import { requireUserId } from "@/lib/auth/current-user";
 import { requireFoodCustomPrefixId } from "@/lib/foods/prefix";
 import { logger } from "@/lib/logger";
 import { type ActionResult, flattenZodErrors } from "./types";
@@ -28,6 +29,8 @@ export async function saveCustomFoodAction(
   _prev: ActionResult<{ foodProductId: string; name: string; kcalPer100g: number }> | null,
   formData: FormData,
 ): Promise<ActionResult<{ foodProductId: string; name: string; kcalPer100g: number }>> {
+  await requireUserId();
+
   try {
     requireFoodCustomPrefixId();
   } catch {

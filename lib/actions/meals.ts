@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { dailyBodyLogs, mealLogItems, type MealType } from "@/db/schema";
 import { requireUserId } from "@/lib/auth/current-user";
@@ -10,8 +10,15 @@ import { writeAuditLog } from "@/lib/audit/log";
 import { buildMealCalories } from "@/lib/kassal/client";
 import { resolveFoodProduct } from "@/lib/foods/catalog";
 import { logger } from "@/lib/logger";
-import { addMealItemSchema } from "@/lib/validation/meal-item";
+import { addMealItemSchema, mealTypeSchema } from "@/lib/validation/meal-item";
 import { type ActionResult, flattenZodErrors } from "./types";
+import { z } from "zod";
+
+const copyMealsSchema = z.object({
+  logDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  mealType: mealTypeSchema,
+  sourceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
 
 async function syncDailyCaloriesFromMeals(userId: string, logDate: string) {
   const db = getDb();
@@ -159,14 +166,17 @@ export async function removeMealItemAction(itemId: string, logDate: string): Pro
 
 export async function getMealItemsForDate(userId: string, logDate: string) {
   const db = getDb();
-  return db.query.mealLogItems.findMany({
-    where: and(
-      eq(mealLogItems.userId, userId),
-      eq(mealLogItems.logDate, logDate),
-      isNull(mealLogItems.deletedAt),
-    ),
-    orderBy: (items, { asc }) => [asc(items.mealType), asc(items.createdAt)],
-  });
+  return db
+    .select()
+    .from(mealLogItems)
+    .where(
+      and(
+        eq(mealLogItems.userId, userId),
+        eq(mealLogItems.logDate, logDate),
+        isNull(mealLogItems.deletedAt),
+      ),
+    )
+    .orderBy(asc(mealLogItems.mealType), asc(mealLogItems.createdAt));
 }
 
 export async function copyMealsFromPreviousDateAction(
@@ -174,25 +184,33 @@ export async function copyMealsFromPreviousDateAction(
   formData: FormData,
 ): Promise<ActionResult> {
   const userId = await requireUserId();
-  const logDate = formData.get("logDate") as string;
-  const mealType = formData.get("mealType") as MealType;
-  const sourceDate = formData.get("sourceDate") as string;
 
-  if (!logDate || !mealType || !sourceDate) {
+  const parsed = copyMealsSchema.safeParse({
+    logDate: formData.get("logDate"),
+    mealType: formData.get("mealType"),
+    sourceDate: formData.get("sourceDate"),
+  });
+
+  if (!parsed.success) {
     return { ok: false, error: "Missing required fields." };
   }
+
+  const { logDate, mealType, sourceDate } = parsed.data;
 
   try {
     const db = getDb();
 
-    const sourceItems = await db.query.mealLogItems.findMany({
-      where: and(
-        eq(mealLogItems.userId, userId),
-        eq(mealLogItems.logDate, sourceDate),
-        eq(mealLogItems.mealType, mealType as MealType),
-        isNull(mealLogItems.deletedAt),
-      ),
-    });
+    const sourceItems = await db
+      .select()
+      .from(mealLogItems)
+      .where(
+        and(
+          eq(mealLogItems.userId, userId),
+          eq(mealLogItems.logDate, sourceDate),
+          eq(mealLogItems.mealType, mealType),
+          isNull(mealLogItems.deletedAt),
+        ),
+      );
 
     if (!sourceItems.length) {
       return { ok: false, error: "No meals found from that date." };
@@ -294,11 +312,12 @@ export async function getRecentMealItemsAction(): Promise<ActionResult<RecentMea
   const userId = await requireUserId();
   try {
     const db = getDb();
-    const rows = await db.query.mealLogItems.findMany({
-      where: and(eq(mealLogItems.userId, userId), isNull(mealLogItems.deletedAt)),
-      orderBy: (t, { desc }) => [desc(t.createdAt)],
-      limit: 60,
-    });
+    const rows = await db
+      .select()
+      .from(mealLogItems)
+      .where(and(eq(mealLogItems.userId, userId), isNull(mealLogItems.deletedAt)))
+      .orderBy(desc(mealLogItems.createdAt))
+      .limit(60);
     const seen = new Set<string>();
     const recent: RecentMealItem[] = [];
     for (const r of rows) {

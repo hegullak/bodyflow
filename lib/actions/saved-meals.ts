@@ -54,9 +54,10 @@ export async function saveMealAction(
 
     return { ok: true, data: undefined };
   } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    logger.error("SavedMeals", "saveMealAction failed", { reason });
-    return { ok: false, error: `Feil: ${reason}` };
+    logger.error("SavedMeals", "saveMealAction failed", {
+      reason: error instanceof Error ? error.message : String(error),
+    });
+    return { ok: false, error: "Kunne ikke lagre måltid. Prøv igjen." };
   }
 }
 
