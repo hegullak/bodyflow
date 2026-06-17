@@ -4,7 +4,7 @@ import { useRef, useTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import type { MealLogItem, MealType } from "@/db/schema";
-import { removeMealItemAction, copyMealsFromPreviousDateAction } from "@/lib/actions/meals";
+import { removeMealItemAction, copyMealsFromPreviousDateAction, updateMealItemAction } from "@/lib/actions/meals";
 import { saveMealAction } from "@/lib/actions/saved-meals";
 import { MEAL_LABELS } from "@/lib/meals/constants";
 import { Button } from "@/components/ui/button";
@@ -20,17 +20,27 @@ const DELETE_W = 72;
 function SwipeableMealItem({
   item,
   removingId,
+  isEditing,
   onRemove,
+  onStartEdit,
+  onCancelEdit,
+  onSaveEdit,
 }: {
   item: MealLogItem;
   removingId: string | null;
+  isEditing: boolean;
   onRemove: (id: string) => void;
+  onStartEdit: (id: string) => void;
+  onCancelEdit: () => void;
+  onSaveEdit: (id: string, newGrams: number) => void;
 }) {
   const [offset, setOffset] = useState(0);
   const [settled, setSettled] = useState(true);
+  const [editGrams, setEditGrams] = useState(String(Math.round(item.quantityGrams)));
   const startRef = useRef({ x: 0, y: 0, active: false, locked: false, startOffset: 0 });
 
   function onPointerDown(e: React.PointerEvent) {
+    if (isEditing) return;
     startRef.current = { x: e.clientX, y: e.clientY, active: true, locked: false, startOffset: offset };
     setSettled(false);
   }
@@ -46,9 +56,22 @@ function SwipeableMealItem({
     setOffset(Math.min(0, Math.max(s.startOffset + dx, -DELETE_W)));
   }
 
-  function onPointerUp() {
+  function onPointerUp(e: React.PointerEvent) {
+    const s = startRef.current;
+    if (!s.active) return;
     startRef.current.active = false;
     setSettled(true);
+
+    const dx = Math.abs(e.clientX - s.x);
+    const dy = Math.abs(e.clientY - s.y);
+
+    // Tap detection: minimal movement, item at rest position
+    if (dx < 5 && dy < 5 && !s.locked && s.startOffset === 0) {
+      setEditGrams(String(Math.round(item.quantityGrams)));
+      onStartEdit(item.id);
+      return;
+    }
+
     setOffset((prev) => (prev < -(DELETE_W * 0.45) ? -DELETE_W : 0));
   }
 
@@ -57,43 +80,88 @@ function SwipeableMealItem({
     setTimeout(() => onRemove(item.id), 180);
   }
 
+  function handleSaveEdit() {
+    const grams = parseFloat(editGrams);
+    if (!grams || grams <= 0) return;
+    onCancelEdit();
+    onSaveEdit(item.id, grams);
+  }
+
+  const showGrams = Boolean(item.foodProductId) || item.quantityGrams !== 100;
+
   return (
     <li className="relative overflow-hidden">
-      <div
-        className="absolute inset-y-0 right-0 flex items-center justify-center bg-[var(--red)]"
-        style={{ width: DELETE_W }}
-      >
-        <button
-          type="button"
-          onClick={handleDelete}
-          disabled={removingId === item.id}
-          className="flex h-full w-full items-center justify-center"
-          aria-label="Slett"
-        >
-          <Trash2 className="h-4 w-4 text-white" />
-        </button>
-      </div>
-      <div
-        className="relative flex items-center gap-2 py-1.5 bg-[var(--card)]"
-        style={{
-          transform: `translateX(${offset}px)`,
-          transition: settled ? "transform 0.22s ease" : "none",
-        }}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-      >
-        <div className="min-w-0 flex-1">
+      {isEditing ? (
+        <div className="py-2">
           <p className="truncate text-sm font-medium">{item.productName}</p>
-          <p className="text-xs text-[var(--color-muted-foreground)]">
-            {Math.round(item.caloriesKcal)} kcal
-            {item.foodProductId || item.quantityGrams !== 100
-              ? ` · ${Math.round(item.quantityGrams)} g`
-              : null}
-          </p>
+          <div className="mt-1.5 flex items-center gap-2">
+            <input
+              type="number"
+              inputMode="decimal"
+              value={editGrams}
+              onChange={(e) => setEditGrams(e.target.value)}
+              className="w-20 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-sm"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSaveEdit();
+                if (e.key === "Escape") onCancelEdit();
+              }}
+              autoFocus
+            />
+            <span className="text-xs text-[var(--color-muted-foreground)]">g</span>
+            <button
+              type="button"
+              onClick={handleSaveEdit}
+              className="rounded-[var(--radius-sm)] bg-[var(--color-primary)] px-3 py-1 text-xs font-medium text-white"
+            >
+              OK
+            </button>
+            <button
+              type="button"
+              onClick={onCancelEdit}
+              className="text-xs text-[var(--color-muted-foreground)]"
+            >
+              Avbryt
+            </button>
+          </div>
         </div>
-      </div>
+      ) : (
+        <>
+          <div
+            className="absolute inset-y-0 right-0 flex items-center justify-center bg-[var(--red)]"
+            style={{ width: DELETE_W }}
+          >
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={removingId === item.id}
+              className="flex h-full w-full items-center justify-center"
+              aria-label="Slett"
+            >
+              <Trash2 className="h-4 w-4 text-white" />
+            </button>
+          </div>
+          <div
+            className="relative flex items-center gap-2 py-1.5 bg-[var(--card)]"
+            style={{
+              transform: `translateX(${offset}px)`,
+              transition: settled ? "transform 0.22s ease" : "none",
+            }}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={() => { startRef.current.active = false; setSettled(true); setOffset((p) => (p < -(DELETE_W * 0.45) ? -DELETE_W : 0)); }}
+          >
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">{item.productName}</p>
+              <p className="text-xs text-[var(--color-muted-foreground)]">
+                {Math.round(item.caloriesKcal)} kcal
+                {showGrams ? ` · ${Math.round(item.quantityGrams)} g` : null}
+              </p>
+            </div>
+            <span className="shrink-0 text-xs text-[var(--color-muted-foreground)] opacity-40">›</span>
+          </div>
+        </>
+      )}
     </li>
   );
 }
@@ -151,11 +219,13 @@ export function MealSection({
 }) {
   const router = useRouter();
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [showSaveForm, setShowSaveForm] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [copyPending, startCopyTransition] = useTransition();
   const [savePending, startSaveTransition] = useTransition();
   const [, startRemoveTransition] = useTransition();
+  const [, startEditTransition] = useTransition();
 
   const sectionSwipe = useRef({ x: 0, active: false });
   const [copyOffset, setCopyOffset] = useState(0);
@@ -183,6 +253,13 @@ export function MealSection({
       } finally {
         setRemovingId(null);
       }
+    });
+  }
+
+  function handleEdit(itemId: string, newGrams: number) {
+    startEditTransition(async () => {
+      await updateMealItemAction(itemId, newGrams, logDate);
+      onChanged();
     });
   }
 
@@ -295,7 +372,11 @@ export function MealSection({
                 key={item.id}
                 item={item}
                 removingId={removingId}
+                isEditing={editingItemId === item.id}
                 onRemove={handleRemove}
+                onStartEdit={(id) => setEditingItemId(id)}
+                onCancelEdit={() => setEditingItemId(null)}
+                onSaveEdit={handleEdit}
               />
             ))}
           </ul>

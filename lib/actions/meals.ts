@@ -380,6 +380,45 @@ export async function reAddMealItemAction(
   }
 }
 
+export async function updateMealItemAction(
+  itemId: string,
+  quantityGrams: number,
+  logDate: string,
+): Promise<ActionResult> {
+  const userId = await requireUserId();
+  if (!quantityGrams || quantityGrams <= 0) return { ok: false, error: "Ugyldig mengde." };
+  try {
+    const db = getDb();
+    const [item] = await db
+      .select()
+      .from(mealLogItems)
+      .where(
+        and(
+          eq(mealLogItems.id, itemId),
+          eq(mealLogItems.userId, userId),
+          isNull(mealLogItems.deletedAt),
+        ),
+      )
+      .limit(1);
+    if (!item) return { ok: false, error: "Matvare ikke funnet." };
+    const caloriesKcal = buildMealCalories(item.kcalPer100g, quantityGrams);
+    await db
+      .update(mealLogItems)
+      .set({ quantityGrams, caloriesKcal, updatedAt: new Date() })
+      .where(scopeBy(mealLogItems.userId, userId, eq(mealLogItems.id, itemId)));
+    await syncDailyCaloriesFromMeals(userId, logDate);
+    revalidatePath("/meals");
+    revalidatePath("/dashboard");
+    revalidatePath("/check-in");
+    return { ok: true, data: undefined };
+  } catch (error) {
+    logger.error("Meals", "updateMealItemAction failed", {
+      reason: error instanceof Error ? error.message : "unknown",
+    });
+    return { ok: false, error: "Kunne ikke oppdatere. Prøv igjen." };
+  }
+}
+
 export type MealsByType = Record<MealType, Awaited<ReturnType<typeof getMealItemsForDate>>>;
 
 export async function getMealsGroupedByType(
