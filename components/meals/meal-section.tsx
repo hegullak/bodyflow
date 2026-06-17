@@ -30,13 +30,22 @@ function SwipeableMealItem({
   onRemove: (id: string) => void;
 }) {
   const router = useRouter();
-  const [offset, setOffset] = useState(0);
-  const [settled, setSettled] = useState(true);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const offsetRef = useRef(0);
   const startRef = useRef({ x: 0, y: 0, active: false, locked: false, startOffset: 0 });
 
+  // Direct DOM mutation — zero React re-renders during drag
+  function applyOffset(offset: number, animated: boolean) {
+    const el = contentRef.current;
+    if (!el) return;
+    el.style.transition = animated ? "transform 0.22s ease" : "none";
+    el.style.transform = `translateX(${offset}px)`;
+    offsetRef.current = offset;
+  }
+
   function onPointerDown(e: React.PointerEvent) {
-    startRef.current = { x: e.clientX, y: e.clientY, active: true, locked: false, startOffset: offset };
-    setSettled(false);
+    startRef.current = { x: e.clientX, y: e.clientY, active: true, locked: false, startOffset: offsetRef.current };
+    if (contentRef.current) contentRef.current.style.transition = "none";
   }
 
   function onPointerMove(e: React.PointerEvent) {
@@ -44,68 +53,64 @@ function SwipeableMealItem({
     if (!s.active || s.locked) return;
     const dx = e.clientX - s.x;
     const dy = e.clientY - s.y;
-    if (Math.abs(dy) > Math.abs(dx) + 6) { s.locked = true; setSettled(true); return; }
+    if (Math.abs(dy) > Math.abs(dx) + 6) { s.locked = true; return; }
     if (Math.abs(dx) < 2) return;
     e.currentTarget.setPointerCapture(e.pointerId);
-    setOffset(Math.min(0, s.startOffset + dx));
+    const next = Math.min(0, s.startOffset + dx);
+    if (contentRef.current) contentRef.current.style.transform = `translateX(${next}px)`;
+    offsetRef.current = next;
   }
 
   function onPointerUp(e: React.PointerEvent) {
     const s = startRef.current;
     if (!s.active) return;
-    startRef.current.active = false;
-    setSettled(true);
+    s.active = false;
 
     const dx = Math.abs(e.clientX - s.x);
     const dy = Math.abs(e.clientY - s.y);
+    const offset = offsetRef.current;
 
-    // Tap: navigate to detail page, or close swipe state
     if (dx < 5 && dy < 5 && !s.locked) {
       if (s.startOffset === 0) {
         router.push(`/meals/item/${item.id}?date=${logDate}`);
       } else {
-        setOffset(0);
+        applyOffset(0, true);
       }
       return;
     }
 
-    // Full swipe left → auto-delete
     if (offset <= -FULL_DELETE) {
-      setOffset(-800);
+      applyOffset(-800, true);
       setTimeout(() => onRemove(item.id), 220);
       return;
     }
 
-    // Snap to reveal delete zone or close
-    setOffset(offset < -(SNAP_W * 0.45) ? -SNAP_W : 0);
+    applyOffset(offset < -(SNAP_W * 0.45) ? -SNAP_W : 0, true);
   }
 
   const showGrams = Boolean(item.foodProductId) || item.quantityGrams !== 100;
 
   return (
     <li className="relative overflow-hidden">
-      {/* Full-width red background — revealed as content slides left */}
       <div className="absolute inset-0 flex items-center justify-end bg-[var(--red)] pr-5">
         <Trash2 className="h-5 w-5 text-white" />
       </div>
 
       <div
+        ref={contentRef}
         className="relative flex items-center gap-2 py-1.5 bg-[var(--card)]"
         style={{
-          transform: `translateX(${offset}px)`,
-          transition: settled ? "transform 0.22s ease" : "none",
-          opacity: removingId === item.id ? 0.4 : 1,
           touchAction: "pan-y",
           userSelect: "none",
           willChange: "transform",
+          opacity: removingId === item.id ? 0.4 : 1,
         }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={() => {
           startRef.current.active = false;
-          setSettled(true);
-          setOffset((p) => (p < -(SNAP_W * 0.45) ? -SNAP_W : 0));
+          applyOffset(offsetRef.current < -(SNAP_W * 0.45) ? -SNAP_W : 0, true);
         }}
       >
         <div className="min-w-0 flex-1">
