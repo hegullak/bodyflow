@@ -59,5 +59,5 @@ export function getWithingsWebhookUrl(): string | null {
 }
 
 export const WITHINGS_SYNC_INTERVAL_MS = 10 * 60 * 1000;
-export const WITHINGS_INITIAL_LOOKBACK_SECONDS = 90 * 24 * 60 * 60;
+export const WITHINGS_INITIAL_LOOKBACK_SECONDS = 10 * 365 * 24 * 60 * 60; // 10 years
 export const WITHINGS_WEIGHT_TYPE = 1;

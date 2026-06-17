@@ -4,7 +4,7 @@ import { dailyBodyLogs, withingsConnections, type WithingsConnection } from "@/d
 import { scopeBy } from "@/lib/auth/scope";
 import { logger } from "@/lib/logger";
 import {
-  fetchMeasurements,
+  fetchAllMeasurements,
   subscribeToBodyMetrics,
   WithingsApiError,
 } from "./api";
@@ -154,7 +154,7 @@ export async function syncWithingsForUser(
               enddate: Math.floor(Date.now() / 1000),
             };
 
-    const body = await fetchMeasurements(fresh.accessToken, measureParams);
+    const body = await fetchAllMeasurements(fresh.accessToken, measureParams);
     const applied = await applyWeightGroups(userId, body.measuregrps ?? []);
 
     const db = getDb();

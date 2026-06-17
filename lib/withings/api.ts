@@ -27,6 +27,8 @@ export interface WithingsTokenResponse {
 export interface WithingsMeasureResponse {
   updatetime: number;
   timezone: string;
+  more: number; // 1 if more pages available
+  offset: number; // use as offset param for next page
   measuregrps: {
     grpid: number;
     date: number;
@@ -116,7 +118,7 @@ export async function refreshAccessToken(refreshToken: string): Promise<Withings
 
 export async function fetchMeasurements(
   accessToken: string,
-  options: { lastupdate?: number; startdate?: number; enddate?: number },
+  options: { lastupdate?: number; startdate?: number; enddate?: number; offset?: number },
 ): Promise<WithingsMeasureResponse> {
   const config = getWithingsConfig();
   if (!config) throw new Error("Withings is not configured");
@@ -132,8 +134,28 @@ export async function fetchMeasurements(
     if (options.startdate != null) params.startdate = String(options.startdate);
     if (options.enddate != null) params.enddate = String(options.enddate);
   }
+  if (options.offset != null) params.offset = String(options.offset);
 
   return postForm<WithingsMeasureResponse>(`${config.apiBase}/measure`, params, accessToken);
+}
+
+export async function fetchAllMeasurements(
+  accessToken: string,
+  options: { lastupdate?: number; startdate?: number; enddate?: number },
+): Promise<{ measuregrps: WithingsMeasureResponse["measuregrps"]; updatetime: number }> {
+  const allGroups: WithingsMeasureResponse["measuregrps"] = [];
+  let updatetime = 0;
+  let offset: number | undefined;
+
+  for (let page = 0; page < 50; page++) {
+    const body = await fetchMeasurements(accessToken, { ...options, offset });
+    updatetime = body.updatetime;
+    allGroups.push(...(body.measuregrps ?? []));
+    if (!body.more) break;
+    offset = body.offset;
+  }
+
+  return { measuregrps: allGroups, updatetime };
 }
 
 export async function subscribeToBodyMetrics(
