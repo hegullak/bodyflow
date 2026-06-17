@@ -127,12 +127,14 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
         setEanError(cameraErrorMessage(err));
       }
     }
-    if (t === "saved" && !savedLoaded) {
+    if (t === "saved") {
+      setSavedError(null);
+      setSavedLoaded(false);
       const res = await getSavedMealsAction();
       if (res.ok) {
         setSavedMeals(res.data);
       } else {
-        setSavedError(res.error ?? "Kunne ikke hente lagrede måltider.");
+        setSavedError("Henting feilet — prøv igjen.");
       }
       setSavedLoaded(true);
     }
@@ -456,7 +458,16 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
             {!savedLoaded ? (
               <p className="text-sm text-[var(--color-muted-foreground)]">Laster…</p>
             ) : savedError ? (
-              <p className="text-sm text-[#9a5b45]">{savedError}</p>
+              <div className="space-y-2">
+                <p className="text-sm text-[#9a5b45]">{savedError}</p>
+                <button
+                  type="button"
+                  onClick={() => switchTab("saved")}
+                  className="text-sm font-medium text-[var(--color-primary)]"
+                >
+                  Prøv igjen
+                </button>
+              </div>
             ) : savedMeals.length === 0 ? (
               <p className="text-sm text-[var(--color-muted-foreground)]">
                 Ingen lagrede måltider ennå. Logg et måltid og trykk «+ Legg til som eget måltid».

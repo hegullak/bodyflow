@@ -253,6 +253,7 @@ export function MealSection({
             </div>
           )}
           <div
+            className="bg-[var(--card)]"
             style={{
               transform: `translateX(${copyOffset}px)`,
               transition: copySettled ? "transform 0.22s ease" : "none",

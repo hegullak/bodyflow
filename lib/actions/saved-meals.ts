@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/db/client";
 import { mealLogItems, savedMealItems, savedMeals, type MealType } from "@/db/schema";
@@ -66,10 +66,11 @@ export async function getSavedMealsAction(): Promise<
   const userId = await requireUserId();
   try {
     const db = getDb();
-    const meals = await db.query.savedMeals.findMany({
-      where: and(eq(savedMeals.userId, userId), isNull(savedMeals.deletedAt)),
-      orderBy: (t, { desc }) => [desc(t.createdAt)],
-    });
+    const meals = await db
+      .select()
+      .from(savedMeals)
+      .where(and(eq(savedMeals.userId, userId), isNull(savedMeals.deletedAt)))
+      .orderBy(desc(savedMeals.createdAt));
     return {
       ok: true,
       data: meals.map((m) => ({
