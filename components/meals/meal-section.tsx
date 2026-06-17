@@ -164,7 +164,13 @@ export function MealSection({
   const isEmpty = items.length === 0;
   const previousDayMeals = previousDayItems.filter((i) => i.mealType === mealType);
   const twoDaysAgoMeals = twoDaysAgoItems.filter((i) => i.mealType === mealType);
-  const hasPreviousMeals = previousDayMeals.length > 0 || twoDaysAgoMeals.length > 0;
+  const copySourceDate = previousDayMeals.length > 0
+    ? addDaysToIsoDate(logDate, -1)
+    : twoDaysAgoMeals.length > 0
+      ? addDaysToIsoDate(logDate, -2)
+      : null;
+  const copyLabel = previousDayMeals.length > 0 ? "Kopier fra i går" : "Kopier fra i forgårs";
+  const hasPreviousMeals = copySourceDate !== null;
 
   async function handleRemove(itemId: string) {
     setRemovingId(itemId);
@@ -222,8 +228,8 @@ export function MealSection({
     <section className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] p-3">
       <div className="mb-1 flex items-center justify-between gap-2">
         <div>
-          <h3 className="text-sm font-semibold">{MEAL_LABELS[mealType]}</h3>
-          <p className="text-xs text-[var(--color-muted-foreground)]">{subtotal} kcal</p>
+          <h3 className="text-base font-bold">{MEAL_LABELS[mealType]}</h3>
+          <p className="text-sm font-medium text-[var(--color-muted-foreground)]">{subtotal} kcal</p>
         </div>
         <Button
           type="button"
@@ -238,21 +244,12 @@ export function MealSection({
       {isEmpty ? (
         <div className="relative overflow-hidden">
           {hasPreviousMeals && (
-            <div className="absolute inset-y-0 left-0 flex flex-col justify-center gap-1" style={{ width: COPY_SNAP }}>
-              {previousDayMeals.length > 0 && (
-                <button type="button" disabled={copyPending}
-                  onClick={() => handleCopyFromDay(addDaysToIsoDate(logDate, -1))}
-                  className="text-left text-xs font-medium text-[var(--color-primary)]">
-                  {copyPending ? "..." : "Kopier fra i går"}
-                </button>
-              )}
-              {twoDaysAgoMeals.length > 0 && (
-                <button type="button" disabled={copyPending}
-                  onClick={() => handleCopyFromDay(addDaysToIsoDate(logDate, -2))}
-                  className="text-left text-xs font-medium text-[var(--color-primary)]">
-                  {copyPending ? "..." : "Kopier fra i forgårs"}
-                </button>
-              )}
+            <div className="absolute inset-y-0 left-0 flex items-center" style={{ width: COPY_SNAP }}>
+              <button type="button" disabled={copyPending}
+                onClick={() => handleCopyFromDay(copySourceDate!)}
+                className="text-left text-xs font-medium text-[var(--color-primary)]">
+                {copyPending ? "..." : copyLabel}
+              </button>
             </div>
           )}
           <div

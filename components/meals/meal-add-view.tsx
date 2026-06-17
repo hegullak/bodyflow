@@ -78,6 +78,7 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
   // Saved meals
   const [savedMeals, setSavedMeals] = useState<Array<{ id: string; name: string; totalKcal: number; totalGrams: number }>>([]);
   const [savedLoaded, setSavedLoaded] = useState(false);
+  const [savedError, setSavedError] = useState<string | null>(null);
   const [addingSavedId, setAddingSavedId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -128,7 +129,11 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
     }
     if (t === "saved" && !savedLoaded) {
       const res = await getSavedMealsAction();
-      if (res.ok) setSavedMeals(res.data);
+      if (res.ok) {
+        setSavedMeals(res.data);
+      } else {
+        setSavedError(res.error ?? "Kunne ikke hente lagrede måltider.");
+      }
       setSavedLoaded(true);
     }
   }
@@ -450,6 +455,8 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
           <div className="space-y-2">
             {!savedLoaded ? (
               <p className="text-sm text-[var(--color-muted-foreground)]">Laster…</p>
+            ) : savedError ? (
+              <p className="text-sm text-[#9a5b45]">{savedError}</p>
             ) : savedMeals.length === 0 ? (
               <p className="text-sm text-[var(--color-muted-foreground)]">
                 Ingen lagrede måltider ennå. Logg et måltid og trykk «+ Legg til som eget måltid».
