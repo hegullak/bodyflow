@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ChevronLeft, Dumbbell, GripVertical, Minus, Play, Plus, Trash2, X } from "lucide-react";
 import {
@@ -46,32 +46,103 @@ interface ActiveInput {
 // Rest timer hook
 // ---------------------------------------------------------------------------
 
+// Wall-clock driven timer — immune to React render timing and setInterval drift.
+// All mutable state lives in refs; React state is only updated for display.
 function useRestTimer() {
   const [seconds, setSeconds] = useState(0);
   const [running, setRunning] = useState(false);
-  const interval = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const start = useCallback((duration: number) => {
-    setSeconds(duration);
-    setRunning(true);
-    // Do NOT clear the interval here — if running is already true, setRunning(true)
-    // is a no-op and the useEffect would never recreate the interval. Instead, let
-    // the existing interval keep ticking from the new seconds value.
-  }, []);
+  // Single ref bundle — no stale-closure risk regardless of how callers cache these fns.
+  const r = useRef({
+    endAt: null as number | null, // wall-clock ms when rest ends
+    running: false,
+    seconds: 0,
+    interval: null as ReturnType<typeof setInterval> | null,
+  });
 
-  const pause = useCallback(() => setRunning((v) => !v), []);
-  const skip = useCallback(() => { setRunning(false); setSeconds(0); }, []);
-  const add = useCallback((n: number) => setSeconds((v) => Math.max(0, v + n)), []);
+  const fns = useRef({
+    stopTick() {
+      if (r.current.interval !== null) {
+        clearInterval(r.current.interval);
+        r.current.interval = null;
+      }
+    },
+    startTick(endAt: number) {
+      fns.current.stopTick();
+      r.current.interval = setInterval(() => {
+        const rem = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
+        r.current.seconds = rem;
+        setSeconds(rem);
+        if (rem <= 0) {
+          fns.current.stopTick();
+          r.current.endAt = null;
+          r.current.running = false;
+          setRunning(false);
+        }
+      }, 250);
+    },
+    start(duration: number) {
+      const endAt = Date.now() + duration * 1000;
+      r.current.endAt = endAt;
+      r.current.seconds = duration;
+      r.current.running = true;
+      setSeconds(duration);
+      setRunning(true);
+      fns.current.startTick(endAt);
+    },
+    pause() {
+      if (r.current.running) {
+        fns.current.stopTick();
+        r.current.endAt = null;
+        r.current.running = false;
+        setRunning(false);
+        // seconds display stays at whatever the last tick showed
+      } else {
+        const s = r.current.seconds;
+        if (s > 0) {
+          const endAt = Date.now() + s * 1000;
+          r.current.endAt = endAt;
+          r.current.running = true;
+          setRunning(true);
+          fns.current.startTick(endAt);
+        }
+      }
+    },
+    skip() {
+      fns.current.stopTick();
+      r.current.endAt = null;
+      r.current.running = false;
+      r.current.seconds = 0;
+      setRunning(false);
+      setSeconds(0);
+    },
+    add(n: number) {
+      if (r.current.endAt !== null) {
+        r.current.endAt += n * 1000;
+        const rem = Math.max(0, Math.ceil((r.current.endAt - Date.now()) / 1000));
+        r.current.seconds = rem;
+        setSeconds(rem);
+        fns.current.startTick(r.current.endAt);
+      } else {
+        const newS = Math.max(0, r.current.seconds + n);
+        r.current.seconds = newS;
+        setSeconds(newS);
+      }
+    },
+  });
 
-  useEffect(() => {
-    if (!running) { if (interval.current) clearInterval(interval.current); return; }
-    interval.current = setInterval(() => {
-      setSeconds((v) => { if (v <= 1) { setRunning(false); return 0; } return v - 1; });
-    }, 1000);
-    return () => { if (interval.current) clearInterval(interval.current); };
-  }, [running]);
+  // Cleanup on unmount only
+  useEffect(() => () => fns.current.stopTick(), []);
 
-  return { seconds, running, active: running || seconds > 0, start, pause, skip, add };
+  return {
+    seconds,
+    running,
+    active: running || seconds > 0,
+    start:  fns.current.start,
+    pause:  fns.current.pause,
+    skip:   fns.current.skip,
+    add:    fns.current.add,
+  };
 }
 
 // ---------------------------------------------------------------------------
