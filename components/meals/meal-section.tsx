@@ -152,6 +152,7 @@ export function MealSection({
   const router = useRouter();
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [showSaveForm, setShowSaveForm] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [copyPending, startCopyTransition] = useTransition();
   const [savePending, startSaveTransition] = useTransition();
 
@@ -191,9 +192,11 @@ export function MealSection({
   }
 
   function handleSaveMeal(name: string) {
+    setSaveError(null);
     startSaveTransition(async () => {
-      await saveMealAction(logDate, mealType, name);
-      setShowSaveForm(false);
+      const result = await saveMealAction(logDate, mealType, name);
+      if (result.ok) setShowSaveForm(false);
+      else setSaveError(result.error ?? "Lagring feilet.");
     });
   }
 
@@ -209,6 +212,7 @@ export function MealSection({
     if (!sectionSwipe.current.active) return;
     const dx = e.clientX - sectionSwipe.current.x;
     if (dx < 0) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
     setCopyOffset(Math.min(dx, COPY_SNAP + 20));
   }
 
@@ -258,6 +262,7 @@ export function MealSection({
             style={{
               transform: `translateX(${copyOffset}px)`,
               transition: copySettled ? "transform 0.22s ease" : "none",
+              touchAction: "pan-y",
             }}
             onPointerDown={onSectionPointerDown}
             onPointerMove={onSectionPointerMove}
@@ -278,7 +283,7 @@ export function MealSection({
         </div>
       ) : (
         <>
-          <ul className="divide-y divide-[var(--color-border)]">
+          <ul>
             {items.map((item) => (
               <SwipeableMealItem
                 key={item.id}
@@ -289,7 +294,10 @@ export function MealSection({
             ))}
           </ul>
           {showSaveForm ? (
-            <SaveMealForm onSave={handleSaveMeal} onCancel={() => setShowSaveForm(false)} saving={savePending} />
+            <>
+              <SaveMealForm onSave={handleSaveMeal} onCancel={() => { setShowSaveForm(false); setSaveError(null); }} saving={savePending} />
+              {saveError && <p className="mt-1 text-xs text-[var(--red)]">{saveError}</p>}
+            </>
           ) : (
             <button type="button" onClick={() => setShowSaveForm(true)}
               className="mt-2 text-xs text-[var(--color-muted-foreground)] hover:text-[var(--color-primary)]">
