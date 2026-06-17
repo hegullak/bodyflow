@@ -20,14 +20,15 @@ export async function saveMealAction(
 
   try {
     const db = getDb();
-    const items = await db.query.mealLogItems.findMany({
-      where: and(
+    const items = await db
+      .select()
+      .from(mealLogItems)
+      .where(and(
         eq(mealLogItems.userId, userId),
         eq(mealLogItems.logDate, logDate),
         eq(mealLogItems.mealType, mealType),
         isNull(mealLogItems.deletedAt),
-      ),
-    });
+      ));
 
     if (!items.length) return { ok: false, error: "Ingen matvarer å lagre." };
 
@@ -97,15 +98,21 @@ export async function addSavedMealToLogAction(
   try {
     const db = getDb();
 
-    const meal = await db.query.savedMeals.findFirst({
-      where: scopeBy(savedMeals.userId, userId, eq(savedMeals.id, savedMealId)),
-      with: { items: true },
-    });
+    const [meal] = await db
+      .select()
+      .from(savedMeals)
+      .where(and(eq(savedMeals.id, savedMealId), eq(savedMeals.userId, userId)))
+      .limit(1);
 
     if (!meal) return { ok: false, error: "Måltid ikke funnet." };
 
+    const items = await db
+      .select()
+      .from(savedMealItems)
+      .where(eq(savedMealItems.savedMealId, savedMealId));
+
     await db.insert(mealLogItems).values(
-      meal.items.map((item) => ({
+      items.map((item) => ({
         userId,
         logDate,
         mealType,
