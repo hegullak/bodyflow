@@ -95,6 +95,8 @@ function SwipeableMealItem({
           transform: `translateX(${offset}px)`,
           transition: settled ? "transform 0.22s ease" : "none",
           opacity: removingId === item.id ? 0.4 : 1,
+          touchAction: "pan-y",
+          userSelect: "none",
         }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
