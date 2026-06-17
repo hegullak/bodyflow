@@ -9,15 +9,6 @@ import { FieldError, Input, Label } from "@/components/ui/field";
 import { formatWeekdayDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
-function formatValue(value: number | null, kind: "kg" | "cm"): string {
-  if (value == null) return "—";
-  return kind === "kg" ? `${value} kg` : `${value} cm`;
-}
-
-function snapshotLine(row: CheckInSnapshot): string {
-  return `${formatWeekdayDate(row.logDate)} — ${formatValue(row.weightKg, "kg")} — ${formatValue(row.waistCm, "cm")} — ${formatValue(row.chestCm, "cm")} — ${formatValue(row.hipCm, "cm")}`;
-}
-
 function diffPart(
   label: string,
   value: number | null,
@@ -63,12 +54,10 @@ function DiffLine({ diff }: { diff: CheckInDiff }) {
 export function CheckInForm({
   logDate,
   today,
-  recent,
   focusWeight = false,
 }: {
   logDate: string;
   today: CheckInSnapshot;
-  recent: CheckInSnapshot[];
   focusWeight?: boolean;
 }) {
   const router = useRouter();
@@ -86,19 +75,6 @@ export function CheckInForm({
 
   return (
     <div className="space-y-3" id="weight-section">
-      {recent.length > 0 ? (
-        <div className="space-y-1 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-muted)]/40 px-2.5 py-2">
-          {recent.map((row) => (
-            <p
-              key={row.logDate}
-              className="text-[11px] leading-snug text-[var(--color-muted-foreground)]"
-            >
-              {snapshotLine(row)}
-            </p>
-          ))}
-        </div>
-      ) : null}
-
       <form action={formAction} className="space-y-3">
         <input type="hidden" name="logDate" value={logDate} />
 

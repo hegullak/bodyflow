@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { CheckInForm } from "@/components/forms/check-in-form";
+import { CheckInHistory } from "@/components/forms/check-in-history";
 import { Card } from "@/components/ui/card";
 import { getCheckInBundle } from "@/lib/actions/check-in";
 import { requireUserId } from "@/lib/auth/current-user";
@@ -18,7 +18,7 @@ export default async function CheckInPage({
 
   await syncWithingsForUser(userId);
 
-  const { today: todayCheckIn, recent } = await getCheckInBundle(userId, today);
+  const { today: todayCheckIn, initial, hasMore } = await getCheckInBundle(userId, today);
 
   return (
     <div>
@@ -28,16 +28,11 @@ export default async function CheckInPage({
         <CheckInForm
           logDate={today}
           today={todayCheckIn}
-          recent={recent}
           focusWeight={focusWeight}
         />
       </Card>
 
-      <p className="mt-4 text-center text-sm text-[var(--color-muted-foreground)]">
-        <Link href="/statistics" className="text-[var(--color-primary)]">
-          View full statistics →
-        </Link>
-      </p>
+      <CheckInHistory initial={initial} hasMore={hasMore} />
     </div>
   );
 }

@@ -12,6 +12,7 @@ import {
   getCheckInHistory,
   getPreviousCheckIn,
   type CheckInDiff,
+  type CheckInSnapshot,
 } from "@/lib/queries/check-in";
 import { checkInFormSchema } from "@/lib/validation/check-in";
 import { type ActionResult, flattenZodErrors } from "./types";
@@ -118,19 +119,28 @@ export async function upsertCheckInAction(
   return { ok: true, data: { diff } };
 }
 
+const HISTORY_PAGE = 5;
+const HISTORY_FETCH_LIMIT = 200;
+
 export async function getCheckInBundle(userId: string, logDate: string) {
-  const history = await getCheckInHistory(userId, 10);
-  const today = (await getCheckInForDate(userId, logDate)) ?? {
-    logDate,
-    weightKg: null,
-    waistCm: null,
-    chestCm: null,
-    hipCm: null,
-  };
+  const [history, today] = await Promise.all([
+    getCheckInHistory(userId, HISTORY_FETCH_LIMIT),
+    getCheckInForDate(userId, logDate),
+  ]);
 
-  const recent = history
-    .filter((row) => row.logDate !== logDate)
-    .slice(0, 2);
+  const todayEntry = today ?? { logDate, weightKg: null, waistCm: null, chestCm: null, hipCm: null };
+  const historyWithoutToday = history.filter((row) => row.logDate !== logDate);
+  const initial = historyWithoutToday.slice(0, HISTORY_PAGE);
+  const hasMore = historyWithoutToday.length > HISTORY_PAGE;
 
-  return { today, recent };
+  return { today: todayEntry, initial, hasMore };
+}
+
+export async function getCheckInHistoryPageAction(
+  offset: number,
+): Promise<CheckInSnapshot[]> {
+  const userId = await requireUserId();
+  const history = await getCheckInHistory(userId, HISTORY_FETCH_LIMIT);
+  const today = (await import("@/lib/utils")).todayIsoDate();
+  return history.filter((row) => row.logDate !== today).slice(offset, offset + HISTORY_PAGE);
 }
