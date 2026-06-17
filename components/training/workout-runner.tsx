@@ -251,16 +251,19 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
       timer.start(ex.restSeconds);
     }
 
-    // Jump keyboard to next uncompleted set, or next exercise if all done
-    if (willAllBeCompleted) {
-      const nextEx = findNextExercise(ex.id);
-      if (nextEx) {
-        setTimeout(() => focusInput(nextEx.id, 0, "weight"), 450);
-      }
-    } else {
-      const nextSetIdx = exRows.findIndex((row, i) => i > idx && !row.completed);
-      if (nextSetIdx !== -1) {
-        setTimeout(() => focusInput(ex.id, nextSetIdx, "weight"), 450);
+    // Only auto-focus the next set if there's no rest timer (restSeconds = 0).
+    // When resting, the user taps the set row manually when ready.
+    if (ex.restSeconds === 0) {
+      if (willAllBeCompleted) {
+        const nextEx = findNextExercise(ex.id);
+        if (nextEx) {
+          setTimeout(() => focusInput(nextEx.id, 0, "weight"), 450);
+        }
+      } else {
+        const nextSetIdx = exRows.findIndex((row, i) => i > idx && !row.completed);
+        if (nextSetIdx !== -1) {
+          setTimeout(() => focusInput(ex.id, nextSetIdx, "weight"), 450);
+        }
       }
     }
   }
