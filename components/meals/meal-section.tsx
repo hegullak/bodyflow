@@ -45,7 +45,7 @@ function SwipeableMealItem({
     const dx = e.clientX - s.x;
     const dy = e.clientY - s.y;
     if (Math.abs(dy) > Math.abs(dx) + 6) { s.locked = true; setSettled(true); return; }
-    if (Math.abs(dx) < 4) return;
+    if (Math.abs(dx) < 2) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     setOffset(Math.min(0, s.startOffset + dx));
   }
@@ -97,6 +97,7 @@ function SwipeableMealItem({
           opacity: removingId === item.id ? 0.4 : 1,
           touchAction: "pan-y",
           userSelect: "none",
+          willChange: "transform",
         }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}

@@ -52,9 +52,11 @@ function useRestTimer() {
   const interval = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const start = useCallback((duration: number) => {
-    if (interval.current) clearInterval(interval.current);
     setSeconds(duration);
     setRunning(true);
+    // Do NOT clear the interval here — if running is already true, setRunning(true)
+    // is a no-op and the useEffect would never recreate the interval. Instead, let
+    // the existing interval keep ticking from the new seconds value.
   }, []);
 
   const pause = useCallback(() => setRunning((v) => !v), []);
@@ -430,7 +432,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
       {activeInput && (
         <div
           className="fixed inset-0 z-[290]"
-          onClick={() => setActiveInput(null)}
+          onPointerDown={(e) => { e.preventDefault(); setActiveInput(null); }}
         />
       )}
 
