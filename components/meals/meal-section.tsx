@@ -226,7 +226,7 @@ export function MealSection({
 
   return (
     <section className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] p-3">
-      <div className="mb-1 flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2">
         <div>
           <h3 className="text-base font-bold">{MEAL_LABELS[mealType]}</h3>
           <p className="text-sm font-medium text-[var(--color-muted-foreground)]">{subtotal} kcal</p>
@@ -240,6 +240,7 @@ export function MealSection({
           + Legg til
         </Button>
       </div>
+      <hr className="my-2 border-t border-[var(--border)]" />
 
       {isEmpty ? (
         <div className="relative overflow-hidden">
