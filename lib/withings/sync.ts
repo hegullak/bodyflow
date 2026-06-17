@@ -118,7 +118,7 @@ export interface WithingsSyncResult {
 
 export async function syncWithingsForUser(
   userId: string,
-  options: { force?: boolean; startdate?: number; enddate?: number } = {},
+  options: { force?: boolean; lastupdate?: number; startdate?: number; enddate?: number } = {},
 ): Promise<WithingsSyncResult> {
   if (!isWithingsConfigured()) {
     return { synced: false, applied: 0, reason: "not_configured" };
@@ -142,7 +142,9 @@ export async function syncWithingsForUser(
     });
 
     const measureParams =
-      options.startdate != null || options.enddate != null
+      options.lastupdate != null
+        ? { lastupdate: options.lastupdate }
+        : options.startdate != null || options.enddate != null
         ? {
             startdate: options.startdate,
             enddate: options.enddate,

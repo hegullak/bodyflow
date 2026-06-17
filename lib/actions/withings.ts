@@ -15,15 +15,12 @@ export async function disconnectWithingsAction() {
   redirect("/profile?withings=disconnected");
 }
 
-// Unix timestamp for 2010-01-01 — covers all realistic Withings history
-const FULL_HISTORY_START = 1262304000;
-
 export async function backfillWithingsHistoryAction(): Promise<{ ok: boolean; applied: number; error?: string }> {
   const userId = await requireUserId();
+  // lastupdate: 0 fetches ALL measurements ever uploaded to Withings (by upload time, not measurement date)
   const result = await syncWithingsForUser(userId, {
     force: true,
-    startdate: FULL_HISTORY_START,
-    enddate: Math.floor(Date.now() / 1000),
+    lastupdate: 0,
   });
   if (result.synced) {
     revalidatePath("/statistics");
