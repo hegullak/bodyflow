@@ -35,9 +35,9 @@ export function StatisticsView({ data }: { data: StatisticsData }) {
       {data.allWeightEntries.length > 0 && (
         <Card>
           <CardTitle>Alle vektmålinger</CardTitle>
-          <div className="mt-3 max-h-[28rem] overflow-y-auto -mx-4 px-4">
+          <div className="mt-3 -mx-4 px-4">
             <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-[var(--card)]">
+              <thead>
                 <tr className="text-left text-[var(--text3)]">
                   <th className="pb-2 font-medium">Dato</th>
                   <th className="pb-2 text-right font-medium">Vekt</th>
@@ -60,9 +60,9 @@ export function StatisticsView({ data }: { data: StatisticsData }) {
       {data.allMeasurementEntries.length > 0 && (
         <Card>
           <CardTitle>Alle kroppsmål</CardTitle>
-          <div className="mt-3 max-h-[28rem] overflow-y-auto -mx-4 px-4">
+          <div className="mt-3 -mx-4 px-4">
             <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-[var(--card)]">
+              <thead>
                 <tr className="text-left text-[var(--text3)]">
                   <th className="pb-2 font-medium">Dato</th>
                   <th className="pb-2 text-right font-medium">Midje</th>
