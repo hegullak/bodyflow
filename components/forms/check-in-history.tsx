@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useRef } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import type { CheckInSnapshot, CheckInDiff } from "@/lib/queries/check-in";
 import {
@@ -86,38 +86,46 @@ function SwipeRow({
   function snap(x: number, animate = true) {
     const el = innerRef.current;
     if (!el) return;
-    el.style.transition = animate ? "transform 0.2s ease" : "none";
+    el.style.transition = animate ? "transform 0.2s ease-out" : "none";
     el.style.transform = `translateX(${x}px)`;
     sw.current.revealed = x < 0;
   }
 
+  useEffect(() => {
+    function onPointerMove(e: PointerEvent) {
+      if (!sw.current.tracking || !innerRef.current) return;
+      const dx = e.clientX - sw.current.startX;
+      const dy = e.clientY - sw.current.startY;
+      if (!sw.current.dragging) {
+        if (Math.abs(dy) > Math.abs(dx) + 5) { sw.current.tracking = false; return; }
+        if (Math.abs(dx) > 5) sw.current.dragging = true;
+        else return;
+      }
+      e.preventDefault();
+      const base = sw.current.revealed ? -REVEAL_W : 0;
+      const x = Math.max(-REVEAL_W, Math.min(0, base + dx));
+      innerRef.current.style.transform = `translateX(${x}px)`;
+    }
+
+    function onPointerUp(e: PointerEvent) {
+      if (!sw.current.tracking || !sw.current.dragging || !innerRef.current) { sw.current.tracking = false; return; }
+      sw.current.tracking = false;
+      const dx = e.clientX - sw.current.startX;
+      const base = sw.current.revealed ? -REVEAL_W : 0;
+      snap(base + dx < -SNAP ? -REVEAL_W : 0);
+    }
+
+    document.addEventListener("pointermove", onPointerMove, { passive: false });
+    document.addEventListener("pointerup", onPointerUp);
+    return () => {
+      document.removeEventListener("pointermove", onPointerMove);
+      document.removeEventListener("pointerup", onPointerUp);
+    };
+  }, []);
+
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
     sw.current = { ...sw.current, startX: e.clientX, startY: e.clientY, tracking: true, dragging: false };
-    innerRef.current?.setPointerCapture(e.pointerId);
     if (innerRef.current) innerRef.current.style.transition = "none";
-  }
-
-  function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
-    if (!sw.current.tracking) return;
-    const dx = e.clientX - sw.current.startX;
-    const dy = e.clientY - sw.current.startY;
-    if (!sw.current.dragging) {
-      if (Math.abs(dy) > Math.abs(dx) + 5) { sw.current.tracking = false; return; }
-      if (Math.abs(dx) > 5) sw.current.dragging = true;
-      else return;
-    }
-    e.preventDefault();
-    const base = sw.current.revealed ? -REVEAL_W : 0;
-    const x = Math.max(-REVEAL_W, Math.min(0, base + dx));
-    if (innerRef.current) innerRef.current.style.transform = `translateX(${x}px)`;
-  }
-
-  function onPointerUp(e: React.PointerEvent<HTMLDivElement>) {
-    if (!sw.current.tracking || !sw.current.dragging) { sw.current.tracking = false; return; }
-    sw.current.tracking = false;
-    const dx = e.clientX - sw.current.startX;
-    const base = sw.current.revealed ? -REVEAL_W : 0;
-    snap(base + dx < -SNAP ? -REVEAL_W : 0);
   }
 
   function handleDelete() {
@@ -158,8 +166,6 @@ function SwipeRow({
       <div
         ref={innerRef}
         onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
         className="relative bg-[var(--card)] px-4 py-3 select-none"
         style={{ touchAction: "pan-y", transform: "translateX(0)" }}
       >
