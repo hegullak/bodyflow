@@ -643,10 +643,14 @@ function SortableWorkoutBlock({ id, children }: { id: string; children: React.Re
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, position: "relative" }}
-      {...attributes}
-      {...listeners}
-      className="cursor-grab touch-none active:cursor-grabbing"
     >
+      {/* Invisible drag handle — narrow strip on left */}
+      <div
+        {...attributes}
+        {...listeners}
+        className="absolute inset-y-0 left-0 z-10 w-8 cursor-grab touch-none active:cursor-grabbing"
+        aria-label="Drag to reorder"
+      />
       {children}
     </div>
   );

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronRight, Play, Plus, Dumbbell } from "lucide-react";
+import { ChevronRight, Play, Plus, Dumbbell, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Program {
@@ -23,6 +23,8 @@ export function ProgramsList({ programs, startMode, activeSessionProgramId }: Pr
   const router = useRouter();
   const [creating, setCreating] = useState(false);
   const [starting, setStarting] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [programList, setProgramList] = useState(programs);
   const [newName, setNewName] = useState("");
   const [showForm, setShowForm] = useState(false);
 
@@ -42,6 +44,17 @@ export function ProgramsList({ programs, startMode, activeSessionProgramId }: Pr
       }
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function handleDelete(programId: string, name: string) {
+    if (!confirm(`Slett "${name}"?`)) return;
+    setDeleting(programId);
+    try {
+      await fetch(`/api/training/programs/${programId}`, { method: "DELETE" });
+      setProgramList((prev) => prev.filter((p) => p.id !== programId));
+    } finally {
+      setDeleting(null);
     }
   }
 
@@ -75,15 +88,15 @@ export function ProgramsList({ programs, startMode, activeSessionProgramId }: Pr
         </div>
       ) : (
         <ul className="flex flex-col gap-2">
-          {programs.map((p) => {
+          {programList.map((p) => {
             const isActive = p.id === activeSessionProgramId;
             return (
-              <li key={p.id}>
+              <li key={p.id} className="flex items-center gap-2">
                 {startMode ? (
                   <button
                     onClick={() => handleStart(p.id, isActive)}
                     disabled={starting === p.id}
-                    className="flex w-full items-center overflow-hidden rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] text-left active:bg-[var(--card2)] disabled:opacity-60"
+                    className="flex flex-1 items-center overflow-hidden rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] text-left active:bg-[var(--card2)] disabled:opacity-60"
                   >
                     <div className={`flex w-12 shrink-0 items-center justify-center self-stretch ${isActive ? "bg-[var(--green)]" : "bg-[var(--accent)]"}`}>
                       {isActive ? (
@@ -99,7 +112,7 @@ export function ProgramsList({ programs, startMode, activeSessionProgramId }: Pr
                       <div>
                         <p className="font-medium text-[var(--text1)]">{p.name}</p>
                         {isActive && (
-                          <p className="text-xs font-medium text-[var(--green)]">Pågående økt ·  trykk for å fortsette</p>
+                          <p className="text-xs font-medium text-[var(--green)]">Pågående økt · trykk for å fortsette</p>
                         )}
                       </div>
                       <ChevronRight className="h-4 w-4 text-[var(--text3)]" />
@@ -108,7 +121,7 @@ export function ProgramsList({ programs, startMode, activeSessionProgramId }: Pr
                 ) : (
                   <Link
                     href={`/training/programs/${p.id}`}
-                    className="flex items-center overflow-hidden rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] active:bg-[var(--card2)]"
+                    className="flex flex-1 items-center overflow-hidden rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] active:bg-[var(--card2)]"
                   >
                     <div className="flex w-12 shrink-0 items-center justify-center self-stretch bg-[var(--accent)]">
                       <ChevronRight className="h-5 w-5 text-white" />
@@ -117,13 +130,21 @@ export function ProgramsList({ programs, startMode, activeSessionProgramId }: Pr
                       <div>
                         <p className="font-medium text-[var(--text1)]">{p.name}</p>
                         {isActive && (
-                          <p className="text-xs text-[var(--green)]">Active session running</p>
+                          <p className="text-xs text-[var(--green)]">Pågående økt</p>
                         )}
                       </div>
                       <ChevronRight className="h-4 w-4 text-[var(--text3)]" />
                     </div>
                   </Link>
                 )}
+                <button
+                  onClick={() => handleDelete(p.id, p.name)}
+                  disabled={deleting === p.id}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[var(--text3)] hover:text-[var(--red)] disabled:opacity-40"
+                  title="Slett program"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
               </li>
             );
           })}

@@ -345,11 +345,15 @@ function SortableBlock({ id, children }: { id: string; children: React.ReactNode
   return (
     <div
       ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }}
-      {...attributes}
-      {...listeners}
-      className="cursor-grab touch-none active:cursor-grabbing"
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, position: "relative" }}
     >
+      {/* Invisible drag handle — narrow strip on left, doesn't block content interaction */}
+      <div
+        {...attributes}
+        {...listeners}
+        className="absolute inset-y-0 left-0 z-10 w-8 cursor-grab touch-none active:cursor-grabbing"
+        aria-label="Drag to reorder"
+      />
       {children}
     </div>
   );
