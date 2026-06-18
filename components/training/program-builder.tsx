@@ -249,8 +249,8 @@ export function ProgramBuilder({ program: initial, activeSessionId }: Props) {
               {program.blocks.map((block, blockIdx) => (
                 <SortableBlock key={blockDragId(block)} id={blockDragId(block)}>
                   {block.type === "superset" ? (
-                    <div className="rounded-[var(--radius-md)] border border-[var(--accent)]/30 bg-[var(--card)]">
-                      <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-2">
+                    <div>
+                      <div className="flex items-center justify-between px-0 py-2">
                         <span className="text-xs font-medium uppercase tracking-wide text-[var(--accent)]">
                           Supersett
                         </span>
@@ -277,7 +277,7 @@ export function ProgramBuilder({ program: initial, activeSessionId }: Props) {
                       ))}
                     </div>
                   ) : (
-                    <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)]">
+                    <div>
                       {block.exercises.map((ex) => (
                         <SwipeableExerciseRow
                           key={ex.id}
@@ -493,38 +493,47 @@ function ExerciseRow({ ex, onUpdate, onRemove, showDivider, canSuperset, adjacen
 
   return (
     <div>
-      <button
-        onClick={() => setExpanded((v) => !v)}
-        className="flex w-full items-center gap-3 px-0 py-3 text-left"
-      >
-        {/* Thumbnail */}
-        {ex.imageUrl && !imgError ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={ex.imageUrl}
-            alt={ex.exerciseName}
-            loading="lazy"
-            onError={() => setImgError(true)}
-            className="h-10 w-10 shrink-0 rounded-[var(--radius-sm)] bg-[var(--card2)] object-cover"
-          />
-        ) : (
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--card2)]">
-            <Dumbbell className="h-4 w-4 text-[var(--text3)]" />
+      <div className="flex items-center gap-3 px-0 py-3">
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+        >
+          {/* Thumbnail */}
+          {ex.imageUrl && !imgError ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={ex.imageUrl}
+              alt={ex.exerciseName}
+              loading="lazy"
+              onError={() => setImgError(true)}
+              className="h-10 w-10 shrink-0 rounded-[var(--radius-sm)] bg-[var(--card2)] object-cover"
+            />
+          ) : (
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--card2)]">
+              <Dumbbell className="h-4 w-4 text-[var(--text3)]" />
+            </div>
+          )}
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate font-medium text-[var(--text1)]">{ex.exerciseName}</span>
+            <span className="text-xs text-[var(--text3)]">
+              {ex.sets} sett × {ex.reps} reps · {ex.restSeconds}s hvile
+              {ex.isBodyweight ? " · Kroppsvekt" : ""}
+            </span>
           </div>
-        )}
-        <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate font-medium text-[var(--text1)]">{ex.exerciseName}</span>
-          <span className="text-xs text-[var(--text3)]">
-            {ex.sets} sett × {ex.reps} reps · {ex.restSeconds}s hvile
-            {ex.isBodyweight ? " · Kroppsvekt" : ""}
-          </span>
-        </div>
-        {expanded ? (
-          <ChevronUp className="h-4 w-4 shrink-0 text-[var(--text3)]" />
-        ) : (
-          <ChevronDown className="h-4 w-4 shrink-0 text-[var(--text3)]" />
-        )}
-      </button>
+          {expanded ? (
+            <ChevronUp className="h-4 w-4 shrink-0 text-[var(--text3)]" />
+          ) : (
+            <ChevronDown className="h-4 w-4 shrink-0 text-[var(--text3)]" />
+          )}
+        </button>
+        <button
+          onClick={() => onUpdate({ sets: ex.sets + 1 })}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--text2)] hover:bg-[var(--card2)]"
+          title="Legg til sett"
+        >
+          <Plus className="h-4 w-4" />
+        </button>
+      </div>
 
       {expanded && (
         <div className="flex flex-col gap-3 px-0 py-3">
