@@ -13,9 +13,9 @@ export async function POST(req: Request, { params }: Params) {
 
   const row = await addExerciseToProgram(id, userId, exerciseId, {
     sets: typeof sets === "number" ? sets : 3,
-    reps: typeof reps === "number" ? reps : 8,
-    restSeconds: typeof restSeconds === "number" ? restSeconds : 90,
-    isBodyweight: Boolean(isBodyweight),
+    reps: typeof reps === "number" ? reps : 12,
+    restSeconds: typeof restSeconds === "number" ? restSeconds : 120,
+    isBodyweight: false,
   });
   if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(row, { status: 201 });
