@@ -1,12 +1,12 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
+  ChevronLeft,
   Copy,
   Dumbbell,
-  GripVertical,
   Link2,
   Link2Off,
   Minus,
@@ -345,23 +345,11 @@ function SortableBlock({ id, children }: { id: string; children: React.ReactNode
   return (
     <div
       ref={setNodeRef}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
-        opacity: isDragging ? 0.5 : 1,
-        position: "relative",
-      }}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }}
+      {...attributes}
+      {...listeners}
+      className="cursor-grab touch-none active:cursor-grabbing"
     >
-      {/* Drag handle — positioned absolutely on the left edge */}
-      <button
-        {...attributes}
-        {...listeners}
-        className="absolute -left-1 top-1/2 z-10 -translate-y-1/2 cursor-grab touch-none rounded p-1 text-[var(--text3)] active:cursor-grabbing"
-        tabIndex={-1}
-        aria-label="Drag to reorder"
-      >
-        <GripVertical className="h-4 w-4" />
-      </button>
       {children}
     </div>
   );
