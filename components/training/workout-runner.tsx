@@ -688,9 +688,9 @@ function ExerciseCard({ ex, setRows, lastSets, nextSetIdx, timerActive, restingS
   const meta = [ex.categoryName, ex.targetMuscleName].filter(Boolean).join(" · ");
 
   return (
-    <div className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)]">
+    <div className="overflow-hidden">
       {/* Exercise name + thumbnail */}
-      <div className="flex items-center gap-3 px-4 py-3 pr-10">
+      <div className="flex items-center justify-between gap-3 px-0 py-3">
         <button
           onClick={onThumbClick}
           disabled={!onThumbClick}
@@ -711,14 +711,21 @@ function ExerciseCard({ ex, setRows, lastSets, nextSetIdx, timerActive, restingS
             </div>
           )}
         </button>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="font-semibold text-[var(--text1)]">{name}</p>
           {meta && <p className="text-xs text-[var(--text3)]">{meta} · {ex.equipment}</p>}
         </div>
+        <button
+          onClick={onAddSet}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--text2)] hover:bg-[var(--card2)]"
+          title="Legg til sett"
+        >
+          <Plus className="h-4 w-4" />
+        </button>
       </div>
 
       {/* Column headers */}
-      <div className="grid grid-cols-[2.5rem_1fr_5rem_4.5rem_3rem] items-center border-t border-[var(--border)] px-4 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--text3)]">
+      <div className="grid grid-cols-[2.5rem_1fr_5rem_4.5rem_3rem] items-center px-0 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--text3)]">
         <span>Set</span>
         <span>Last</span>
         <span className="text-right">{ex.isBodyweight ? "Type" : "kg"}</span>
@@ -749,14 +756,6 @@ function ExerciseCard({ ex, setRows, lastSets, nextSetIdx, timerActive, restingS
         </SwipeableSetRow>
       ))}
 
-      {/* Add set */}
-      <button
-        onClick={onAddSet}
-        className="flex w-full items-center gap-2 border-t border-[var(--border)] px-4 py-2.5 text-sm text-[var(--accent)] hover:bg-[var(--card2)]"
-      >
-        <Plus className="h-3.5 w-3.5" />
-        Add set
-      </button>
     </div>
   );
 }
