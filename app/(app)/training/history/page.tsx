@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Clock, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { Clock, Trash2, ChevronRight } from "lucide-react";
 
 interface SessionItem {
   id: string;
@@ -73,24 +74,29 @@ export default function TrainingHistoryPage() {
           {history.map((s) => {
             const { date, time } = formatDateTime(s.startedAt);
             return (
-              <li
-                key={s.id}
-                className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] px-4 py-3"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-[var(--text1)] truncate">{s.programName}</p>
-                  <p className="text-xs text-[var(--text3)] mt-0.5">
-                    {date} · {time}
-                    {s.durationMinutes !== null && (
-                      <span className="ml-2 text-[var(--text2)]">· {formatDuration(s.durationMinutes)}</span>
-                    )}
-                  </p>
-                  {s.endedAt === null && (
-                    <span className="mt-1 inline-block rounded-full bg-[var(--green-light)] px-2 py-0.5 text-xs text-[var(--green)]">
-                      Aktiv
-                    </span>
-                  )}
-                </div>
+              <li key={s.id} className="flex items-center gap-2">
+                <Link
+                  href={`/training/history/${s.id}`}
+                  className="flex flex-1 items-center overflow-hidden rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] active:bg-[var(--card2)]"
+                >
+                  <div className="flex flex-1 items-center justify-between px-4 py-3 min-w-0">
+                    <div className="min-w-0">
+                      <p className="font-medium text-[var(--text1)] truncate">{s.programName}</p>
+                      <p className="text-xs text-[var(--text3)] mt-0.5">
+                        {date} · {time}
+                        {s.durationMinutes !== null && (
+                          <span className="ml-2 text-[var(--text2)]">· {formatDuration(s.durationMinutes)}</span>
+                        )}
+                      </p>
+                      {s.endedAt === null && (
+                        <span className="mt-1 inline-block rounded-full bg-[var(--green-light)] px-2 py-0.5 text-xs text-[var(--green)]">
+                          Aktiv
+                        </span>
+                      )}
+                    </div>
+                    <ChevronRight className="ml-2 h-4 w-4 shrink-0 text-[var(--text3)]" />
+                  </div>
+                </Link>
                 <button
                   onClick={() => handleDelete(s.id)}
                   disabled={deleting === s.id}

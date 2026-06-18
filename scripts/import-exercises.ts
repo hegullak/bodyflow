@@ -271,6 +271,7 @@ async function main() {
   const categoryMap = await upsertCategories(db, exercises);
   const muscleMap = await upsertMuscles(db, exercises);
 
+
   const BATCH = 50;
   const seenSlugs = new Set<string>();
   let imported = 0;

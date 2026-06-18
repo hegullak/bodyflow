@@ -138,6 +138,69 @@ export async function getActiveSession(userId: string): Promise<ActiveSession | 
   };
 }
 
+export interface SessionDetailExercise {
+  exerciseName: string;
+  sets: { setNumber: number; weightKg: number | null; reps: number | null; isBodyweight: boolean }[];
+}
+
+export interface SessionDetail {
+  id: string;
+  programName: string;
+  startedAt: Date;
+  endedAt: Date | null;
+  durationMinutes: number | null;
+  exercises: SessionDetailExercise[];
+}
+
+export async function getSessionDetail(id: string, userId: string): Promise<SessionDetail | null> {
+  const db = getDb();
+
+  const [session] = await db
+    .select()
+    .from(workoutSessions)
+    .where(and(eq(workoutSessions.id, id), eq(workoutSessions.userId, userId)))
+    .limit(1);
+
+  if (!session) return null;
+
+  const setRows = await db
+    .select({
+      exerciseName: workoutSetLogs.exerciseName,
+      setNumber: workoutSetLogs.setNumber,
+      weightKg: workoutSetLogs.weightKg,
+      reps: workoutSetLogs.reps,
+      isBodyweight: workoutSetLogs.isBodyweight,
+    })
+    .from(workoutSetLogs)
+    .where(eq(workoutSetLogs.sessionId, id))
+    .orderBy(asc(workoutSetLogs.completedAt));
+
+  // Group by exercise name, preserving order of first appearance
+  const exerciseMap = new Map<string, SessionDetailExercise>();
+  for (const r of setRows) {
+    if (!exerciseMap.has(r.exerciseName)) {
+      exerciseMap.set(r.exerciseName, { exerciseName: r.exerciseName, sets: [] });
+    }
+    exerciseMap.get(r.exerciseName)!.sets.push({
+      setNumber: r.setNumber,
+      weightKg: r.weightKg,
+      reps: r.reps,
+      isBodyweight: r.isBodyweight,
+    });
+  }
+
+  return {
+    id: session.id,
+    programName: session.programName,
+    startedAt: session.startedAt,
+    endedAt: session.endedAt,
+    durationMinutes: session.endedAt
+      ? Math.round((session.endedAt.getTime() - session.startedAt.getTime()) / 60000)
+      : null,
+    exercises: [...exerciseMap.values()],
+  };
+}
+
 export async function getSessionHistory(userId: string, limit = 30): Promise<SessionHistoryItem[]> {
   const db = getDb();
 
