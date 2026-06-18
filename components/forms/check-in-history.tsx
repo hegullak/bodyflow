@@ -217,7 +217,7 @@ function EditSheet({
         onClick={onClose}
       />
       <div
-        className="fixed bottom-24 left-0 right-0 z-[61] rounded-t-[var(--radius-lg)] border-t border-[var(--border)] p-4 shadow-2xl overflow-y-auto"
+        className="fixed bottom-24 left-4 right-4 z-[61] rounded-[var(--radius-lg)] border border-[var(--border)] p-4 shadow-2xl overflow-y-auto"
         style={{
           maxHeight: "calc(100vh - 10rem)",
           backgroundColor: "rgba(20,24,36,0.95)",
