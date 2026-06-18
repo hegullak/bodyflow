@@ -2,9 +2,9 @@
 
 import { useRef, useTransition, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Zap } from "lucide-react";
 import type { MealLogItem, MealType } from "@/db/schema";
-import { removeMealItemAction, updateMealItemAction, copyMealsFromPreviousDateAction } from "@/lib/actions/meals";
+import { removeMealItemAction, updateMealItemAction, copyMealsFromPreviousDateAction, quickAddMealItemAction } from "@/lib/actions/meals";
 import { saveMealAction } from "@/lib/actions/saved-meals";
 import { MEAL_LABELS } from "@/lib/meals/constants";
 import { Button } from "@/components/ui/button";
@@ -210,6 +210,79 @@ function EditMealSheet({
 }
 
 // ---------------------------------------------------------------------------
+// Quick add sheet (kalorier only)
+// ---------------------------------------------------------------------------
+
+function QuickAddSheet({
+  logDate,
+  mealType,
+  onClose,
+  onAdded,
+}: {
+  logDate: string;
+  mealType: MealType;
+  onClose: () => void;
+  onAdded: () => void;
+}) {
+  const [kcal, setKcal] = useState("");
+  const [saving, startSave] = useTransition();
+
+  const parsed = parseInt(kcal, 10);
+  const valid = !isNaN(parsed) && parsed > 0;
+
+  function handleAdd() {
+    if (!valid) return;
+    startSave(async () => {
+      const result = await quickAddMealItemAction(logDate, mealType, parsed);
+      if (result.ok) {
+        onAdded();
+      }
+    });
+  }
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div
+        className="fixed bottom-24 left-4 right-4 z-[61] rounded-[var(--radius-lg)] border border-[var(--border)] p-4 shadow-2xl overflow-y-auto"
+        style={{
+          maxHeight: "calc(100vh - 10rem)",
+          backgroundColor: "rgba(20,24,36,0.95)",
+          backdropFilter: "blur(30px)",
+          WebkitBackdropFilter: "blur(30px)",
+        }}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <p className="text-sm font-semibold">Legg til kalorier</p>
+          <button type="button" onClick={onClose} className="text-xs text-[var(--text3)]">
+            Avbryt
+          </button>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <Label htmlFor="quick-kcal">Kalorier (kcal)</Label>
+            <Input
+              id="quick-kcal"
+              type="number"
+              inputMode="numeric"
+              placeholder="500"
+              value={kcal}
+              onChange={(e) => setKcal(e.target.value)}
+            />
+          </div>
+        </div>
+        <Button type="button" disabled={saving || !valid} onClick={handleAdd} className="mt-4 w-full">
+          {saving ? "Legger til…" : "Legg til"}
+        </Button>
+      </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Save-as-meal inline form
 // ---------------------------------------------------------------------------
 
@@ -263,6 +336,7 @@ export function MealSection({
   const router = useRouter();
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<MealLogItem | null>(null);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [showSaveForm, setShowSaveForm] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [copyPending, startCopyTransition] = useTransition();
@@ -353,14 +427,25 @@ export function MealSection({
           <h3 className="text-base font-bold">{MEAL_LABELS[mealType]}</h3>
           <p className="text-sm font-medium text-[var(--color-muted-foreground)]">{subtotal} kcal</p>
         </div>
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          onClick={() => router.push(`/meals/add?date=${logDate}&type=${mealType}`)}
-        >
-          + Legg til
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => setShowQuickAdd(true)}
+            title="Quick add kalorier"
+          >
+            <Zap className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => router.push(`/meals/add?date=${logDate}&type=${mealType}`)}
+          >
+            + Legg til
+          </Button>
+        </div>
       </div>
       <hr className="my-2 border-t border-[var(--border)]" />
 
@@ -425,6 +510,18 @@ export function MealSection({
             </button>
           )}
         </>
+      )}
+
+      {showQuickAdd && (
+        <QuickAddSheet
+          logDate={logDate}
+          mealType={mealType}
+          onClose={() => setShowQuickAdd(false)}
+          onAdded={() => {
+            setShowQuickAdd(false);
+            onChanged();
+          }}
+        />
       )}
 
       {editingItem && (
