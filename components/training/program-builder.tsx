@@ -4,16 +4,12 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  ChevronDown,
-  ChevronLeft,
-  ChevronUp,
   Copy,
   Dumbbell,
   GripVertical,
   Link2,
   Link2Off,
   Minus,
-  Pencil,
   Play,
   Plus,
   Trash2,
@@ -98,7 +94,7 @@ export function ProgramBuilder({ program: initial, activeSessionId }: Props) {
 
   async function handleUpdateExercise(
     exerciseId: string,
-    patch: { sets?: number; reps?: number; restSeconds?: number; isBodyweight?: boolean },
+    patch: { sets?: number; reps?: number; restSeconds?: number },
   ) {
     await fetch(`/api/training/programs/${program.id}/exercises/${exerciseId}`, {
       method: "PATCH",
@@ -262,43 +258,33 @@ export function ProgramBuilder({ program: initial, activeSessionId }: Props) {
                         </button>
                       </div>
                       {block.exercises.map((ex, exIdx) => (
-                        <SwipeableExerciseRow
+                        <ExerciseRow
                           key={ex.id}
-                          onDelete={() => handleRemoveExercise(ex.id)}
-                          onEdit={() => {}}
-                        >
-                          <ExerciseRow
-                            ex={ex}
-                            onUpdate={(patch) => handleUpdateExercise(ex.id, patch)}
-                            onRemove={() => handleRemoveExercise(ex.id)}
-                            showDivider={exIdx < block.exercises.length - 1}
-                          />
-                        </SwipeableExerciseRow>
+                          ex={ex}
+                          onUpdate={(patch) => handleUpdateExercise(ex.id, patch)}
+                          onRemove={() => handleRemoveExercise(ex.id)}
+                          showDivider={exIdx < block.exercises.length - 1}
+                        />
                       ))}
                     </div>
                   ) : (
                     <div>
                       {block.exercises.map((ex) => (
-                        <SwipeableExerciseRow
+                        <ExerciseRow
                           key={ex.id}
-                          onDelete={() => handleRemoveExercise(ex.id)}
-                          onEdit={() => {}}
-                        >
-                          <ExerciseRow
-                            ex={ex}
-                            onUpdate={(patch) => handleUpdateExercise(ex.id, patch)}
-                            onRemove={() => handleRemoveExercise(ex.id)}
-                            showDivider={false}
-                            canSuperset={program.blocks.length > 1}
-                            adjacentId={
-                              blockIdx + 1 < program.blocks.length &&
-                              program.blocks[blockIdx + 1].type === "exercise"
-                                ? program.blocks[blockIdx + 1].exercises[0].id
-                                : null
-                            }
-                            onCreateSuperset={handleCreateSuperset}
-                          />
-                        </SwipeableExerciseRow>
+                          ex={ex}
+                          onUpdate={(patch) => handleUpdateExercise(ex.id, patch)}
+                          onRemove={() => handleRemoveExercise(ex.id)}
+                          showDivider={false}
+                          canSuperset={program.blocks.length > 1}
+                          adjacentId={
+                            blockIdx + 1 < program.blocks.length &&
+                            program.blocks[blockIdx + 1].type === "exercise"
+                              ? program.blocks[blockIdx + 1].exercises[0].id
+                              : null
+                          }
+                          onCreateSuperset={handleCreateSuperset}
+                        />
                       ))}
                     </div>
                   )}
@@ -382,104 +368,12 @@ function SortableBlock({ id, children }: { id: string; children: React.ReactNode
 }
 
 // ---------------------------------------------------------------------------
-// Swipeable exercise row — swipe left to reveal delete
-// ---------------------------------------------------------------------------
-
-function SwipeableExerciseRow({ onDelete, onEdit, children }: { onDelete: () => void; onEdit?: () => void; children: React.ReactNode }) {
-  const innerRef = useRef<HTMLDivElement>(null);
-  const sw = useRef({ startX: 0, startY: 0, tracking: false, revealed: false, dragging: false });
-  const REVEAL_W = 112;
-  const SNAP = 40;
-
-  function snap(x: number, animate = true) {
-    const el = innerRef.current;
-    if (!el) return;
-    el.style.transition = animate ? "transform 0.25s cubic-bezier(0.4,0,0.2,1)" : "none";
-    el.style.transform = `translateX(${x}px)`;
-    sw.current.revealed = x < 0;
-  }
-
-  function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
-    sw.current = { startX: e.clientX, startY: e.clientY, tracking: true, dragging: false, revealed: sw.current.revealed };
-    if (innerRef.current) innerRef.current.style.transition = "none";
-  }
-
-  function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
-    if (!sw.current.tracking || !innerRef.current) return;
-    const dx = e.clientX - sw.current.startX;
-    const dy = e.clientY - sw.current.startY;
-    if (!sw.current.dragging && Math.abs(dy) > Math.abs(dx) + 5) { sw.current.tracking = false; return; }
-    if (!sw.current.dragging && Math.abs(dx) > 4) sw.current.dragging = true;
-    if (!sw.current.dragging) return;
-    const base = sw.current.revealed ? -REVEAL_W : 0;
-    const x = Math.max(-REVEAL_W, Math.min(0, base + dx));
-    innerRef.current.style.transform = `translateX(${x}px)`;
-  }
-
-  function onPointerUp(e: React.PointerEvent<HTMLDivElement>) {
-    if (!sw.current.tracking) return;
-    sw.current.tracking = false;
-    if (!sw.current.dragging) return;
-    const dx = e.clientX - sw.current.startX;
-    const base = sw.current.revealed ? -REVEAL_W : 0;
-    snap(base + dx < -SNAP ? -REVEAL_W : 0);
-  }
-
-  function handleEdit() {
-    snap(0);
-    setTimeout(() => onEdit?.(), 200);
-  }
-
-  function handleDelete() {
-    snap(0);
-    setTimeout(onDelete, 200);
-  }
-
-  return (
-    <div className="relative overflow-hidden">
-      <div className="absolute inset-y-0 right-0 flex" style={{ width: REVEAL_W }}>
-        <button
-          type="button"
-          onClick={handleEdit}
-          className="flex w-14 items-center justify-center bg-blue-500 text-white active:opacity-80"
-          aria-label="Rediger"
-        >
-          <Pencil className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          onClick={handleDelete}
-          className="flex w-14 items-center justify-center bg-[var(--red)] text-white active:opacity-80"
-          aria-label="Slett"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
-      </div>
-      <div
-        ref={innerRef}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={() => { sw.current.tracking = false; snap(sw.current.revealed ? -REVEAL_W : 0); }}
-        style={{
-          touchAction: "pan-y",
-          userSelect: "none",
-          willChange: "transform",
-        }}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Exercise row in builder
 // ---------------------------------------------------------------------------
 
 interface ExerciseRowProps {
   ex: ProgramExerciseRow;
-  onUpdate: (patch: { sets?: number; reps?: number; restSeconds?: number; isBodyweight?: boolean }) => void;
+  onUpdate: (patch: { sets?: number; reps?: number; restSeconds?: number }) => void;
   onRemove: () => void;
   showDivider: boolean;
   canSuperset?: boolean;
@@ -488,17 +382,14 @@ interface ExerciseRowProps {
 }
 
 function ExerciseRow({ ex, onUpdate, onRemove, showDivider, canSuperset, adjacentId, onCreateSuperset }: ExerciseRowProps) {
-  const [expanded, setExpanded] = useState(false);
   const [imgError, setImgError] = useState(false);
 
   return (
     <div>
+      {/* Exercise header */}
       <div className="flex items-center gap-3 px-0 py-3">
-        <button
-          onClick={() => setExpanded((v) => !v)}
-          className="flex min-w-0 flex-1 items-center gap-3 text-left"
-        >
-          {/* Thumbnail */}
+        {/* Thumbnail + name */}
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           {ex.imageUrl && !imgError ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -513,103 +404,110 @@ function ExerciseRow({ ex, onUpdate, onRemove, showDivider, canSuperset, adjacen
               <Dumbbell className="h-4 w-4 text-[var(--text3)]" />
             </div>
           )}
-          <div className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate font-medium text-[var(--text1)]">{ex.exerciseName}</span>
-            <span className="text-xs text-[var(--text3)]">
-              {ex.sets} sett × {ex.reps} reps · {ex.restSeconds}s hvile
-              {ex.isBodyweight ? " · Kroppsvekt" : ""}
-            </span>
-          </div>
-          {expanded ? (
-            <ChevronUp className="h-4 w-4 shrink-0 text-[var(--text3)]" />
-          ) : (
-            <ChevronDown className="h-4 w-4 shrink-0 text-[var(--text3)]" />
-          )}
-        </button>
-        <button
-          onClick={() => onUpdate({ sets: ex.sets + 1 })}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--text2)] hover:bg-[var(--card2)]"
-          title="Legg til sett"
-        >
-          <Plus className="h-4 w-4" />
-        </button>
-      </div>
-
-      {expanded && (
-        <div className="flex flex-col gap-3 px-0 py-3">
-          <div className="grid grid-cols-3 gap-2">
-            <Stepper label="Sett" value={ex.sets} min={1} max={20} onChange={(v) => onUpdate({ sets: v })} />
-            <Stepper label="Reps" value={ex.reps} min={1} max={100} onChange={(v) => onUpdate({ reps: v })} />
-            <Stepper label="Hvile (s)" value={ex.restSeconds} min={0} max={600} step={15} onChange={(v) => onUpdate({ restSeconds: v })} />
-          </div>
-
-          <label className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              checked={ex.isBodyweight}
-              onChange={(e) => onUpdate({ isBodyweight: e.target.checked })}
-              className="h-4 w-4 accent-[var(--accent)]"
-            />
-            <span className="text-sm text-[var(--text2)]">Kroppsvekt</span>
-          </label>
-
-          <div className="flex flex-wrap gap-2 pt-1">
-            {canSuperset && adjacentId && onCreateSuperset && (
-              <button
-                onClick={() => onCreateSuperset([ex.id, adjacentId])}
-                className="flex items-center gap-1 rounded-full px-3 py-1.5 text-xs text-[var(--accent)] hover:bg-[var(--accent-light)]"
-              >
-                <Link2 className="h-3 w-3" /> Supersett med neste
-              </button>
-            )}
-            <button
-              onClick={onRemove}
-              className="flex items-center gap-1 rounded-full px-3 py-1.5 text-xs text-[var(--red)] hover:bg-[var(--red-light)]"
-            >
-              <Trash2 className="h-3 w-3" /> Fjern
-            </button>
+          <div className="min-w-0">
+            <p className="truncate font-medium text-[var(--text1)]">{ex.exerciseName}</p>
+            <p className="text-xs text-[var(--text3)]">{ex.sets} sett · {ex.reps} reps · {ex.restSeconds}s hvile</p>
           </div>
         </div>
+        {/* Plus and delete buttons */}
+        <div className="flex shrink-0 gap-2">
+          <button
+            onClick={() => onUpdate({ sets: Math.min(20, ex.sets + 1) })}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text2)] hover:bg-[var(--card2)]"
+            title="Legg til sett"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+          <button
+            onClick={onRemove}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text2)] hover:bg-[var(--red)]/10 hover:text-[var(--red)]"
+            title="Fjern øvelse"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Individual set rows */}
+      <div className="space-y-1 px-0 py-2">
+        {Array.from({ length: ex.sets }, (_, i) => (
+          <div key={i} className="grid grid-cols-[2.5rem_1fr_1fr_1fr] items-center gap-2 rounded-[var(--radius-sm)] bg-[var(--card2)] px-3 py-2">
+            <span className="text-xs font-medium text-[var(--text3)]">Sett {i + 1}</span>
+            <RepsControl value={ex.reps} onChange={(v) => onUpdate({ reps: v })} />
+            <RestControl value={ex.restSeconds} onChange={(v) => onUpdate({ restSeconds: v })} />
+            <div className="flex items-center justify-end">
+              {ex.sets > 1 && (
+                <button
+                  onClick={() => onUpdate({ sets: ex.sets - 1 })}
+                  className="flex h-6 w-6 items-center justify-center text-[var(--text2)] hover:text-[var(--red)]"
+                  title="Fjern sett"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Superset button */}
+      {canSuperset && adjacentId && onCreateSuperset && (
+        <div className="flex gap-2 px-0 py-2">
+          <button
+            onClick={() => onCreateSuperset([ex.id, adjacentId])}
+            className="flex items-center gap-1 rounded-full px-3 py-1.5 text-xs text-[var(--accent)] hover:bg-[var(--accent-light)]"
+          >
+            <Link2 className="h-3 w-3" /> Supersett med neste
+          </button>
+        </div>
       )}
+
+      {showDivider && <hr className="my-2 border-t border-[var(--border)]" />}
     </div>
   );
 }
 
-function Stepper({
-  label,
-  value,
-  min,
-  max,
-  step = 1,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step?: number;
-  onChange: (v: number) => void;
-}) {
+// ---------------------------------------------------------------------------
+// Set controls
+// ---------------------------------------------------------------------------
+
+function RepsControl({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   return (
-    <div className="flex flex-col items-center gap-1 rounded-[var(--radius-sm)] bg-[var(--bg)] px-2 py-2">
-      <span className="text-xs text-[var(--text3)]">{label}</span>
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => onChange(Math.max(min, value - step))}
-          className="flex h-6 w-6 items-center justify-center rounded-full text-[var(--text2)] hover:bg-[var(--card2)]"
-        >
-          <Minus className="h-3 w-3" />
-        </button>
-        <span className="min-w-[2rem] text-center text-sm font-medium text-[var(--text1)]">
-          {value}
-        </span>
-        <button
-          onClick={() => onChange(Math.min(max, value + step))}
-          className="flex h-6 w-6 items-center justify-center rounded-full text-[var(--text2)] hover:bg-[var(--card2)]"
-        >
-          <Plus className="h-3 w-3" />
-        </button>
-      </div>
+    <div className="flex items-center gap-1">
+      <button
+        onClick={() => onChange(Math.max(1, value - 1))}
+        className="flex h-5 w-5 items-center justify-center rounded text-[var(--text3)] hover:bg-[var(--bg)]"
+      >
+        <Minus className="h-2.5 w-2.5" />
+      </button>
+      <span className="flex-1 text-center text-xs font-medium text-[var(--text1)]">{value}</span>
+      <button
+        onClick={() => onChange(Math.min(100, value + 1))}
+        className="flex h-5 w-5 items-center justify-center rounded text-[var(--text3)] hover:bg-[var(--bg)]"
+      >
+        <Plus className="h-2.5 w-2.5" />
+      </button>
     </div>
   );
 }
+
+function RestControl({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        onClick={() => onChange(Math.max(0, value - 15))}
+        className="flex h-5 w-5 items-center justify-center rounded text-[var(--text3)] hover:bg-[var(--bg)]"
+      >
+        <Minus className="h-2.5 w-2.5" />
+      </button>
+      <span className="flex-1 text-center text-xs font-medium text-[var(--text1)]">{value}s</span>
+      <button
+        onClick={() => onChange(Math.min(600, value + 15))}
+        className="flex h-5 w-5 items-center justify-center rounded text-[var(--text3)] hover:bg-[var(--bg)]"
+      >
+        <Plus className="h-2.5 w-2.5" />
+      </button>
+    </div>
+  );
+}
+
