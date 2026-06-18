@@ -242,7 +242,7 @@ npm run dev:fresh
 
 ---
 
-## 11. Git state (as of 2026-06-18)
+## 11. Git state (as of 2026-06-18, updated 2026-06-18 PM)
 
 **Latest work (sandbox → develop → master):**
 
@@ -268,7 +268,13 @@ npm run dev:fresh
   - **Swipe performance**: document event listeners fjernet → React PointerEvent props (jevnere, ingen passive:false lag)
   - [Commits: `27523ff` → `3a3cc67`](https://github.com/hegullak/bodyflow/commits/master?since=2026-06-17)
 
-**Deploy:** merge to `master` → Vercel auto-deploy. Run `npm run db:migrate` if new migrations exist (last: `0015_set_log_reps`).
+- **Workout UI Refinement & Program Builder Refactor** (2026-06-18 PM, just deployed):
+  - **Workout Runner**: ❌ Removed swipe on exercise cards (no SwipeableExerciseRow), ✅ added delete icon to header next to +, ❌ removed drag handle icon visual, improved set row swipe with meal pattern (touchAction, willChange, snap logic)
+  - **Program Builder**: ❌ No swipe, ❌ removed bodyweight checkbox, show 3 individual set rows per exercise (visual rows with Set#, Reps ±, Rest ±, Delete), plus/delete icons in header, simplified controls
+  - **Default Exercise Values**: updated to 3 sets × **12 reps** × **120s rest** (was 8 reps × 90s)
+  - [Commits: `8e3ef64` → `48a3c18`](https://github.com/hegullak/bodyflow/commits/master?since=2026-06-18)
+
+**Deploy:** merge to `master` → Vercel auto-deploy ✅ (just pushed). Run `npm run db:migrate` if new migrations exist (last: `0015_set_log_reps`).
 
 ---
 
