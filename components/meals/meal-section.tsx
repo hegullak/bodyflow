@@ -2,7 +2,7 @@
 
 import { useRef, useTransition, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2, Zap } from "lucide-react";
+import { Pencil, Plus, Trash2, Zap } from "lucide-react";
 import type { MealLogItem, MealType } from "@/db/schema";
 import { removeMealItemAction, updateMealItemAction, copyMealsFromPreviousDateAction, quickAddMealItemAction } from "@/lib/actions/meals";
 import { saveMealAction } from "@/lib/actions/saved-meals";
@@ -442,8 +442,9 @@ export function MealSection({
             variant="secondary"
             size="sm"
             onClick={() => router.push(`/meals/add?date=${logDate}&type=${mealType}`)}
+            title="Legg til måltid"
           >
-            + Legg til
+            <Plus className="h-4 w-4" />
           </Button>
         </div>
       </div>

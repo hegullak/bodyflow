@@ -462,13 +462,10 @@ function SwipeableExerciseRow({ onDelete, onEdit, children }: { onDelete: () => 
         onPointerUp={onPointerUp}
         onPointerCancel={() => { sw.current.tracking = false; snap(sw.current.revealed ? -REVEAL_W : 0); }}
         style={{
-          transform: `translateX(${offset}px)`,
-          transition: settled ? "transform 0.22s ease" : "none",
+          touchAction: "pan-y",
+          userSelect: "none",
+          willChange: "transform",
         }}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
       >
         {children}
       </div>
