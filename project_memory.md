@@ -2,7 +2,7 @@
 
 > **Purpose of this file:** Handoff context for humans and AI agents. Read this first, then `ARCHITECTURE.md`, `DECISIONS.md`, `db/DATABASE.md`, and `DATABASE_STANDARDS.md`.
 
-Last updated: 2026-06-12
+Last updated: 2026-06-15
 
 ---
 
@@ -68,6 +68,13 @@ Bottom nav (`components/layout/bottom-nav.tsx`):
 - **Withings** — OAuth connect, encrypted tokens, weight sync to `daily_body_log`, webhook (secret path in prod); disconnect via server action; OAuth callback returns to Profile; ngrok-safe redirects via `X-Forwarded-Host` (`lib/app-url.ts`)
 - **Reminders** — generic engine (`reminder` table), weigh-in UI on Profile, PWA notifications via service worker (`docs/REMINDERS.md`)
 - **Food catalog** — `food_product` + `meal_log_item`, Kassal API, Matvaretabellen seed
+- **Training Flow** ✅ COMPLETE (2026-06-15):
+  - **Program Builder** — create/edit programs, drag-to-reorder exercises, swipe-left delete, superset support
+  - **Workout Runner** — custom numeric keyboard (0-9, decimal, ±15, NEXT), auto-focus flow (KG → REPS → complete → timer), tap row to activate timer, swipe-left delete sets, inline REST countdown, GO indicator, fullscreen exercise images, timer bar with next-exercise preview, add-exercise on the fly
+  - **History** — session list with date/time/duration, delete with confirm, sorted descending
+  - **API**: POST `/api/training/sessions`, GET `/api/training/sessions/active`, POST/DELETE `/api/training/sessions/{id}/sets`, PUT `/api/training/sessions/{id}`, DELETE `/api/training/sessions/{id}`, GET `/api/training/sessions/history`
+  - **Loading skeletons** for program detail + add-exercise pages
+  - **Tech**: `@dnd-kit` for drag-to-reorder, pointer events for swipe detection, `env(safe-area-inset-bottom)` for iOS nav overlap fix
 
 ### ⏳ Backlog / compliance (see `db/DATABASE.md`)
 
@@ -138,6 +145,16 @@ lib/
 | `/api/kassal/products` | Kassal proxy |
 | `/api/reminders` | Reminder settings for client scheduler |
 | `/api/integrations/withings/*` | OAuth, webhook, disconnect |
+| `/api/training/programs` | POST (create), GET (list) |
+| `/api/training/programs/[id]` | GET (detail), PUT (update name) |
+| `/api/training/programs/[id]/exercises` | POST (add), DELETE (remove) |
+| `/api/training/programs/[id]/reorder` | POST (drag-to-reorder) |
+| `/api/training/programs/[id]/supersets` | POST (create), DELETE (unlink) |
+| `/api/training/sessions` | POST (start), GET (list) |
+| `/api/training/sessions/active` | GET (current session) |
+| `/api/training/sessions/[id]` | PUT (end), DELETE (remove) |
+| `/api/training/sessions/[id]/sets` | POST (log), DELETE (remove) |
+| `/api/training/sessions/history` | GET (session history) |
 
 ---
 
@@ -225,15 +242,33 @@ npm run dev:fresh
 
 ---
 
-## 11. Git state (as of 2026-06-12)
+## 11. Git state (as of 2026-06-18)
 
 **Latest work (sandbox → develop → master):**
 
-- Withings token encryption + security hardening (#21–#23)
-- Dashboard + Profile UX cleanup
-- Withings OAuth/ngrok redirect fix, disconnect server action, logger format
+- **Training Flow Complete** (2026-06-15):
+  - Custom workout keyboard (0-9, decimal, ±15, NEXT), auto-focus KG→REPS→complete→timer
+  - Swipe-left delete for exercises + sets across program-builder + workout-runner
+  - Timer bar: compact design, safe-area offset, always visible during rest
+  - Tap set row to activate timer, inline REST countdown, GO indicator, fullscreen images
+  - Auto-jump to next set/exercise with 450ms delay
+  - History page: delete sessions, date/time/duration, sorted descending
+  - Add-exercise buttons on the fly (both program + active workout)
+  - Loading skeletons, Vercel build gate (only master deploys)
+  - [Commit history: `b6dac82` → `6d43a9a`](https://github.com/hegullak/bodyflow/commits/master?since=2026-06-14)
 
-**Deploy:** merge to `master` → Vercel auto-deploy. Run `npm run db:migrate` if new migrations exist.
+- **UI Polish & Swipe Everywhere** (2026-06-18):
+  - **Check-in historikk**: sveip-venstre → blå rediger + rød slett. Redigering via glassmorphism bottomsheet. Summary line under dato viser kortform diffs: `V 88 (+2) · M 95 (-6) · B 94.5 (-2) · H 96` (rød = opp, grønn = ned)
+  - **Check-in form**: vekt på egen full-width linje, midje/bryst/hofte i 3 kolonner. Diff vises ved label etter lagring (+2 rød, -6 grønn)
+  - **Meals**: sveip-venstre på hver måltid → rediger mengde i bottomsheet. Lyn-ikon (⚡) for quick-add kalorier som "Manual". Pluss-ikon ikon-only (ingen "+ Legg til" tekst)
+  - **Exercises (program-builder)**: borders fjernet rundt øvelser. Pluss-ikon i header → legger til sett. Sveip-venstre rediger + slett
+  - **Exercises (workout-runner)**: "Add set" linje fjernet, logikken flytta til pluss-ikon i header. Borders fjernet rundt øvelses-kort. Smoothere animasjon (cubic-bezier)
+  - **Statistics**: moved fra bottom-nav til settings-menyen (⚙️). Viser alle individuelle målinger (ikke månedlige), scrollbar tabell for alle weight/body-measurement entries
+  - **Modal styling**: glassmorphism bakgrunn (blur 30px, dark semi-transparent), avstand fra bottom-nav (bottom-24), floating design (left-4 right-4)
+  - **Swipe performance**: document event listeners fjernet → React PointerEvent props (jevnere, ingen passive:false lag)
+  - [Commits: `27523ff` → `3a3cc67`](https://github.com/hegullak/bodyflow/commits/master?since=2026-06-17)
+
+**Deploy:** merge to `master` → Vercel auto-deploy. Run `npm run db:migrate` if new migrations exist (last: `0015_set_log_reps`).
 
 ---
 
