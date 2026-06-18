@@ -2,115 +2,122 @@
 
 import { useRef, useTransition, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import type { MealLogItem, MealType } from "@/db/schema";
-import { removeMealItemAction, copyMealsFromPreviousDateAction } from "@/lib/actions/meals";
+import { removeMealItemAction, updateMealItemAction, copyMealsFromPreviousDateAction } from "@/lib/actions/meals";
 import { saveMealAction } from "@/lib/actions/saved-meals";
 import { MEAL_LABELS } from "@/lib/meals/constants";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/field";
+import { Input, Label } from "@/components/ui/field";
 import { addDaysToIsoDate } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // Swipeable meal item — tap to edit, swipe left to delete
 // ---------------------------------------------------------------------------
 
-const SNAP_W = 72;       // px swiped before snapping to reveal delete zone
-const FULL_DELETE = 220; // px swiped to trigger auto-delete on release
+const REVEAL_W = 112; // width of edit + delete buttons
+const SNAP = 40;      // snap threshold
 
 function SwipeableMealItem({
   item,
   logDate,
   removingId,
   onRemove,
+  onEdit,
 }: {
   item: MealLogItem;
   logDate: string;
   removingId: string | null;
   onRemove: (id: string) => void;
+  onEdit: (item: MealLogItem) => void;
 }) {
-  const router = useRouter();
-  const contentRef = useRef<HTMLDivElement>(null);
-  const offsetRef = useRef(0);
-  const startRef = useRef({ x: 0, y: 0, active: false, locked: false, startOffset: 0 });
+  const innerRef = useRef<HTMLDivElement>(null);
+  const sw = useRef({ startX: 0, startY: 0, tracking: false, revealed: false, dragging: false });
+  const [deleting, startDelete] = useTransition();
 
-  // Direct DOM mutation — zero React re-renders during drag
-  function applyOffset(offset: number, animated: boolean) {
-    const el = contentRef.current;
+  function snap(x: number, animate = true) {
+    const el = innerRef.current;
     if (!el) return;
-    el.style.transition = animated ? "transform 0.22s ease" : "none";
-    el.style.transform = `translateX(${offset}px)`;
-    offsetRef.current = offset;
+    el.style.transition = animate ? "transform 0.25s cubic-bezier(0.4,0,0.2,1)" : "none";
+    el.style.transform = `translateX(${x}px)`;
+    sw.current.revealed = x < 0;
   }
 
-  function onPointerDown(e: React.PointerEvent) {
-    startRef.current = { x: e.clientX, y: e.clientY, active: true, locked: false, startOffset: offsetRef.current };
-    if (contentRef.current) contentRef.current.style.transition = "none";
+  function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    sw.current = { startX: e.clientX, startY: e.clientY, tracking: true, dragging: false, revealed: sw.current.revealed };
+    if (innerRef.current) innerRef.current.style.transition = "none";
   }
 
-  function onPointerMove(e: React.PointerEvent) {
-    const s = startRef.current;
-    if (!s.active || s.locked) return;
-    const dx = e.clientX - s.x;
-    const dy = e.clientY - s.y;
-    if (Math.abs(dy) > Math.abs(dx) + 6) { s.locked = true; return; }
-    if (Math.abs(dx) < 2) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
-    const next = Math.min(0, s.startOffset + dx);
-    if (contentRef.current) contentRef.current.style.transform = `translateX(${next}px)`;
-    offsetRef.current = next;
+  function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!sw.current.tracking || !innerRef.current) return;
+    const dx = e.clientX - sw.current.startX;
+    const dy = e.clientY - sw.current.startY;
+    if (!sw.current.dragging && Math.abs(dy) > Math.abs(dx) + 5) { sw.current.tracking = false; return; }
+    if (!sw.current.dragging && Math.abs(dx) > 4) sw.current.dragging = true;
+    if (!sw.current.dragging) return;
+    const base = sw.current.revealed ? -REVEAL_W : 0;
+    const x = Math.max(-REVEAL_W, Math.min(0, base + dx));
+    innerRef.current.style.transform = `translateX(${x}px)`;
   }
 
-  function onPointerUp(e: React.PointerEvent) {
-    const s = startRef.current;
-    if (!s.active) return;
-    s.active = false;
+  function onPointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    if (!sw.current.tracking) return;
+    sw.current.tracking = false;
+    if (!sw.current.dragging) return;
+    const dx = e.clientX - sw.current.startX;
+    const base = sw.current.revealed ? -REVEAL_W : 0;
+    snap(base + dx < -SNAP ? -REVEAL_W : 0);
+  }
 
-    const dx = Math.abs(e.clientX - s.x);
-    const dy = Math.abs(e.clientY - s.y);
-    const offset = offsetRef.current;
+  function handleEdit() {
+    snap(0);
+    setTimeout(() => onEdit(item), 200);
+  }
 
-    if (dx < 5 && dy < 5 && !s.locked) {
-      if (s.startOffset === 0) {
-        router.push(`/meals/item/${item.id}?date=${logDate}`);
-      } else {
-        applyOffset(0, true);
-      }
-      return;
-    }
-
-    if (offset <= -FULL_DELETE) {
-      applyOffset(-800, true);
-      setTimeout(() => onRemove(item.id), 220);
-      return;
-    }
-
-    applyOffset(offset < -(SNAP_W * 0.45) ? -SNAP_W : 0, true);
+  function handleDelete() {
+    snap(0);
+    startDelete(async () => {
+      await removeMealItemAction(item.id, logDate);
+      onRemove(item.id);
+    });
   }
 
   const showGrams = Boolean(item.foodProductId) || item.quantityGrams !== 100;
 
   return (
     <li className="relative overflow-hidden">
-      <div className="absolute inset-0 flex items-center justify-end bg-[var(--red)] pr-5">
-        <Trash2 className="h-5 w-5 text-white" />
+      <div className="absolute inset-y-0 right-0 flex" style={{ width: REVEAL_W }}>
+        <button
+          type="button"
+          onClick={handleEdit}
+          className="flex w-14 items-center justify-center bg-blue-500 text-white active:opacity-80"
+          aria-label="Rediger"
+        >
+          <Pencil className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={deleting}
+          className="flex w-14 items-center justify-center bg-[var(--red)] text-white active:opacity-80 disabled:opacity-50"
+          aria-label="Slett"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
       </div>
 
       <div
-        ref={contentRef}
+        ref={innerRef}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={() => { sw.current.tracking = false; snap(sw.current.revealed ? -REVEAL_W : 0); }}
         className="relative flex items-center gap-2 py-1.5 bg-[var(--card)]"
         style={{
           touchAction: "pan-y",
           userSelect: "none",
           willChange: "transform",
           opacity: removingId === item.id ? 0.4 : 1,
-        }}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={() => {
-          startRef.current.active = false;
-          applyOffset(offsetRef.current < -(SNAP_W * 0.45) ? -SNAP_W : 0, true);
         }}
       >
         <div className="min-w-0 flex-1">
@@ -120,9 +127,85 @@ function SwipeableMealItem({
             {showGrams ? ` · ${Math.round(item.quantityGrams)} g` : null}
           </p>
         </div>
-        <span className="shrink-0 text-xs text-[var(--color-muted-foreground)] opacity-40">›</span>
       </div>
     </li>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Edit meal sheet (bottomsheet)
+// ---------------------------------------------------------------------------
+
+function EditMealSheet({
+  item,
+  onClose,
+  onSaved,
+}: {
+  item: MealLogItem;
+  onClose: () => void;
+  onSaved: (updated: MealLogItem) => void;
+}) {
+  const [grams, setGrams] = useState(String(Math.round(item.quantityGrams)));
+  const [saving, startSave] = useTransition();
+
+  const parsed = parseFloat(grams);
+  const valid = !isNaN(parsed) && parsed > 0;
+  const kcal = valid ? Math.round((item.kcalPer100g * parsed) / 100) : 0;
+
+  function handleSave() {
+    if (!valid) return;
+    startSave(async () => {
+      const result = await updateMealItemAction(item.id, parsed, item.logDate);
+      if (result.ok) {
+        onSaved({ ...item, quantityGrams: parsed, caloriesKcal: kcal });
+      }
+    });
+  }
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div
+        className="fixed bottom-24 left-4 right-4 z-[61] rounded-[var(--radius-lg)] border border-[var(--border)] p-4 shadow-2xl overflow-y-auto"
+        style={{
+          maxHeight: "calc(100vh - 10rem)",
+          backgroundColor: "rgba(20,24,36,0.95)",
+          backdropFilter: "blur(30px)",
+          WebkitBackdropFilter: "blur(30px)",
+        }}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <p className="text-sm font-semibold">{item.productName}</p>
+          <button type="button" onClick={onClose} className="text-xs text-[var(--text3)]">
+            Avbryt
+          </button>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <Label htmlFor="meal-grams">Mengde (g)</Label>
+            <Input
+              id="meal-grams"
+              type="number"
+              inputMode="decimal"
+              step="0.1"
+              placeholder="100"
+              value={grams}
+              onChange={(e) => setGrams(e.target.value)}
+            />
+          </div>
+          <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card2)] p-3">
+            <p className="text-xs text-[var(--color-muted-foreground)]">Estimert kalorier</p>
+            <p className="mt-1 text-2xl font-bold">{kcal} <span className="text-sm">kcal</span></p>
+          </div>
+        </div>
+        <Button type="button" disabled={saving || !valid} onClick={handleSave} className="mt-4 w-full">
+          {saving ? "Lagrer…" : "Lagre"}
+        </Button>
+      </div>
+    </>
   );
 }
 
@@ -179,6 +262,7 @@ export function MealSection({
 }) {
   const router = useRouter();
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [editingItem, setEditingItem] = useState<MealLogItem | null>(null);
   const [showSaveForm, setShowSaveForm] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [copyPending, startCopyTransition] = useTransition();
@@ -325,6 +409,7 @@ export function MealSection({
                 logDate={logDate}
                 removingId={removingId}
                 onRemove={handleRemove}
+                onEdit={setEditingItem}
               />
             ))}
           </ul>
@@ -340,6 +425,19 @@ export function MealSection({
             </button>
           )}
         </>
+      )}
+
+      {editingItem && (
+        <EditMealSheet
+          item={editingItem}
+          onClose={() => setEditingItem(null)}
+          onSaved={(updated) => {
+            // Update items array with new values
+            const newItems = items.map((i) => i.id === updated.id ? updated : i);
+            onChanged();
+            setEditingItem(null);
+          }}
+        />
       )}
     </section>
   );
