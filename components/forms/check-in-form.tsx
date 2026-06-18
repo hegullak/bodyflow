@@ -2,52 +2,26 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import type { CheckInDiff, CheckInSnapshot } from "@/lib/queries/check-in";
+import type { CheckInSnapshot } from "@/lib/queries/check-in";
 import { upsertCheckInAction } from "@/lib/actions/check-in";
 import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label } from "@/components/ui/field";
 import { formatWeekdayDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
-function diffPart(
-  label: string,
-  value: number | null,
-  unit: string,
-): { text: string; tone: "up" | "down" | "neutral" } | null {
-  if (value == null || value === 0) return null;
-  const sign = value > 0 ? "+" : "";
-  return {
-    text: `${label} ${sign}${value}${unit}`,
-    tone: value > 0 ? "up" : "down",
-  };
-}
-
-function DiffLine({ diff }: { diff: CheckInDiff }) {
-  const parts = [
-    diffPart("Vekt", diff.weightKg, "kg"),
-    diffPart("Midje", diff.waistCm, "cm"),
-    diffPart("Bryst", diff.chestCm, "cm"),
-    diffPart("Hofte", diff.hipCm, "cm"),
-  ].filter(Boolean) as Array<{ text: string; tone: "up" | "down" | "neutral" }>;
-
-  if (parts.length === 0) return null;
-
+function DiffBadge({ diff }: { diff: number | null | undefined }) {
+  if (diff == null || diff === 0) return null;
+  const pos = diff > 0;
   return (
-    <p className="text-xs leading-relaxed">
-      {parts.map((part, index) => (
-        <span key={part.text}>
-          {index > 0 ? " · " : null}
-          <span
-            className={cn(
-              part.tone === "up" && "text-[#9a5b45]",
-              part.tone === "down" && "text-[var(--color-primary)]",
-            )}
-          >
-            {part.text}
-          </span>
-        </span>
-      ))}
-    </p>
+    <span
+      className={cn(
+        "ml-1.5 text-xs font-medium",
+        pos ? "text-[#9a5b45]" : "text-[var(--color-primary)]",
+      )}
+    >
+      {pos ? "+" : ""}
+      {diff}
+    </span>
   );
 }
 
@@ -73,6 +47,8 @@ export function CheckInForm({
     if (state?.ok) router.refresh();
   }, [state, router]);
 
+  const diff = state?.ok ? state.data?.diff : null;
+
   return (
     <div className="space-y-3" id="weight-section">
       <form action={formAction} className="space-y-3">
@@ -80,9 +56,13 @@ export function CheckInForm({
 
         <p className="text-sm font-medium">{formatWeekdayDate(logDate)}</p>
 
-        <div className="form-grid-2">
+        <div className="space-y-2">
+          {/* Weight — full width */}
           <div>
-            <Label htmlFor="weightKg">Vekt (kg)</Label>
+            <Label htmlFor="weightKg">
+              Vekt (kg)
+              <DiffBadge diff={diff?.weightKg} />
+            </Label>
             <Input
               ref={weightRef}
               id="weightKg"
@@ -95,41 +75,54 @@ export function CheckInForm({
             />
             <FieldError message={state?.ok === false ? state.fieldErrors?.weightKg?.[0] : undefined} />
           </div>
-          <div>
-            <Label htmlFor="waistCm">Midje (cm)</Label>
-            <Input
-              id="waistCm"
-              name="waistCm"
-              type="number"
-              inputMode="decimal"
-              step="0.1"
-              placeholder="94"
-              defaultValue={today.waistCm ?? ""}
-            />
-          </div>
-          <div>
-            <Label htmlFor="chestCm">Bryst (cm)</Label>
-            <Input
-              id="chestCm"
-              name="chestCm"
-              type="number"
-              inputMode="decimal"
-              step="0.1"
-              placeholder="95"
-              defaultValue={today.chestCm ?? ""}
-            />
-          </div>
-          <div>
-            <Label htmlFor="hipCm">Hofte (cm)</Label>
-            <Input
-              id="hipCm"
-              name="hipCm"
-              type="number"
-              inputMode="decimal"
-              step="0.1"
-              placeholder="96"
-              defaultValue={today.hipCm ?? ""}
-            />
+
+          {/* Body measurements — 3 columns */}
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <Label htmlFor="waistCm">
+                Midje
+                <DiffBadge diff={diff?.waistCm} />
+              </Label>
+              <Input
+                id="waistCm"
+                name="waistCm"
+                type="number"
+                inputMode="decimal"
+                step="0.1"
+                placeholder="94"
+                defaultValue={today.waistCm ?? ""}
+              />
+            </div>
+            <div>
+              <Label htmlFor="chestCm">
+                Bryst
+                <DiffBadge diff={diff?.chestCm} />
+              </Label>
+              <Input
+                id="chestCm"
+                name="chestCm"
+                type="number"
+                inputMode="decimal"
+                step="0.1"
+                placeholder="95"
+                defaultValue={today.chestCm ?? ""}
+              />
+            </div>
+            <div>
+              <Label htmlFor="hipCm">
+                Hofte
+                <DiffBadge diff={diff?.hipCm} />
+              </Label>
+              <Input
+                id="hipCm"
+                name="hipCm"
+                type="number"
+                inputMode="decimal"
+                step="0.1"
+                placeholder="96"
+                defaultValue={today.hipCm ?? ""}
+              />
+            </div>
           </div>
         </div>
 
@@ -137,10 +130,8 @@ export function CheckInForm({
           <p className="text-xs text-[#9a5b45]">{state.error}</p>
         ) : null}
 
-        {state?.ok && state.data?.diff ? <DiffLine diff={state.data.diff} /> : null}
-
         <Button type="submit" disabled={pending} className="w-full">
-          {pending ? "Lagrer..." : "Save"}
+          {pending ? "Lagrer..." : "Lagre"}
         </Button>
       </form>
     </div>

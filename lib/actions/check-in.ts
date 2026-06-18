@@ -136,6 +136,24 @@ export async function getCheckInBundle(userId: string, logDate: string) {
   return { today: todayEntry, initial, hasMore };
 }
 
+export async function deleteCheckInAction(logDate: string): Promise<{ ok: boolean }> {
+  const userId = await requireUserId();
+  const db = getDb();
+  await Promise.all([
+    db
+      .update(dailyBodyLogs)
+      .set({ weightKg: null, weightSource: null, updatedAt: new Date() })
+      .where(scopeBy(dailyBodyLogs.userId, userId, eq(dailyBodyLogs.logDate, logDate))),
+    db
+      .delete(bodyMeasurements)
+      .where(scopeBy(bodyMeasurements.userId, userId, eq(bodyMeasurements.measuredOn, logDate))),
+  ]);
+  revalidatePath("/check-in");
+  revalidatePath("/statistics");
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
 export async function getCheckInHistoryPageAction(
   offset: number,
 ): Promise<CheckInSnapshot[]> {
