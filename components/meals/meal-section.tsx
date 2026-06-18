@@ -233,7 +233,7 @@ function QuickAddSheet({
   function handleAdd() {
     if (!valid) return;
     startSave(async () => {
-      const result = await quickAddMealItemAction(logDate, mealType, parsed);
+      const result = await quickAddMealItemAction(logDate, mealType, "Manual", parsed);
       if (result.ok) {
         onAdded();
       }
