@@ -86,46 +86,35 @@ function SwipeRow({
   function snap(x: number, animate = true) {
     const el = innerRef.current;
     if (!el) return;
-    el.style.transition = animate ? "transform 0.2s ease-out" : "none";
+    el.style.transition = animate ? "transform 0.25s cubic-bezier(0.4,0,0.2,1)" : "none";
     el.style.transform = `translateX(${x}px)`;
     sw.current.revealed = x < 0;
   }
 
-  useEffect(() => {
-    function onPointerMove(e: PointerEvent) {
-      if (!sw.current.tracking || !innerRef.current) return;
-      const dx = e.clientX - sw.current.startX;
-      const dy = e.clientY - sw.current.startY;
-      if (!sw.current.dragging) {
-        if (Math.abs(dy) > Math.abs(dx) + 5) { sw.current.tracking = false; return; }
-        if (Math.abs(dx) > 5) sw.current.dragging = true;
-        else return;
-      }
-      e.preventDefault();
-      const base = sw.current.revealed ? -REVEAL_W : 0;
-      const x = Math.max(-REVEAL_W, Math.min(0, base + dx));
-      innerRef.current.style.transform = `translateX(${x}px)`;
-    }
-
-    function onPointerUp(e: PointerEvent) {
-      if (!sw.current.tracking || !sw.current.dragging || !innerRef.current) { sw.current.tracking = false; return; }
-      sw.current.tracking = false;
-      const dx = e.clientX - sw.current.startX;
-      const base = sw.current.revealed ? -REVEAL_W : 0;
-      snap(base + dx < -SNAP ? -REVEAL_W : 0);
-    }
-
-    document.addEventListener("pointermove", onPointerMove, { passive: false });
-    document.addEventListener("pointerup", onPointerUp);
-    return () => {
-      document.removeEventListener("pointermove", onPointerMove);
-      document.removeEventListener("pointerup", onPointerUp);
-    };
-  }, []);
-
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
-    sw.current = { ...sw.current, startX: e.clientX, startY: e.clientY, tracking: true, dragging: false };
+    sw.current = { startX: e.clientX, startY: e.clientY, tracking: true, dragging: false, revealed: sw.current.revealed };
     if (innerRef.current) innerRef.current.style.transition = "none";
+  }
+
+  function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!sw.current.tracking || !innerRef.current) return;
+    const dx = e.clientX - sw.current.startX;
+    const dy = e.clientY - sw.current.startY;
+    if (!sw.current.dragging && Math.abs(dy) > Math.abs(dx) + 5) { sw.current.tracking = false; return; }
+    if (!sw.current.dragging && Math.abs(dx) > 4) sw.current.dragging = true;
+    if (!sw.current.dragging) return;
+    const base = sw.current.revealed ? -REVEAL_W : 0;
+    const x = Math.max(-REVEAL_W, Math.min(0, base + dx));
+    innerRef.current.style.transform = `translateX(${x}px)`;
+  }
+
+  function onPointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    if (!sw.current.tracking) return;
+    sw.current.tracking = false;
+    if (!sw.current.dragging) return;
+    const dx = e.clientX - sw.current.startX;
+    const base = sw.current.revealed ? -REVEAL_W : 0;
+    snap(base + dx < -SNAP ? -REVEAL_W : 0);
   }
 
   function handleDelete() {
@@ -166,6 +155,9 @@ function SwipeRow({
       <div
         ref={innerRef}
         onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={() => { sw.current.tracking = false; snap(sw.current.revealed ? -REVEAL_W : 0); }}
         className="relative bg-[var(--card)] px-4 py-3 select-none"
         style={{ touchAction: "pan-y", transform: "translateX(0)" }}
       >
@@ -221,16 +213,16 @@ function EditSheet({
   return (
     <>
       <div
-        className="fixed inset-0 z-40 backdrop-blur-sm"
-        style={{ backgroundColor: "rgba(0,0,0,0.3)" }}
+        className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
       />
       <div
-        className="fixed bottom-0 left-0 right-0 z-50 rounded-t-[var(--radius-lg)] border-t border-[var(--border)] p-4 pb-safe-or-8 shadow-2xl"
+        className="fixed bottom-0 left-0 right-0 z-50 rounded-t-[var(--radius-lg)] border-t border-[var(--border)] p-4 pb-safe-or-8 shadow-2xl overflow-y-auto"
         style={{
-          backgroundColor: "rgba(30,41,59,0.85)",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
+          maxHeight: "80vh",
+          backgroundColor: "rgba(20,24,36,0.95)",
+          backdropFilter: "blur(30px)",
+          WebkitBackdropFilter: "blur(30px)",
         }}
       >
         <div className="mb-4 flex items-center justify-between">
