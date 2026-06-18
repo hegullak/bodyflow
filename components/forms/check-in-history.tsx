@@ -220,8 +220,19 @@ function EditSheet({
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-black/40" onClick={onClose} />
-      <div className="fixed bottom-0 left-0 right-0 z-50 rounded-t-[var(--radius-lg)] border-t border-[var(--border)] bg-[var(--card)] p-4 pb-safe-or-8 shadow-xl">
+      <div
+        className="fixed inset-0 z-40 backdrop-blur-sm"
+        style={{ backgroundColor: "rgba(0,0,0,0.3)" }}
+        onClick={onClose}
+      />
+      <div
+        className="fixed bottom-0 left-0 right-0 z-50 rounded-t-[var(--radius-lg)] border-t border-[var(--border)] p-4 pb-safe-or-8 shadow-2xl"
+        style={{
+          backgroundColor: "rgba(30,41,59,0.85)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+        }}
+      >
         <div className="mb-4 flex items-center justify-between">
           <p className="text-sm font-semibold">{formatWeekdayDate(entry.logDate)}</p>
           <button type="button" onClick={onClose} className="text-xs text-[var(--text3)]">
