@@ -492,10 +492,10 @@ function ExerciseRow({ ex, onUpdate, onRemove, showDivider, canSuperset, adjacen
   const [imgError, setImgError] = useState(false);
 
   return (
-    <div className={showDivider ? "border-b border-[var(--border)]" : ""}>
+    <div>
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left"
+        className="flex w-full items-center gap-3 px-0 py-3 text-left"
       >
         {/* Thumbnail */}
         {ex.imageUrl && !imgError ? (
@@ -527,7 +527,7 @@ function ExerciseRow({ ex, onUpdate, onRemove, showDivider, canSuperset, adjacen
       </button>
 
       {expanded && (
-        <div className="flex flex-col gap-3 border-t border-[var(--border)] px-4 py-3">
+        <div className="flex flex-col gap-3 px-0 py-3">
           <div className="grid grid-cols-3 gap-2">
             <Stepper label="Sett" value={ex.sets} min={1} max={20} onChange={(v) => onUpdate({ sets: v })} />
             <Stepper label="Reps" value={ex.reps} min={1} max={100} onChange={(v) => onUpdate({ reps: v })} />
