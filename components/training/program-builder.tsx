@@ -13,6 +13,7 @@ import {
   Link2,
   Link2Off,
   Minus,
+  Pencil,
   Play,
   Plus,
   Trash2,
@@ -261,7 +262,11 @@ export function ProgramBuilder({ program: initial, activeSessionId }: Props) {
                         </button>
                       </div>
                       {block.exercises.map((ex, exIdx) => (
-                        <SwipeableExerciseRow key={ex.id} onDelete={() => handleRemoveExercise(ex.id)}>
+                        <SwipeableExerciseRow
+                          key={ex.id}
+                          onDelete={() => handleRemoveExercise(ex.id)}
+                          onEdit={() => {}}
+                        >
                           <ExerciseRow
                             ex={ex}
                             onUpdate={(patch) => handleUpdateExercise(ex.id, patch)}
@@ -274,7 +279,11 @@ export function ProgramBuilder({ program: initial, activeSessionId }: Props) {
                   ) : (
                     <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)]">
                       {block.exercises.map((ex) => (
-                        <SwipeableExerciseRow key={ex.id} onDelete={() => handleRemoveExercise(ex.id)}>
+                        <SwipeableExerciseRow
+                          key={ex.id}
+                          onDelete={() => handleRemoveExercise(ex.id)}
+                          onEdit={() => {}}
+                        >
                           <ExerciseRow
                             ex={ex}
                             onUpdate={(patch) => handleUpdateExercise(ex.id, patch)}
@@ -376,55 +385,82 @@ function SortableBlock({ id, children }: { id: string; children: React.ReactNode
 // Swipeable exercise row — swipe left to reveal delete
 // ---------------------------------------------------------------------------
 
-function SwipeableExerciseRow({ onDelete, children }: { onDelete: () => void; children: React.ReactNode }) {
-  const [offset, setOffset] = useState(0);
-  const [settled, setSettled] = useState(true);
-  const startRef = useRef({ x: 0, y: 0, active: false, locked: false, startOffset: 0 });
-  const DELETE_W = 80;
+function SwipeableExerciseRow({ onDelete, onEdit, children }: { onDelete: () => void; onEdit?: () => void; children: React.ReactNode }) {
+  const innerRef = useRef<HTMLDivElement>(null);
+  const sw = useRef({ startX: 0, startY: 0, tracking: false, revealed: false, dragging: false });
+  const REVEAL_W = 112;
+  const SNAP = 40;
 
-  function onPointerDown(e: React.PointerEvent) {
-    startRef.current = { x: e.clientX, y: e.clientY, active: true, locked: false, startOffset: offset };
-    setSettled(false);
+  function snap(x: number, animate = true) {
+    const el = innerRef.current;
+    if (!el) return;
+    el.style.transition = animate ? "transform 0.25s cubic-bezier(0.4,0,0.2,1)" : "none";
+    el.style.transform = `translateX(${x}px)`;
+    sw.current.revealed = x < 0;
   }
 
-  function onPointerMove(e: React.PointerEvent) {
-    const s = startRef.current;
-    if (!s.active || s.locked) return;
-    const dx = e.clientX - s.x;
-    const dy = e.clientY - s.y;
-    if (Math.abs(dy) > Math.abs(dx) + 6) { s.locked = true; setSettled(true); return; }
-    if (Math.abs(dx) < 4) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
-    const newOffset = Math.min(0, Math.max(s.startOffset + dx, -DELETE_W));
-    setOffset(newOffset);
+  function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    sw.current = { startX: e.clientX, startY: e.clientY, tracking: true, dragging: false, revealed: sw.current.revealed };
+    if (innerRef.current) innerRef.current.style.transition = "none";
   }
 
-  function onPointerUp() {
-    startRef.current.active = false;
-    setSettled(true);
-    setOffset((prev) => (prev < -(DELETE_W * 0.5) ? -DELETE_W : 0));
+  function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!sw.current.tracking || !innerRef.current) return;
+    const dx = e.clientX - sw.current.startX;
+    const dy = e.clientY - sw.current.startY;
+    if (!sw.current.dragging && Math.abs(dy) > Math.abs(dx) + 5) { sw.current.tracking = false; return; }
+    if (!sw.current.dragging && Math.abs(dx) > 4) sw.current.dragging = true;
+    if (!sw.current.dragging) return;
+    const base = sw.current.revealed ? -REVEAL_W : 0;
+    const x = Math.max(-REVEAL_W, Math.min(0, base + dx));
+    innerRef.current.style.transform = `translateX(${x}px)`;
+  }
+
+  function onPointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    if (!sw.current.tracking) return;
+    sw.current.tracking = false;
+    if (!sw.current.dragging) return;
+    const dx = e.clientX - sw.current.startX;
+    const base = sw.current.revealed ? -REVEAL_W : 0;
+    snap(base + dx < -SNAP ? -REVEAL_W : 0);
+  }
+
+  function handleEdit() {
+    snap(0);
+    setTimeout(() => onEdit?.(), 200);
   }
 
   function handleDelete() {
-    setOffset(-DELETE_W * 3);
+    snap(0);
     setTimeout(onDelete, 200);
   }
 
   return (
     <div className="relative overflow-hidden">
-      <div
-        className="absolute inset-y-0 right-0 flex items-center justify-center bg-[var(--red)]"
-        style={{ width: DELETE_W }}
-      >
+      <div className="absolute inset-y-0 right-0 flex" style={{ width: REVEAL_W }}>
         <button
-          onClick={handleDelete}
-          className="flex h-full w-full items-center justify-center"
-          aria-label="Slett øvelse"
+          type="button"
+          onClick={handleEdit}
+          className="flex w-14 items-center justify-center bg-blue-500 text-white active:opacity-80"
+          aria-label="Rediger"
         >
-          <Trash2 className="h-5 w-5 text-white" />
+          <Pencil className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={handleDelete}
+          className="flex w-14 items-center justify-center bg-[var(--red)] text-white active:opacity-80"
+          aria-label="Slett"
+        >
+          <Trash2 className="h-4 w-4" />
         </button>
       </div>
       <div
+        ref={innerRef}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={() => { sw.current.tracking = false; snap(sw.current.revealed ? -REVEAL_W : 0); }}
         style={{
           transform: `translateX(${offset}px)`,
           transition: settled ? "transform 0.22s ease" : "none",
