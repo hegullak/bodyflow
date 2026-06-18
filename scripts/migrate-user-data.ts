@@ -14,8 +14,8 @@ dotenv.config({ path: ".env.local" });
 
 import { neon } from "@neondatabase/serverless";
 
-const OLD_URL =
-  "postgresql://neondb_owner:npg_oNvWdHLVc3w8@ep-quiet-shadow-ab1f98ju.eu-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require";
+const OLD_URL = process.env.OLD_DATABASE_URL;
+if (!OLD_URL) throw new Error("OLD_DATABASE_URL not set");
 const NEW_URL = process.env.DATABASE_URL!;
 
 if (!NEW_URL) throw new Error("DATABASE_URL not set in .env.local");
