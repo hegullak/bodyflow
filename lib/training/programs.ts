@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull, max, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, max } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import {
   exercises,
@@ -358,7 +358,7 @@ export async function createSuperset(
     .where(
       and(
         eq(workoutProgramExercises.programId, programId),
-        sql`${workoutProgramExercises.id} = ANY(${sql.raw(`ARRAY['${exerciseIds.join("','")}']::uuid[]`)})`,
+        inArray(workoutProgramExercises.id, exerciseIds),
       ),
     );
 

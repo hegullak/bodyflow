@@ -529,9 +529,7 @@ export function MealSection({
         <EditMealSheet
           item={editingItem}
           onClose={() => setEditingItem(null)}
-          onSaved={(updated) => {
-            // Update items array with new values
-            const newItems = items.map((i) => i.id === updated.id ? updated : i);
+          onSaved={() => {
             onChanged();
             setEditingItem(null);
           }}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useRef, useEffect } from "react";
+import { useState, useTransition, useRef } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import type { CheckInSnapshot, CheckInDiff } from "@/lib/queries/check-in";
 import {
@@ -11,7 +11,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/field";
 import { formatWeekdayDate } from "@/lib/utils";
-import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 5;
 const REVEAL_W = 112;

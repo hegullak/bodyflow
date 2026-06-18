@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ChevronLeft, Dumbbell, Minus, Play, Plus, Trash2, X } from "lucide-react";
 import {
@@ -134,15 +134,12 @@ function useRestTimer() {
   // Cleanup on unmount only
   useEffect(() => () => fns.current.stopTick(), []);
 
-  return {
-    seconds,
-    running,
-    active: running || seconds > 0,
-    start:  fns.current.start,
-    pause:  fns.current.pause,
-    skip:   fns.current.skip,
-    add:    fns.current.add,
-  };
+  const start = useCallback((duration: number) => fns.current.start(duration), []);
+  const pause = useCallback(() => fns.current.pause(), []);
+  const skip  = useCallback(() => fns.current.skip(), []);
+  const add   = useCallback((n: number) => fns.current.add(n), []);
+
+  return { seconds, running, active: running || seconds > 0, start, pause, skip, add };
 }
 
 // ---------------------------------------------------------------------------

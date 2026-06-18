@@ -9,8 +9,9 @@ export async function POST(req: Request, { params }: Params) {
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
   const { exerciseIds } = body;
-  if (!Array.isArray(exerciseIds) || exerciseIds.length < 2) {
-    return NextResponse.json({ error: "exerciseIds (min 2) required" }, { status: 400 });
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!Array.isArray(exerciseIds) || exerciseIds.length < 2 || !exerciseIds.every((id) => typeof id === "string" && UUID_RE.test(id))) {
+    return NextResponse.json({ error: "exerciseIds (min 2 valid UUIDs) required" }, { status: 400 });
   }
   const superset = await createSuperset(id, userId, exerciseIds);
   if (!superset) return NextResponse.json({ error: "Not found" }, { status: 404 });
