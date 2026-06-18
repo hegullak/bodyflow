@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, ClipboardPen, Dumbbell, LayoutDashboard, Utensils } from "lucide-react";
+import { ClipboardPen, Dumbbell, LayoutDashboard, Utensils } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const tabs = [
@@ -10,7 +10,6 @@ const tabs = [
   { href: "/check-in", label: "Check-in", icon: ClipboardPen },
   { href: "/training", label: "Trening", icon: Dumbbell },
   { href: "/meals", label: "Meals", icon: Utensils },
-  { href: "/statistics", label: "Stats", icon: BarChart3 },
 ];
 
 export function BottomNav() {
