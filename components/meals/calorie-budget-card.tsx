@@ -38,19 +38,15 @@ export function CalorieBudgetCard({
           </p>
         </div>
       </div>
-      <p className="mt-2 text-xs text-[var(--color-muted-foreground)]">
-        {dailyTarget == null ? (
-          <>
-            Sett daglig kalorimål på{" "}
-            <Link href="/profile" className="text-[var(--color-primary)]">
-              Profile
-            </Link>
-            .
-          </>
-        ) : (
-          "kcal · måltider oppdaterer daglig logg automatisk"
-        )}
-      </p>
+      {dailyTarget == null && (
+        <p className="mt-2 text-xs text-[var(--color-muted-foreground)]">
+          Sett daglig kalorimål på{" "}
+          <Link href="/profile" className="text-[var(--color-primary)]">
+            Profile
+          </Link>
+          .
+        </p>
+      )}
     </div>
   );
 }
