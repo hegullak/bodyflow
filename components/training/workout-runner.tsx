@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, ChevronLeft, Dumbbell, GripVertical, Minus, Play, Plus, Trash2, X } from "lucide-react";
+import { Check, ChevronLeft, Dumbbell, Minus, Play, Plus, Trash2, X } from "lucide-react";
 import {
   DndContext,
   DragEndEvent,
@@ -553,28 +553,27 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
                       </p>
                     )}
                     {block.exercises.map((ex) => (
-                      <SwipeableExerciseRow key={ex.id} onDelete={() => removeExercise(ex.id)}>
-                        <div ref={(el) => setCardRef(ex.id, el)}>
-                          <ExerciseCard
-                            ex={ex}
-                            setRows={rows(ex.id)}
-                            lastSets={session.lastSets[ex.id] ?? []}
-                            nextSetIdx={ex.id === nextExId ? nextExIdx : -1}
-                            timerActive={timer.active}
-                            restingSetIdx={restingSet?.exId === ex.id ? restingSet.setIdx : -1}
-                            timerSeconds={timer.seconds}
-                            activeInput={activeInput?.exId === ex.id ? activeInput : null}
-                            onToggle={(idx) => toggleSet(ex, idx, block)}
-                            onActivateSet={(idx) => { const r = rows(ex.id)[idx]; if (r && !r.completed) { setRestingSet({ exId: ex.id, setIdx: idx }); timer.start(ex.restSeconds); } }}
-                            onWeight={(idx, v) => patchRow(ex.id, idx, { weightKg: v })}
-                            onReps={(idx, v) => patchRow(ex.id, idx, { reps: v })}
-                            onFocusInput={(setIdx, field) => focusInput(ex.id, setIdx, field)}
-                            onAddSet={() => addRow(ex.id)}
-                            onRemoveSet={(idx) => removeRow(ex.id, idx)}
-                            onThumbClick={ex.imageUrl ? () => setFullscreenImage({ url: ex.imageUrl!, name: ex.exerciseName }) : undefined}
-                          />
-                        </div>
-                      </SwipeableExerciseRow>
+                      <div key={ex.id} ref={(el) => setCardRef(ex.id, el)}>
+                        <ExerciseCard
+                          ex={ex}
+                          setRows={rows(ex.id)}
+                          lastSets={session.lastSets[ex.id] ?? []}
+                          nextSetIdx={ex.id === nextExId ? nextExIdx : -1}
+                          timerActive={timer.active}
+                          restingSetIdx={restingSet?.exId === ex.id ? restingSet.setIdx : -1}
+                          timerSeconds={timer.seconds}
+                          activeInput={activeInput?.exId === ex.id ? activeInput : null}
+                          onToggle={(idx) => toggleSet(ex, idx, block)}
+                          onActivateSet={(idx) => { const r = rows(ex.id)[idx]; if (r && !r.completed) { setRestingSet({ exId: ex.id, setIdx: idx }); timer.start(ex.restSeconds); } }}
+                          onWeight={(idx, v) => patchRow(ex.id, idx, { weightKg: v })}
+                          onReps={(idx, v) => patchRow(ex.id, idx, { reps: v })}
+                          onFocusInput={(setIdx, field) => focusInput(ex.id, setIdx, field)}
+                          onAddSet={() => addRow(ex.id)}
+                          onRemoveSet={(idx) => removeRow(ex.id, idx)}
+                          onRemoveExercise={() => removeExercise(ex.id)}
+                          onThumbClick={ex.imageUrl ? () => setFullscreenImage({ url: ex.imageUrl!, name: ex.exerciseName }) : undefined}
+                        />
+                      </div>
                     ))}
                   </div>
                 </SortableWorkoutBlock>
@@ -644,16 +643,10 @@ function SortableWorkoutBlock({ id, children }: { id: string; children: React.Re
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, position: "relative" }}
+      {...attributes}
+      {...listeners}
+      className="cursor-grab touch-none active:cursor-grabbing"
     >
-      <button
-        {...attributes}
-        {...listeners}
-        className="absolute right-2 top-2 z-10 cursor-grab touch-none rounded p-1 text-[var(--text3)] active:cursor-grabbing"
-        tabIndex={-1}
-        aria-label="Drag to reorder"
-      >
-        <GripVertical className="h-4 w-4" />
-      </button>
       {children}
     </div>
   );
@@ -679,10 +672,11 @@ interface ExerciseCardProps {
   onFocusInput: (setIdx: number, field: "weight" | "reps") => void;
   onAddSet: () => void;
   onRemoveSet: (idx: number) => void;
+  onRemoveExercise: () => void;
   onThumbClick?: () => void;
 }
 
-function ExerciseCard({ ex, setRows, lastSets, nextSetIdx, timerActive, restingSetIdx, timerSeconds, activeInput, onToggle, onActivateSet, onWeight: _onWeight, onReps: _onReps, onFocusInput, onAddSet, onRemoveSet, onThumbClick }: ExerciseCardProps) {
+function ExerciseCard({ ex, setRows, lastSets, nextSetIdx, timerActive, restingSetIdx, timerSeconds, activeInput, onToggle, onActivateSet, onWeight: _onWeight, onReps: _onReps, onFocusInput, onAddSet, onRemoveSet, onRemoveExercise, onThumbClick }: ExerciseCardProps) {
   const [imgError, setImgError] = useState(false);
   const name = ex.exerciseName;
   const meta = [ex.categoryName, ex.targetMuscleName].filter(Boolean).join(" · ");
@@ -715,13 +709,22 @@ function ExerciseCard({ ex, setRows, lastSets, nextSetIdx, timerActive, restingS
           <p className="font-semibold text-[var(--text1)]">{name}</p>
           {meta && <p className="text-xs text-[var(--text3)]">{meta} · {ex.equipment}</p>}
         </div>
-        <button
-          onClick={onAddSet}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--text2)] hover:bg-[var(--card2)]"
-          title="Legg til sett"
-        >
-          <Plus className="h-4 w-4" />
-        </button>
+        <div className="flex shrink-0 gap-2">
+          <button
+            onClick={onAddSet}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text2)] hover:bg-[var(--card2)]"
+            title="Legg til sett"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+          <button
+            onClick={onRemoveExercise}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text2)] hover:bg-[var(--red)]/10 hover:text-[var(--red)]"
+            title="Fjern øvelse"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {/* Column headers */}
@@ -761,40 +764,51 @@ function ExerciseCard({ ex, setRows, lastSets, nextSetIdx, timerActive, restingS
 }
 
 // ---------------------------------------------------------------------------
-// Swipeable row wrapper — swipe left to reveal delete, swipe right to close
+// Swipeable set row — swipe left to reveal delete
 // ---------------------------------------------------------------------------
 
 function SwipeableSetRow({ onDelete, children }: { onDelete: () => void; children: React.ReactNode }) {
-  const [offset, setOffset] = useState(0);
-  const [settled, setSettled] = useState(true);
-  const startRef = useRef({ x: 0, y: 0, active: false, locked: false, startOffset: 0 });
-  const DELETE_W = 72;
+  const innerRef = useRef<HTMLDivElement>(null);
+  const sw = useRef({ startX: 0, startY: 0, tracking: false, revealed: false, dragging: false });
+  const DELETE_W = 56;
+  const SNAP = 20;
 
-  function onPointerDown(e: React.PointerEvent) {
-    startRef.current = { x: e.clientX, y: e.clientY, active: true, locked: false, startOffset: offset };
-    setSettled(false);
+  function snap(x: number, animate = true) {
+    const el = innerRef.current;
+    if (!el) return;
+    el.style.transition = animate ? "transform 0.25s cubic-bezier(0.4,0,0.2,1)" : "none";
+    el.style.transform = `translateX(${x}px)`;
+    sw.current.revealed = x < 0;
   }
 
-  function onPointerMove(e: React.PointerEvent) {
-    const s = startRef.current;
-    if (!s.active || s.locked) return;
-    const dx = e.clientX - s.x;
-    const dy = e.clientY - s.y;
-    if (Math.abs(dy) > Math.abs(dx) + 6) { s.locked = true; setSettled(true); return; }
-    if (Math.abs(dx) < 4) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
-    const newOffset = Math.min(0, Math.max(s.startOffset + dx, -DELETE_W));
-    setOffset(newOffset);
+  function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    sw.current = { startX: e.clientX, startY: e.clientY, tracking: true, dragging: false, revealed: sw.current.revealed };
+    if (innerRef.current) innerRef.current.style.transition = "none";
   }
 
-  function onPointerUp() {
-    startRef.current.active = false;
-    setSettled(true);
-    setOffset((prev) => (prev < -(DELETE_W * 0.5) ? -DELETE_W : 0));
+  function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!sw.current.tracking || !innerRef.current) return;
+    const dx = e.clientX - sw.current.startX;
+    const dy = e.clientY - sw.current.startY;
+    if (!sw.current.dragging && Math.abs(dy) > Math.abs(dx) + 5) { sw.current.tracking = false; return; }
+    if (!sw.current.dragging && Math.abs(dx) > 4) sw.current.dragging = true;
+    if (!sw.current.dragging) return;
+    const base = sw.current.revealed ? -DELETE_W : 0;
+    const x = Math.max(-DELETE_W, Math.min(0, base + dx));
+    innerRef.current.style.transform = `translateX(${x}px)`;
+  }
+
+  function onPointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    if (!sw.current.tracking) return;
+    sw.current.tracking = false;
+    if (!sw.current.dragging) return;
+    const dx = e.clientX - sw.current.startX;
+    const base = sw.current.revealed ? -DELETE_W : 0;
+    snap(base + dx < -SNAP ? -DELETE_W : 0);
   }
 
   function handleDelete() {
-    setOffset(-DELETE_W * 3);
+    snap(-DELETE_W * 3, true);
     setTimeout(onDelete, 200);
   }
 
@@ -813,15 +827,17 @@ function SwipeableSetRow({ onDelete, children }: { onDelete: () => void; childre
         </button>
       </div>
       <div
-        className="relative bg-[var(--card)]"
-        style={{
-          transform: `translateX(${offset}px)`,
-          transition: settled ? "transform 0.22s ease" : "none",
-        }}
+        ref={innerRef}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
+        onPointerCancel={() => { sw.current.tracking = false; snap(sw.current.revealed ? -DELETE_W : 0); }}
+        className="relative bg-[var(--card)]"
+        style={{
+          touchAction: "pan-y",
+          userSelect: "none",
+          willChange: "transform",
+        }}
       >
         {children}
       </div>
@@ -1111,74 +1127,6 @@ function RestTimerBar({ seconds, running, nextExercise, onAdd, onPause, onSkip }
           </button>
         </div>
       )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Swipeable exercise row — swipe left to reveal delete
-// ---------------------------------------------------------------------------
-
-function SwipeableExerciseRow({ onDelete, children }: { onDelete: () => void; children: React.ReactNode }) {
-  const [offset, setOffset] = useState(0);
-  const [settled, setSettled] = useState(true);
-  const startRef = useRef({ x: 0, y: 0, active: false, locked: false, startOffset: 0 });
-  const DELETE_W = 80;
-
-  function onPointerDown(e: React.PointerEvent) {
-    startRef.current = { x: e.clientX, y: e.clientY, active: true, locked: false, startOffset: offset };
-    setSettled(false);
-  }
-
-  function onPointerMove(e: React.PointerEvent) {
-    const s = startRef.current;
-    if (!s.active || s.locked) return;
-    const dx = e.clientX - s.x;
-    const dy = e.clientY - s.y;
-    if (Math.abs(dy) > Math.abs(dx) + 6) { s.locked = true; setSettled(true); return; }
-    if (Math.abs(dx) < 4) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
-    const newOffset = Math.min(0, Math.max(s.startOffset + dx, -DELETE_W));
-    setOffset(newOffset);
-  }
-
-  function onPointerUp() {
-    startRef.current.active = false;
-    setSettled(true);
-    setOffset((prev) => (prev < -(DELETE_W * 0.5) ? -DELETE_W : 0));
-  }
-
-  function handleDelete() {
-    setOffset(-DELETE_W * 3);
-    setTimeout(onDelete, 200);
-  }
-
-  return (
-    <div className="relative overflow-hidden">
-      <div
-        className="absolute inset-y-0 right-0 flex items-center justify-center bg-[var(--red)]"
-        style={{ width: DELETE_W }}
-      >
-        <button
-          onClick={handleDelete}
-          className="flex h-full w-full items-center justify-center"
-          aria-label="Slett øvelse"
-        >
-          <Trash2 className="h-5 w-5 text-white" />
-        </button>
-      </div>
-      <div
-        style={{
-          transform: `translateX(${offset}px)`,
-          transition: settled ? "transform 0.22s ease" : "none",
-        }}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-      >
-        {children}
-      </div>
     </div>
   );
 }
