@@ -213,11 +213,11 @@ function EditSheet({
   return (
     <>
       <div
-        className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+        className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm"
         onClick={onClose}
       />
       <div
-        className="fixed bottom-0 left-0 right-0 z-50 rounded-t-[var(--radius-lg)] border-t border-[var(--border)] p-4 pb-safe-or-8 shadow-2xl overflow-y-auto"
+        className="fixed bottom-0 left-0 right-0 z-[61] rounded-t-[var(--radius-lg)] border-t border-[var(--border)] p-4 pb-safe-or-8 shadow-2xl overflow-y-auto"
         style={{
           maxHeight: "80vh",
           backgroundColor: "rgba(20,24,36,0.95)",
