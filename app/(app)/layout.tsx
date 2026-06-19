@@ -3,7 +3,6 @@ import { SettingsDropdown } from "@/components/layout/settings-dropdown";
 import { ReminderSync } from "@/components/reminders/reminder-sync";
 import { LangProvider } from "@/components/providers/lang-provider";
 import { getLang } from "@/lib/i18n/server";
-import { getTranslations } from "@/lib/i18n";
 import { requireUserId } from "@/lib/auth/current-user";
 import { getWithingsConnection } from "@/lib/withings/sync";
 import { isWithingsConfigured } from "@/lib/withings/config";
@@ -19,7 +18,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   ]);
 
   return (
-    <LangProvider translations={getTranslations(lang)}>
+    <LangProvider lang={lang}>
       <div className="app-shell">
         <header className="app-header">
           <SettingsDropdown withingsConnected={withingsConnected} />

@@ -1,19 +1,23 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import { en } from "@/lib/i18n/en";
-import type { Translations } from "@/lib/i18n/types";
+import type { Lang, Translations } from "@/lib/i18n/types";
+import { getTranslations } from "@/lib/i18n";
 
-const LangContext = createContext<Translations>(en);
+const LangContext = createContext<Translations>(getTranslations("no"));
 
 export function LangProvider({
   children,
-  translations,
+  lang,
 }: {
   children: React.ReactNode;
-  translations: Translations;
+  lang: Lang;
 }) {
-  return <LangContext.Provider value={translations}>{children}</LangContext.Provider>;
+  return (
+    <LangContext.Provider value={getTranslations(lang)}>
+      {children}
+    </LangContext.Provider>
+  );
 }
 
 export function useT(): Translations {
