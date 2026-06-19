@@ -3,7 +3,7 @@
 import { useClerk, useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { BarChart3, LogOut, Settings, Wifi, WifiOff } from "lucide-react";
+import { BarChart3, LogOut, Settings, UserRound, Wifi, WifiOff } from "lucide-react";
 
 export function SettingsDropdown({ withingsConnected }: { withingsConnected: boolean }) {
   const { user } = useUser();
@@ -24,15 +24,13 @@ export function SettingsDropdown({ withingsConnected }: { withingsConnected: boo
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--card2)] border border-[var(--border)] transition-colors hover:bg-[var(--card)] overflow-hidden"
+        className="flex items-center justify-center transition-colors"
         aria-label="Settings"
       >
-        {user?.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={user.imageUrl} alt="" className="h-full w-full object-cover" />
-        ) : (
-          <Settings className="h-4 w-4 text-[var(--text2)]" strokeWidth={1.5} />
-        )}
+        <UserRound
+          className="h-6 w-6 text-[var(--text3)] hover:text-[var(--text2)] transition-colors"
+          strokeWidth={1.5}
+        />
       </button>
 
       {open && (
