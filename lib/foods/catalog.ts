@@ -222,10 +222,12 @@ export async function searchFoodProducts(query: string): Promise<FoodProductSumm
   const sourceOrder = { matvaretabellen: 0, kassal: 1, custom: 2 } as const;
   const q = trimmed.toLowerCase();
   merged.sort((a, b) => {
+    const sa = sourceOrder[a.source] ?? 9;
+    const sb = sourceOrder[b.source] ?? 9;
+    if (sa !== sb) return sa - sb;
     const aPrefix = (a.prettyName ?? a.name).toLowerCase().startsWith(q) ? 0 : 1;
     const bPrefix = (b.prettyName ?? b.name).toLowerCase().startsWith(q) ? 0 : 1;
-    if (aPrefix !== bPrefix) return aPrefix - bPrefix;
-    return (sourceOrder[a.source] ?? 9) - (sourceOrder[b.source] ?? 9);
+    return aPrefix - bPrefix;
   });
 
   return merged.slice(0, 25);

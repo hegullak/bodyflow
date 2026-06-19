@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, isNull, sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { dailyBodyLogs, mealLogItems, type MealType } from "@/db/schema";
+import { dailyBodyLogs, foodProducts, mealLogItems, type MealType } from "@/db/schema";
 import { requireUserId } from "@/lib/auth/current-user";
 import { scopeBy } from "@/lib/auth/scope";
 import { writeAuditLog } from "@/lib/audit/log";
@@ -97,7 +97,7 @@ export async function addMealItemAction(
         foodProductId: food.id,
         kassalProductId: food.source === "kassal" ? Number(food.externalId) : null,
         ean: food.ean,
-        productName: food.name,
+        productName: food.prettyName ?? food.name,
         brand: food.brand,
         quantityGrams: parsed.data.quantityGrams,
         kcalPer100g: food.kcalPer100g,
@@ -166,9 +166,14 @@ export async function removeMealItemAction(itemId: string, logDate: string): Pro
 
 export async function getMealItemsForDate(userId: string, logDate: string) {
   const db = getDb();
+  const { productName: _pn, ...itemCols } = getTableColumns(mealLogItems);
   return db
-    .select()
+    .select({
+      ...itemCols,
+      productName: sql<string>`coalesce(${foodProducts.prettyName}, ${mealLogItems.productName})`,
+    })
     .from(mealLogItems)
+    .leftJoin(foodProducts, eq(mealLogItems.foodProductId, foodProducts.id))
     .where(
       and(
         eq(mealLogItems.userId, userId),
@@ -422,9 +427,14 @@ export async function updateMealItemAction(
 export async function getMealItemByIdAction(itemId: string) {
   const userId = await requireUserId();
   const db = getDb();
+  const { productName: _pn, ...itemCols } = getTableColumns(mealLogItems);
   const [item] = await db
-    .select()
+    .select({
+      ...itemCols,
+      productName: sql<string>`coalesce(${foodProducts.prettyName}, ${mealLogItems.productName})`,
+    })
     .from(mealLogItems)
+    .leftJoin(foodProducts, eq(mealLogItems.foodProductId, foodProducts.id))
     .where(and(eq(mealLogItems.id, itemId), eq(mealLogItems.userId, userId), isNull(mealLogItems.deletedAt)))
     .limit(1);
   return item ?? null;
