@@ -243,6 +243,11 @@ export function ProductPicker({
 
   function handleAdd() {
     if (!selected?.kcalPer100g) return;
+    const grams = toGrams(Number(quantityInput), unit);
+    if (!grams || grams <= 0) {
+      setLookupError("Skriv inn mengde.");
+      return;
+    }
     const formData = new FormData();
     formData.set("logDate", logDate);
     formData.set("mealType", mealType);
@@ -250,7 +255,7 @@ export function ProductPicker({
     formData.set("source", selected.source);
     formData.set("externalId", selected.externalId);
     if (selected.ean) formData.set("ean", selected.ean);
-    formData.set("quantityGrams", String(toGrams(Number(quantityInput), unit)));
+    formData.set("quantityGrams", String(grams));
 
     startTransition(async () => {
       const result = await addMealItemAction(null, formData);

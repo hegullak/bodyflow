@@ -193,6 +193,8 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
 
   function handleAdd() {
     if (!selected?.kcalPer100g) return;
+    const grams = toGrams(Number(quantityInput), unit);
+    if (!grams || grams <= 0) { setAddError("Skriv inn mengde."); return; }
     const fd = new FormData();
     fd.set("logDate", logDate);
     fd.set("mealType", mealType);
@@ -200,7 +202,7 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
     fd.set("source", selected.source);
     fd.set("externalId", selected.externalId);
     if (selected.ean) fd.set("ean", selected.ean);
-    fd.set("quantityGrams", String(toGrams(Number(quantityInput), unit)));
+    fd.set("quantityGrams", String(grams));
     startTransition(async () => {
       const result = await addMealItemAction(null, fd);
       if (result.ok) router.back();
