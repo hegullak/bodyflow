@@ -28,7 +28,7 @@ export function SettingsDropdown({ withingsConnected }: { withingsConnected: boo
         aria-label="Settings"
       >
         <UserRound
-          className="h-6 w-6 text-[var(--text3)] hover:text-[var(--text2)] transition-colors"
+          className="h-7 w-7 text-[var(--text3)] hover:text-[var(--text2)] transition-colors"
           strokeWidth={1.5}
         />
       </button>
