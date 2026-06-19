@@ -41,11 +41,6 @@ export function DashboardCards({ data }: { data: DashboardData }) {
           {data.latestWeight != null && (
             <div className="shrink-0 text-right">
               <p className="text-base font-semibold leading-tight">{data.latestWeight} kg</p>
-              {data.measurementsHeaderDate && (
-                <p className="text-xs text-[var(--text2)]">
-                  {formatDate(data.measurementsHeaderDate)}
-                </p>
-              )}
             </div>
           )}
         </div>
@@ -64,11 +59,6 @@ export function DashboardCards({ data }: { data: DashboardData }) {
               <p className="text-[var(--text2)]">Hip</p>
               <p className="font-medium">{formatNumber(data.latestMeasurement.hipCm, " cm")}</p>
             </div>
-            {!data.latestWeight && data.measurementsHeaderDate && (
-              <CardHint className="col-span-3">
-                {formatDate(data.measurementsHeaderDate)}
-              </CardHint>
-            )}
           </div>
         ) : (
           <CardHint className="mt-2">
