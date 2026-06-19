@@ -14,11 +14,11 @@ import {
 import { FoodScanWizard } from "@/components/meals/food-scan-wizard";
 import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label } from "@/components/ui/field";
-import { BookOpen, Camera, Pencil, ScanBarcode, Search, X } from "lucide-react";
-import { setPrettyNameAction } from "@/lib/actions/foods";
+import { BookOpen, Camera, Pencil, ScanBarcode, Search, Star, X } from "lucide-react";
+import { getFavoriteIdsAction, getFavoriteProductsAction, setPrettyNameAction, toggleFavoriteAction } from "@/lib/actions/foods";
 import { cn } from "@/lib/utils";
 
-type Mode = "search" | "scan" | "photo" | "saved";
+type Mode = "search" | "favorites" | "scan" | "photo" | "saved";
 type Unit = "g" | "dl" | "flaske" | "boks";
 
 const UNIT_FACTOR: Record<Unit, number> = { g: 1, dl: 100, flaske: 333, boks: 500 };
@@ -119,11 +119,47 @@ export function ProductPicker({
     }
   }, [stopCameraStream]);
 
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const [favoriteProducts, setFavoriteProducts] = useState<FoodProductSummary[]>([]);
+  const [favoritesLoaded, setFavoritesLoaded] = useState(false);
+
   const [savedMeals, setSavedMeals] = useState<
     Array<{ id: string; name: string; totalKcal: number; totalGrams: number }>
   >([]);
   const [savedMealsLoaded, setSavedMealsLoaded] = useState(false);
   const [addingSavedId, setAddingSavedId] = useState<string | null>(null);
+
+  // Load favorite IDs once on mount so stars render correctly in search results
+  useEffect(() => {
+    getFavoriteIdsAction().then((ids) => setFavoriteIds(new Set(ids)));
+  }, []);
+
+  async function loadFavorites() {
+    const products = await getFavoriteProductsAction();
+    setFavoriteProducts(products);
+    setFavoritesLoaded(true);
+  }
+
+  async function handleToggleFavorite(product: FoodProductSummary, e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!product.id) return;
+    const result = await toggleFavoriteAction(product.id);
+    if (!result.ok) return;
+    setFavoriteIds((prev) => {
+      const next = new Set(prev);
+      if (result.isFavorited) next.add(product.id!);
+      else next.delete(product.id!);
+      return next;
+    });
+    // Keep favorites list in sync if it's already loaded
+    if (favoritesLoaded) {
+      if (result.isFavorited) {
+        setFavoriteProducts((prev) => [...prev, product]);
+      } else {
+        setFavoriteProducts((prev) => prev.filter((p) => p.id !== product.id));
+      }
+    }
+  }
 
   async function loadSavedMeals() {
     if (savedMealsLoaded) return;
@@ -141,6 +177,7 @@ export function ProductPicker({
       stopCameraStream();
       setMode(id);
       if (id === "saved") void loadSavedMeals();
+      if (id === "favorites") void loadFavorites();
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [activateScanMode, stopCameraStream],
@@ -277,10 +314,11 @@ export function ProductPicker({
   }
 
   const modeTabs: Array<{ id: Mode; label: string; icon: typeof Search }> = [
-    { id: "search", label: "Søk", icon: Search },
-    { id: "scan", label: "Strekkode", icon: ScanBarcode },
-    { id: "photo", label: "Bilde", icon: Camera },
-    { id: "saved", label: "Måltider", icon: BookOpen },
+    { id: "search",    label: "Søk",        icon: Search },
+    { id: "favorites", label: "Favoritter", icon: Star },
+    { id: "scan",      label: "Strekkode",  icon: ScanBarcode },
+    { id: "photo",     label: "Bilde",      icon: Camera },
+    { id: "saved",     label: "Måltider",   icon: BookOpen },
   ];
 
   return (
@@ -342,10 +380,10 @@ export function ProductPicker({
                       </p>
                       <ul className="space-y-1">
                         {group.items.map((product) => (
-                          <li key={`${product.source}-${product.externalId}`}>
+                          <li key={`${product.source}-${product.externalId}`} className="flex items-stretch overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-border)]">
                             <button
                               type="button"
-                              className="flex w-full items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] px-2 py-2 text-left text-sm hover:bg-[var(--color-muted)]"
+                              className="flex min-w-0 flex-1 items-center gap-2 px-2 py-2 text-left text-sm hover:bg-[var(--color-muted)]"
                               onClick={() => selectProduct(product)}
                             >
                               {product.image ? (
@@ -377,6 +415,20 @@ export function ProductPicker({
                                 </span>
                               </span>
                             </button>
+                            {product.id && (
+                              <button
+                                type="button"
+                                aria-label={favoriteIds.has(product.id) ? "Fjern favoritt" : "Legg til favoritt"}
+                                onClick={(e) => handleToggleFavorite(product, e)}
+                                className="flex shrink-0 items-center px-2.5 hover:bg-[var(--color-muted)]"
+                              >
+                                <Star
+                                  className={cn("h-4 w-4 transition-colors", favoriteIds.has(product.id)
+                                    ? "fill-[var(--amber)] text-[var(--amber)]"
+                                    : "text-[var(--text3)]")}
+                                />
+                              </button>
+                            )}
                           </li>
                         ))}
                       </ul>
@@ -431,6 +483,55 @@ export function ProductPicker({
                     ) : null}
                   </div>
                 ) : null}
+              </div>
+            ) : mode === "favorites" ? (
+              <div className="space-y-2">
+                {!favoritesLoaded ? (
+                  <p className="text-xs text-[var(--color-muted-foreground)]">Laster…</p>
+                ) : favoriteProducts.length === 0 ? (
+                  <p className="text-xs text-[var(--color-muted-foreground)]">
+                    Ingen favoritter ennå. Trykk ★ ved siden av et søkeresultat for å lagre det.
+                  </p>
+                ) : (
+                  <ul className="space-y-1">
+                    {favoriteProducts.map((product) => (
+                      <li key={`fav-${product.id}`} className="flex items-stretch overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-border)]">
+                        <button
+                          type="button"
+                          className="flex min-w-0 flex-1 items-center gap-2 px-2 py-2 text-left text-sm hover:bg-[var(--color-muted)]"
+                          onClick={() => selectProduct(product)}
+                        >
+                          {product.image ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={product.image} alt="" className="h-10 w-10 shrink-0 rounded object-cover" />
+                          ) : (
+                            <div className="h-10 w-10 shrink-0 rounded bg-[var(--color-muted)]" />
+                          )}
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate font-medium">
+                              {product.prettyName ?? product.name}
+                            </span>
+                            {product.prettyName && (
+                              <span className="block truncate text-xs text-[var(--text3)]">{product.name}</span>
+                            )}
+                            <span className="block truncate text-xs text-[var(--color-muted-foreground)]">
+                              {product.source === "kassal" && product.brand ? product.brand : sourceLabel(product)}
+                              {product.kcalPer100g != null ? ` · ${product.kcalPer100g} kcal/100g` : ""}
+                            </span>
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Fjern favoritt"
+                          onClick={(e) => handleToggleFavorite(product, e)}
+                          className="flex shrink-0 items-center px-2.5 hover:bg-[var(--color-muted)]"
+                        >
+                          <Star className="h-4 w-4 fill-[var(--amber)] text-[var(--amber)] transition-colors" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             ) : mode === "saved" ? (
               <div className="space-y-2">

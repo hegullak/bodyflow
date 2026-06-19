@@ -774,3 +774,17 @@ export type Recipe = typeof recipes.$inferSelect;
 export type NewRecipe = typeof recipes.$inferInsert;
 export type RecipeIngredient = typeof recipeIngredients.$inferSelect;
 
+export const foodFavorites = pgTable(
+  "food_favorite",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    foodProductId: uuid("food_product_id").notNull().references(() => foodProducts.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("food_favorite_user_food_unique").on(t.userId, t.foodProductId),
+    index("food_favorite_user_idx").on(t.userId),
+  ],
+);
+
