@@ -729,4 +729,46 @@ export const savedMealItemsRelations = relations(savedMealItems, ({ one }) => ({
 export type SavedMeal = typeof savedMeals.$inferSelect;
 export type SavedMealItem = typeof savedMealItems.$inferSelect;
 
+// ---------------------------------------------------------------------------
+// Recipes
+// User-created multi-ingredient recipes with calculated kcal/100g.
+// Each recipe is mirrored as a food_product (source=custom, externalId=recipe-{id})
+// so it appears naturally in food search and meal logging.
+// ---------------------------------------------------------------------------
+
+export const recipes = pgTable(
+  "recipe",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    name: text("name").notNull(),
+    totalWeightG: real("total_weight_g").notNull().default(0),
+    cookedWeightG: real("cooked_weight_g"),
+    kcalPer100g: real("kcal_per_100g").notNull().default(0),
+    foodProductId: uuid("food_product_id").references(() => foodProducts.id, { onDelete: "set null" }),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("recipe_user_idx").on(t.userId)],
+);
+
+export const recipeIngredients = pgTable(
+  "recipe_ingredient",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    recipeId: uuid("recipe_id").notNull().references(() => recipes.id, { onDelete: "cascade" }),
+    foodProductId: uuid("food_product_id").references(() => foodProducts.id, { onDelete: "set null" }),
+    productName: text("product_name").notNull(),
+    kcalPer100g: real("kcal_per_100g").notNull(),
+    quantityGrams: real("quantity_grams").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("recipe_ingredient_recipe_idx").on(t.recipeId)],
+);
+
+export type Recipe = typeof recipes.$inferSelect;
+export type NewRecipe = typeof recipes.$inferInsert;
+export type RecipeIngredient = typeof recipeIngredients.$inferSelect;
 

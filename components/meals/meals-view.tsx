@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, UtensilsCrossed } from "lucide-react";
 import type { MealLogItem } from "@/db/schema";
 import type { MealsByType } from "@/lib/actions/meals";
 import { MEAL_TYPES } from "@/lib/meals/constants";
@@ -65,6 +66,18 @@ export function MealsView({
       </div>
 
       <CalorieBudgetCard dailyTarget={dailyTarget} usedKcal={totalKcal} />
+
+      <Link
+        href="/meals/recipes"
+        className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] px-4 py-3 active:bg-[var(--card2)]"
+      >
+        <UtensilsCrossed className="h-5 w-5 shrink-0 text-[var(--accent)]" />
+        <div className="flex-1">
+          <p className="text-sm font-medium text-[var(--text1)]">Oppskrifter</p>
+          <p className="text-xs text-[var(--text3)]">Lag egne retter med beregnet kcal/100g</p>
+        </div>
+        <ChevronRight className="h-4 w-4 shrink-0 text-[var(--text3)]" />
+      </Link>
 
       {MEAL_TYPES.map((mealType) => (
         <MealSection
