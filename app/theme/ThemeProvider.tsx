@@ -4,6 +4,8 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { themeClassFor } from './themeClass';
 import { THEME_TOKENS, type EchoTheme, type ThemeTokens } from './tokens';
 
+const STORAGE_KEY = 'echoflow-theme';
+
 type ThemeContextValue = {
   theme: EchoTheme;
   tokens: ThemeTokens;
@@ -23,15 +25,26 @@ export function ThemeProvider({
 }) {
   const [theme, setThemeState] = useState<EchoTheme>(defaultTheme);
 
+  // Read persisted theme on mount
+  useEffect(() => {
+    const stored = localStorage.getItem(STORAGE_KEY) as EchoTheme | null;
+    if (stored && (stored === 'sand' || stored === 'slate' || stored === 'golden')) {
+      setThemeState(stored);
+    }
+  }, []);
+
+  // Apply class to <html> and persist whenever theme changes
   useEffect(() => {
     const root = document.documentElement;
     root.classList.remove('dark', 'golden');
     const cls = themeClassFor(theme);
     if (cls) root.classList.add(cls);
+    localStorage.setItem(STORAGE_KEY, theme);
   }, [theme]);
 
   const setTheme = (next: EchoTheme) => setThemeState(next);
-  const toggleTheme = () => setThemeState((t) => (t === 'sand' ? 'slate' : 'sand'));
+  const toggleTheme = () =>
+    setThemeState((t) => (t === 'sand' ? 'slate' : 'sand'));
 
   return (
     <ThemeContext.Provider

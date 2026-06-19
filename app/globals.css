@@ -47,8 +47,19 @@
   --color-gold-light:   var(--gold-light);
 
   --radius-sm: 0.75rem;
-  --radius-md: 1.25rem;
-  --radius-lg: 1.5rem;
+  --radius-md: 0.875rem;
+  --radius-lg: 1.25rem;
+  --radius-hero: 1.375rem;
+  --radius-pill: 1.875rem;
+
+  --font-size-2xs: 10px;
+  --font-size-3xs: 11px;
+  --font-size-body: 13px;
+  --font-size-body-lg: 15px;
+  --font-size-nav: 22px;
+
+  --font-family-heading: var(--font-heading);
+  --font-family-body: var(--font-body);
 }
 
 /* ─── Sand (light) ──────────────────────────────────────────────────────────
@@ -114,7 +125,7 @@
   --gold-light:   #3A2A16;
 }
 
-/* ─── Golden (dark) ─────────────────────────────────────────────────────────
+/* ─── Golden (warm dark) ────────────────────────────────────────────────────
    Deep warm amber — applied via .golden on <html>.                        */
 .golden {
   color-scheme: dark;

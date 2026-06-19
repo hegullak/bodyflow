@@ -1,9 +1,3 @@
-/**
- * echo design system — themeClass.ts
- *
- * Maps an EchoTheme value to the CSS class name applied to <html>.
- */
-
 import type { EchoTheme } from "./tokens";
 
 export type { EchoTheme };
