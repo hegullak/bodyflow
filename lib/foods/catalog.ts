@@ -219,7 +219,7 @@ export async function searchFoodProducts(query: string): Promise<FoodProductSumm
     }
   }
 
-  const sourceOrder = { kassal: 0, matvaretabellen: 1, custom: 2 } as const;
+  const sourceOrder = { matvaretabellen: 0, kassal: 1, custom: 2 } as const;
   const q = trimmed.toLowerCase();
   merged.sort((a, b) => {
     const aPrefix = (a.prettyName ?? a.name).toLowerCase().startsWith(q) ? 0 : 1;
