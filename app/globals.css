@@ -159,30 +159,30 @@
    Same structure as golden, hue shifted to terracotta/ember.               */
 .training {
   color-scheme: dark;
-  --bg:           #0D0707;
-  --bg2:          #0A0505;
-  --card:         #190C0C;
-  --card2:        #211010;
-  --border:       rgba(255, 100, 100, 0.12);
-  --text1:        #F5EDEC;
-  --text2:        #B89090;
-  --text3:        #6E4242;
-  --accent:       #C83232;
-  --accent-light: rgba(200,  50,  50, 0.16);
+  --bg:           #0D0906;
+  --bg2:          #0A0704;
+  --card:         #1A1008;
+  --card2:        #22160A;
+  --border:       rgba(220, 140, 90, 0.11);
+  --text1:        #F5EFEA;
+  --text2:        #B89878;
+  --text3:        #6E5038;
+  --accent:       #BE5228;
+  --accent-light: rgba(190,  82,  40, 0.15);
   --green:        #84CC16;
   --green-light:  rgba(132, 204,  22, 0.14);
-  --amber:        #E89040;
-  --amber-light:  rgba(232, 144,  64, 0.14);
+  --amber:        #E8A040;
+  --amber-light:  rgba(232, 160,  64, 0.14);
   --red:          #F87171;
   --red-light:    rgba(248, 113, 113, 0.14);
   --sage:         #A39052;
   --sage-light:   rgba(163, 144,  82, 0.14);
-  --dusk:         #C48080;
-  --dusk-light:   rgba(196, 128, 128, 0.14);
+  --dusk:         #C49278;
+  --dusk-light:   rgba(196, 146, 120, 0.14);
   --blue:         #60A5FA;
   --blue-light:   rgba( 96, 165, 250, 0.12);
-  --gold:         #C86040;
-  --gold-light:   rgba(200,  96,  64, 0.14);
+  --gold:         #D48040;
+  --gold-light:   rgba(212, 128,  64, 0.14);
 }
 
 /* ─── Measurement flow (warm dark sage green) ───────────────────────────────

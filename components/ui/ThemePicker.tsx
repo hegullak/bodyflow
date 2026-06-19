@@ -10,7 +10,7 @@ const BASE_THEMES: { value: EchoTheme; label: string; bg: string; accent: string
 ];
 
 const FLOW_THEMES: { value: EchoTheme; label: string; bg: string; accent: string }[] = [
-  { value: 'training',    label: 'Training',    bg: '#0D0707', accent: '#C83232' },
+  { value: 'training',    label: 'Training',    bg: '#0D0906', accent: '#BE5228' },
   { value: 'golden',      label: 'Nutriant',    bg: '#0E0C0A', accent: '#F59E0B' },
   { value: 'measurement', label: 'Measurement', bg: '#09100A', accent: '#5AA86A' },
 ];
