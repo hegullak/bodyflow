@@ -5,6 +5,7 @@ export type FoodProductSummary = {
   source: FoodSource;
   externalId: string;
   name: string;
+  prettyName: string | null;
   brand: string | null;
   ean: string | null;
   image: string | null;

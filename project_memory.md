@@ -2,7 +2,7 @@
 
 > **Purpose of this file:** Handoff context for humans and AI agents. Read this first, then `ARCHITECTURE.md`, `DECISIONS.md`, `db/DATABASE.md`, and `DATABASE_STANDARDS.md`.
 
-Last updated: 2026-06-15
+Last updated: 2026-06-19
 
 ---
 
@@ -17,7 +17,7 @@ Last updated: 2026-06-15
 | Vercel (alt) | https://bodyflow-delta.vercel.app |
 | Clerk app ID | `app_3F1YgZupaC522xCiwUnzuAqMFsn` |
 | Dev port | **3010** (fixed in `package.json`) |
-| Default branch workflow | `sandbox` → `develop` → `master` (no `main`) |
+| Default branch workflow | `master` only (direct commits) |
 
 ---
 
@@ -27,7 +27,7 @@ Last updated: 2026-06-15
 |-------|--------|
 | Framework | Next.js 16 (App Router), React 19, TypeScript |
 | Auth | Clerk (`@clerk/nextjs` v7) — middleware in `proxy.ts` |
-| Database | Neon Postgres, schema `bodyflow` |
+| Database | Neon Postgres (`ep-gentle-tooth`), schema `bodyflow` |
 | ORM | Drizzle + `npm run db:migrate` |
 | Styling | Tailwind CSS 4, mobile-first, max-width 640px shell |
 | Tests | Vitest (`npm test` — 56 tests) |
@@ -59,41 +59,46 @@ Bottom nav (`components/layout/bottom-nav.tsx`):
 
 ### ✅ Built and in use
 
-- **Profile** — Clerk name as subtitle, sex/height/activity/goal/kcal (no notes field), compact weigh-in weekdays, Withings connect/disconnect
-- **Dashboard** — simplified: today's calories, latest measurements, latest weight, BMI + TDEE side-by-side; Withings prompt only when not connected
-- **Check-in** — single form (`components/forms/check-in-form.tsx`): vekt + midje/bryst/hofte, one **Save** button, shows 2 previous entries, diff line after save (green = down, red = up)
-- **Meals** — search (local DB → Matvaretabellen → Kassal), EAN barcode (camera + manual), custom food via photo/OCR/AI, calorie budget (Totalt/Brukt/Tilgjengelig), date navigation ←/→
-- **Meal types:** Frokost, Lunsj, Mellommåltid, Middag, Kvelds, **Røk på en smell** (`smoke` enum, migration `0009`)
+- **Profile** — Clerk name as subtitle, sex/height/activity/goal/kcal, compact weigh-in weekdays, Withings connect/disconnect
+- **Dashboard** — today's calories, latest measurements, latest weight, BMI + TDEE side-by-side
+- **Check-in** — weight + midje/bryst/hofte, shows 2 previous entries, diff line after save
+- **Meals** — search (local DB → Matvaretabellen → Kassal), EAN barcode, custom food via photo/OCR/AI, calorie budget, date navigation
+- **Meal types:** Frokost, Lunsj, Mellommåltid, Middag, Kvelds, Røk på en smell (`smoke`)
+- **Saved meals** — named meal templates for quick reuse
+- **Oppskrifter (Recipes)** ✅ NEW (2026-06-19):
+  - Multi-ingredient recipes with auto-calculated kcal/100g
+  - Optional "kokt vekt" (cooked weight) to adjust for evaporation
+  - Recipes stored as `food_product` (source=custom, externalId=`recipe-{id}`) → appear automatically in food search and meal logging
+  - `/meals/recipes` list + `/meals/recipes/[id]` editor
+  - Entry point in Meals overview page
 - **Statistics** — period views
-- **Withings** — OAuth connect, encrypted tokens, weight sync to `daily_body_log`, webhook (secret path in prod); disconnect via server action; OAuth callback returns to Profile; ngrok-safe redirects via `X-Forwarded-Host` (`lib/app-url.ts`)
-- **Reminders** — generic engine (`reminder` table), weigh-in UI on Profile, PWA notifications via service worker (`docs/REMINDERS.md`)
-- **Food catalog** — `food_product` + `meal_log_item`, Kassal API, Matvaretabellen seed
-- **Training Flow** ✅ COMPLETE (2026-06-15):
-  - **Program Builder** — create/edit programs, drag-to-reorder exercises, swipe-left delete, superset support
-  - **Workout Runner** — custom numeric keyboard (0-9, decimal, ±15, NEXT), auto-focus flow (KG → REPS → complete → timer), tap row to activate timer, swipe-left delete sets, inline REST countdown, GO indicator, fullscreen exercise images, timer bar with next-exercise preview, add-exercise on the fly
-  - **History** — session list with date/time/duration, delete with confirm, sorted descending
-  - **API**: POST `/api/training/sessions`, GET `/api/training/sessions/active`, POST/DELETE `/api/training/sessions/{id}/sets`, PUT `/api/training/sessions/{id}`, DELETE `/api/training/sessions/{id}`, GET `/api/training/sessions/history`
-  - **Loading skeletons** for program detail + add-exercise pages
-  - **Tech**: `@dnd-kit` for drag-to-reorder, pointer events for swipe detection, `env(safe-area-inset-bottom)` for iOS nav overlap fix
+- **Withings** — OAuth, encrypted tokens, weight sync, webhook
+- **Reminders** — weigh-in reminders, PWA notifications
+- **Training Flow** ✅ COMPLETE:
+  - **Program Builder** — create/edit programs, individual set rows (Set#/Reps±/Rest±), drag-to-reorder, plus/delete icons in header, default 3 sets × 12 reps × 120s rest
+  - **Workout Runner** — custom numeric keyboard, auto-focus KG→REPS→complete→timer, swipe-left delete sets, rest countdown timer, add/delete exercises, drag-to-reorder blocks
+  - **History** — clickable sessions → `/training/history/[id]` shows full workout detail (all exercises + sets, read-only). Delete from list.
+  - **API**: full CRUD for programs, sessions, sets, history
 
-### ⏳ Backlog / compliance (see `db/DATABASE.md`)
+### ⏳ Backlog
 
-- Soft delete (`deleted_at`) on all user tables
+- Bodyweight toggle in workout runner (instead of kg input, show body symbol)
+- Clerk **production** keys (currently `pk_test_` on prod URL)
 - `audit_log` usage in all mutations
-- ~~Encrypt Withings tokens at rest~~ ✅ (AES-256-GCM, `lib/withings/token-crypto.ts`)
 - Remove legacy `kassal_product_id` on `meal_log_item`
-- Clerk **production** keys + prod domain (currently `pk_test_` on prod URL)
 
 ---
 
 ## 5. Database
 
-- **Docs:** `db/DATABASE.md`, standards: `DATABASE_STANDARDS.md`
-- **Migrations:** `db/migrations/` — latest `0009_meal_type_smoke.sql`
-- **Migrate:** `npm run db:migrate` (uses `bodyflow_drizzle` migration schema)
+- **Neon project:** `bodyflow` — host: `ep-gentle-tooth-asg9bh30.c-4.eu-central-1.aws.neon.tech`
+- **Old database** (`ep-quiet-shadow`) is deprecated — DO NOT use. Password was rotated after credential exposure incident (2026-06-19).
+- **Migrations:** `db/migrations/` — latest: `0017_recipes.sql`
+- **Migrate:** `npm run db:migrate`
+- **Note:** `npm run db:generate` requires an interactive TTY terminal — run from a real terminal window, not from Claude Code tools.
 - **Seeds:**
-  - `npm run db:seed-matvaretabellen` — ~2100 foods
-  - `npm run db:seed-measurements` — needs `SEED_USER_ID`
+  - `npm run db:seed-matvaretabellen` — ~2100 foods (already seeded in new DB)
+  - `npm run import:exercises` — 1500 exercises with initcap names (already imported)
 
 ### Core tables (singular names since `0007`)
 
@@ -102,11 +107,18 @@ Bottom nav (`components/layout/bottom-nav.tsx`):
 | `user_profile` | BMI/BMR/TDEE inputs, `daily_calorie_target` |
 | `daily_body_log` | Weight + aggregated `calorie_intake` per day |
 | `body_measurement` | waist/chest/hip per date |
-| `food_product` | Shared catalog (matvaretabellen, kassal, custom) |
+| `food_product` | Shared catalog (matvaretabellen, kassal, custom, recipe mirror) |
 | `meal_log_item` | User meal entries (denormalized product snapshot) |
-| `reminder` | Scheduled reminders (`weigh_in` first) |
+| `saved_meal` / `saved_meal_item` | Named meal templates |
+| `recipe` / `recipe_ingredient` | User recipes with calculated nutrition |
+| `exercise` / `exercise_category` / `exercise_muscle` | Exercise catalog (1500 exercises from ExerciseDB) |
+| `exercise_secondary_muscle` | Join table |
+| `workout_program` / `workout_program_exercise` | Training programs |
+| `workout_superset` | Superset groupings |
+| `workout_session` / `workout_set_log` | Session history |
+| `reminder` | Scheduled reminders |
 | `withings_connection` | OAuth tokens (encrypted at rest) |
-| `audit_log` | Change history (write usage TODO) |
+| `audit_log` | Change history |
 
 **User scoping:** Always `scopeBy(table.userId, userId, …)` from `lib/auth/scope.ts`.
 
@@ -116,21 +128,21 @@ Bottom nav (`components/layout/bottom-nav.tsx`):
 
 ```
 lib/
-  actions/          # Server actions (profile, meals, check-in, reminders, daily-log, …)
+  actions/          # Server actions (profile, meals, check-in, reminders, daily-log, saved-meals, custom-food)
   queries/          # Read models (dashboard, statistics, check-in)
   foods/            # catalog.ts, barcode-detect.ts, OCR, vision
+  recipes/          # index.ts — CRUD + food_product sync
   kassal/           # Kassal.app API client
   meals/            # constants (meal types/labels)
   reminders/        # schedule.ts, client-scheduler.ts, constants
   withings/         # OAuth, sync, token-crypto, webhook-auth, token-refresh
-  logger.ts         # centralized logging (LOGGING_STANDARD.md)
+  training/         # programs.ts, sessions.ts
+  exercises/        # catalog.ts
+  logger.ts         # centralized logging
   calculations/     # BMI, BMR, TDEE
   validation/       # Zod schemas per form
+  rate-limit.ts     # In-memory (per-instance) — limited effectiveness on Vercel serverless
 ```
-
-**Check-in flow:** `lib/actions/check-in.ts` + `lib/queries/check-in.ts` — merges `daily_body_log` and `body_measurement` by date.
-
-**Meals flow:** `lib/actions/meals.ts` — syncs daily calories from meal totals to `daily_body_log`.
 
 ---
 
@@ -138,23 +150,30 @@ lib/
 
 | Route | Purpose |
 |-------|---------|
-| `/api/foods/search` | Product search (local + external) |
+| `/api/foods/search` | Product search (local + kassal) — includes recipe food_products |
 | `/api/foods/ean/[ean]` | EAN lookup |
 | `/api/foods/extract` | Label OCR / vision |
-| `/api/foods/config` | Client config (prefix id, vision flag) |
+| `/api/foods/config` | Client config |
 | `/api/kassal/products` | Kassal proxy |
-| `/api/reminders` | Reminder settings for client scheduler |
+| `/api/exercises` | List/search exercises |
+| `/api/exercises/[id]` | Single exercise |
+| `/api/recipes` | GET list, POST create |
+| `/api/recipes/[id]` | GET detail, PATCH (name/cookedWeightG), DELETE |
+| `/api/recipes/[id]/ingredients` | POST add ingredient |
+| `/api/recipes/[id]/ingredients/[ingredientId]` | PATCH qty, DELETE |
+| `/api/reminders` | Reminder settings |
 | `/api/integrations/withings/*` | OAuth, webhook, disconnect |
-| `/api/training/programs` | POST (create), GET (list) |
-| `/api/training/programs/[id]` | GET (detail), PUT (update name) |
-| `/api/training/programs/[id]/exercises` | POST (add), DELETE (remove) |
-| `/api/training/programs/[id]/reorder` | POST (drag-to-reorder) |
-| `/api/training/programs/[id]/supersets` | POST (create), DELETE (unlink) |
-| `/api/training/sessions` | POST (start), GET (list) |
-| `/api/training/sessions/active` | GET (current session) |
-| `/api/training/sessions/[id]` | PUT (end), DELETE (remove) |
-| `/api/training/sessions/[id]/sets` | POST (log), DELETE (remove) |
-| `/api/training/sessions/history` | GET (session history) |
+| `/api/training/programs` | POST create, GET list |
+| `/api/training/programs/[id]` | GET, PUT, DELETE |
+| `/api/training/programs/[id]/exercises` | POST add, exercises management |
+| `/api/training/programs/[id]/reorder` | POST drag-to-reorder |
+| `/api/training/programs/[id]/supersets` | POST create, DELETE unlink |
+| `/api/training/programs/[id]/duplicate` | POST |
+| `/api/training/sessions` | POST start |
+| `/api/training/sessions/active` | GET current session |
+| `/api/training/sessions/[id]` | GET detail, PUT end, DELETE |
+| `/api/training/sessions/[id]/sets` | POST log, DELETE remove |
+| `/api/training/sessions/history` | GET list |
 
 ---
 
@@ -163,33 +182,17 @@ lib/
 See `.env.example`. Critical:
 
 ```env
-DATABASE_URL=                    # Neon pooled URL
+DATABASE_URL=                    # Neon ep-gentle-tooth pooled URL
 NEXT_PUBLIC_CLERK_* / CLERK_SECRET_KEY
 NEXT_PUBLIC_APP_URL=             # https://bodyflow.echonote.no in prod
 KASSAL_API_KEY=
 FOOD_CUSTOM_PREFIX_ID=go4g
 WITHINGS_CLIENT_ID / SECRET / REDIRECT_URI
 WITHINGS_TOKEN_ENCRYPTION_KEY   # openssl rand -base64 32
-WITHINGS_STATE_SECRET           # required in production (OAuth CSRF state)
-WITHINGS_WEBHOOK_SECRET         # required in production (webhook path token)
-# Optional:
-OPENAI_API_KEY                   # Vision for food labels
+WITHINGS_WEBHOOK_SECRET         # required in production
+OPENAI_API_KEY                   # Vision for food labels (optional)
 ALLOWED_DEV_ORIGINS=             # ngrok hostnames for Clerk dev
 ```
-
-**Production checklist:**
-
-1. All envs in Vercel
-2. `npm run db:migrate` against prod Neon (same `DATABASE_URL` as Vercel)
-3. Clerk Dashboard → Domains: add `https://bodyflow.echonote.no`
-4. Withings redirect URI → prod URL callback
-5. `WITHINGS_TOKEN_ENCRYPTION_KEY` in Vercel (same key as used for migration; `openssl rand -base64 32`)
-6. Existing Withings rows: `npm run withings:encrypt-tokens` once against prod DB
-7. `WITHINGS_STATE_SECRET` + `WITHINGS_WEBHOOK_SECRET` in Vercel Production (`openssl rand -base64 32` each)
-8. Re-subscribe webhooks: set `webhook_subscribed = false` in Neon or disconnect/reconnect Withings (new callback URL includes secret path)
-9. Deploy from `master` after merge
-
-**Withings security (#21–#23):** done — see `DECISIONS.md` ADR-0003.
 
 ---
 
@@ -200,85 +203,56 @@ npm install
 cp .env.example .env.local   # fill in keys
 npm run db:migrate
 npm run dev                  # port 3010
-# or if port busy:
 npm run dev:fresh            # kills 3010 then starts
 ```
 
-### Mobile testing (camera, PWA, notifications, Withings)
+### Mobile testing
 
 ```bash
 npm run ngrok                # updates .env.local with ngrok URL
 npm run dev:fresh
 ```
 
-- Add ngrok URL in Clerk **development** domains
-- Set `NEXT_PUBLIC_APP_URL` and `WITHINGS_REDIRECT_URI` to ngrok callback in `.env.local`
-- Register same ngrok callback in **Withings Developer Portal** (remove stale localhost entries when testing mobile only)
-- OAuth redirect URI is derived from request `X-Forwarded-Host` when behind ngrok — avoids Safari redirect to `localhost:3010`
-- On iPhone: open ngrok URL → Add to Home Screen for PWA
-- **Barcode camera:** must tap strekkode tab (user gesture) — `getUserMedia` called in `product-picker.tsx` `activateScanMode()`, not in passive `useEffect` (iOS requirement)
-- Uses ZXing when `BarcodeDetector` unavailable (desktop Chrome, iOS)
+---
 
-### Common issues
+## 10. Security notes
 
-| Problem | Fix |
-|---------|-----|
-| `EADDRINUSE :::3010` | `npm run dev:fresh` |
-| Clerk origin error | Add URL to Clerk Domains + `ALLOWED_DEV_ORIGINS` |
-| `daily_body_logs does not exist` on Vercel | Deploy latest code (singular table names) + run migrations |
-| Hydration warnings on desktop | Chrome extensions (`__gcruniqueid`) — `ClientOnly` wrappers on forms |
-| Withings redirect to localhost on mobile | Use ngrok URL everywhere; app uses `X-Forwarded-Host` in `lib/app-url.ts` |
-| Withings black screen after OAuth | Callback redirects to Profile (not `/`); sync runs in background |
-| Withings disconnect black screen | Use server action `disconnectWithingsAction` (not POST to `/api/...`) |
+- **Credential exposure (2026-06-19):** Old `ep-quiet-shadow` password was exposed via hardcoded connection string in `scripts/migrate-user-data.ts` committed to GitHub. Password rotated. Fixed by removing hardcoded URL (now uses `OLD_DATABASE_URL` env var). Migration script is one-time-use only.
+- **SQL injection fix (2026-06-19):** `createSuperset` in `lib/training/programs.ts` used `sql.raw()` with user-controlled `exerciseIds`. Fixed with `inArray()` + UUID validation in route.
+- Withings tokens encrypted at rest (AES-256-GCM).
+- All API routes require `requireUserId()`. Webhook uses `timingSafeEqual`.
+- No `dangerouslySetInnerHTML`, `eval()`, or raw SQL anywhere.
+- `lib/rate-limit.ts` is in-memory — resets per serverless instance. Adequate for single user, insufficient if app ever scales.
 
 ---
 
-## 10. UI conventions
+## 11. Git state (as of 2026-06-19)
 
-- Norwegian labels in meals/check-in; some English remnants in profile ("Save", "Daily kcal")
+**Recent commits (master):**
+
+| Hash | Description |
+|------|-------------|
+| `8ab85bf` | Feat: recipe builder with auto-calculated kcal/100g |
+| `ec4d27d` | Fix: ESLint errors, SQL injection in createSuperset, unused imports |
+| `005f734` | Security: remove hardcoded database credential from migration script |
+| `ec79700` | Feat: clickable workout history with session detail view |
+| `d598130` | Fix: scroll blocked by drag listeners, add delete from programs list |
+
+**Deploy:** push to `master` → Vercel auto-deploys. Run `npm run db:migrate` if new migrations.
+
+---
+
+## 12. UI conventions
+
+- Norwegian labels throughout
 - `page-title` / `card-compact` / `form-grid-2` in `globals.css`
-- Forms: server actions + `useActionState`, Zod validation
-- Client-only forms where browser extensions break hydration (`components/client-only.tsx`)
+- CSS vars: `--text1/2/3`, `--card/card2`, `--border`, `--accent`, `--bg`, `--red`, `--green`, `--radius-md/sm`
+- Swipe pattern: pointer events, `touchAction: "pan-y"`, `willChange: "transform"`, snap/reveal — see `SwipeableSetRow` in `workout-runner.tsx` or `SwipeableMealItem` in `meal-section.tsx`
+- DnD: `@dnd-kit`, drag handle is an invisible 32px `absolute inset-y-0 left-0 w-8` strip with `touch-none` — critical to avoid scroll-blocking
 
 ---
 
-## 11. Git state (as of 2026-06-18, updated 2026-06-18 PM)
-
-**Latest work (sandbox → develop → master):**
-
-- **Training Flow Complete** (2026-06-15):
-  - Custom workout keyboard (0-9, decimal, ±15, NEXT), auto-focus KG→REPS→complete→timer
-  - Swipe-left delete for exercises + sets across program-builder + workout-runner
-  - Timer bar: compact design, safe-area offset, always visible during rest
-  - Tap set row to activate timer, inline REST countdown, GO indicator, fullscreen images
-  - Auto-jump to next set/exercise with 450ms delay
-  - History page: delete sessions, date/time/duration, sorted descending
-  - Add-exercise buttons on the fly (both program + active workout)
-  - Loading skeletons, Vercel build gate (only master deploys)
-  - [Commit history: `b6dac82` → `6d43a9a`](https://github.com/hegullak/bodyflow/commits/master?since=2026-06-14)
-
-- **UI Polish & Swipe Everywhere** (2026-06-18):
-  - **Check-in historikk**: sveip-venstre → blå rediger + rød slett. Redigering via glassmorphism bottomsheet. Summary line under dato viser kortform diffs: `V 88 (+2) · M 95 (-6) · B 94.5 (-2) · H 96` (rød = opp, grønn = ned)
-  - **Check-in form**: vekt på egen full-width linje, midje/bryst/hofte i 3 kolonner. Diff vises ved label etter lagring (+2 rød, -6 grønn)
-  - **Meals**: sveip-venstre på hver måltid → rediger mengde i bottomsheet. Lyn-ikon (⚡) for quick-add kalorier som "Manual". Pluss-ikon ikon-only (ingen "+ Legg til" tekst)
-  - **Exercises (program-builder)**: borders fjernet rundt øvelser. Pluss-ikon i header → legger til sett. Sveip-venstre rediger + slett
-  - **Exercises (workout-runner)**: "Add set" linje fjernet, logikken flytta til pluss-ikon i header. Borders fjernet rundt øvelses-kort. Smoothere animasjon (cubic-bezier)
-  - **Statistics**: moved fra bottom-nav til settings-menyen (⚙️). Viser alle individuelle målinger (ikke månedlige), scrollbar tabell for alle weight/body-measurement entries
-  - **Modal styling**: glassmorphism bakgrunn (blur 30px, dark semi-transparent), avstand fra bottom-nav (bottom-24), floating design (left-4 right-4)
-  - **Swipe performance**: document event listeners fjernet → React PointerEvent props (jevnere, ingen passive:false lag)
-  - [Commits: `27523ff` → `3a3cc67`](https://github.com/hegullak/bodyflow/commits/master?since=2026-06-17)
-
-- **Workout UI Refinement & Program Builder Refactor** (2026-06-18 PM, just deployed):
-  - **Workout Runner**: ❌ Removed swipe on exercise cards (no SwipeableExerciseRow), ✅ added delete icon to header next to +, ❌ removed drag handle icon visual, improved set row swipe with meal pattern (touchAction, willChange, snap logic)
-  - **Program Builder**: ❌ No swipe, ❌ removed bodyweight checkbox, show 3 individual set rows per exercise (visual rows with Set#, Reps ±, Rest ±, Delete), plus/delete icons in header, simplified controls
-  - **Default Exercise Values**: updated to 3 sets × **12 reps** × **120s rest** (was 8 reps × 90s)
-  - [Commits: `8e3ef64` → `48a3c18`](https://github.com/hegullak/bodyflow/commits/master?since=2026-06-18)
-
-**Deploy:** merge to `master` → Vercel auto-deploy ✅ (just pushed). Run `npm run db:migrate` if new migrations exist (last: `0015_set_log_reps`).
-
----
-
-## 12. Testing
+## 13. Testing
 
 ```bash
 npm test           # unit tests
@@ -287,47 +261,32 @@ npm run lint
 npm run check      # all of the above + build
 ```
 
-Tests in `__tests__/` — kassal nutrition, food label parse, reminders schedule, withings crypto/oauth/webhook, app-url (ngrok), logger.
-
 ---
 
-## 13. Related docs (read order)
-
-1. `project_memory.md` (this file)
-2. `DECISIONS.md` — ADRs (stack, branches, Withings)
-3. `db/DATABASE.md` — schema, compliance status
-4. `DATABASE_STANDARDS.md` — full DB rules (from project-master-template)
-5. `docs/REMINDERS.md` — reminder engine + PWA limitations
-6. `AI_DEVELOPMENT_STANDARD.md` — coding rules for agents
-
----
-
-## 14. Product principles (do not violate)
-
-- **Private by default** — all queries user-scoped
-- **Minimal taps** — mobile-first, no scroll-heavy screens where possible
-- **No social** — single-user personal tool
-- **Historical accuracy** — meal items snapshot product data at log time
-- **Calm UI** — light theme, teal primary (`--color-primary`)
-
----
-
-## 15. Handoff commands for a new AI agent
+## 14. Handoff commands for a new AI agent
 
 ```bash
 # Orient
-cat project_memory.md db/DATABASE.md DECISIONS.md
+cat project_memory.md
 
 # Verify environment
 npm run db:migrate
 npm run dev:fresh
 
-# Before PR
+# Before pushing
 npm run check
 ```
 
-When changing schema: `npm run db:generate` → review SQL → `npm run db:migrate` → update `db/DATABASE.md`.
+**Schema changes:** Write migration SQL manually to `db/migrations/00XX_name.sql` + add entry to `db/migrations/meta/_journal.json` (drizzle-kit generate requires TTY). Then `npm run db:migrate`.
 
-When adding meal types: extend `meal_type` enum in schema + migration + `lib/meals/constants.ts` + `lib/validation/meal-item.ts` + `getMealsGroupedByType`.
+**Recipes:** When a recipe is created/modified, `lib/recipes/index.ts` auto-upserts a `food_product` row with `source='custom'`, `externalId='recipe-{id}'`. This makes it searchable in `/api/foods/search` automatically — no special handling needed.
 
-When touching camera/barcode: read `lib/foods/barcode-detect.ts` and `components/meals/product-picker.tsx` (iOS user-gesture requirement).
+---
+
+## 15. Product principles
+
+- **Private by default** — all queries user-scoped
+- **Minimal taps** — mobile-first, no scroll-heavy screens
+- **No social** — single-user personal tool
+- **Historical accuracy** — meal items snapshot product data at log time
+- **Calm UI** — light theme, teal primary (`--color-primary` / `--accent`)

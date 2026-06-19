@@ -152,6 +152,7 @@ export function FoodScanWizard({
         source: "custom",
         externalId: `${prefixId ?? "custom"}-${result.data.foodProductId}`,
         name: result.data.name,
+        prettyName: null,
         brand: brand || null,
         ean: ean || null,
         image: null,

@@ -14,7 +14,8 @@ import {
 import { FoodScanWizard } from "@/components/meals/food-scan-wizard";
 import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label } from "@/components/ui/field";
-import { BookOpen, Camera, ScanBarcode, Search, X } from "lucide-react";
+import { BookOpen, Camera, Pencil, ScanBarcode, Search, X } from "lucide-react";
+import { setPrettyNameAction } from "@/lib/actions/foods";
 import { cn } from "@/lib/utils";
 
 type Mode = "search" | "scan" | "photo" | "saved";
@@ -89,6 +90,7 @@ export function ProductPicker({
   const [selected, setSelected] = useState<FoodProductSummary | null>(null);
   const [quantityInput, setQuantityInput] = useState("");
   const [unit, setUnit] = useState<Unit>("g");
+  const [prettyNameInput, setPrettyNameInput] = useState("");
   const [eanInput, setEanInput] = useState("");
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [eanNotFound, setEanNotFound] = useState(false);
@@ -196,6 +198,12 @@ export function ProductPicker({
     setLookupError(null);
     setUnit("g");
     setQuantityInput(product.packageGrams ? String(Math.round(product.packageGrams)) : "");
+    setPrettyNameInput(product.prettyName ?? "");
+  }
+
+  async function savePrettyName() {
+    if (!selected?.id) return;
+    await setPrettyNameAction(selected.id, prettyNameInput);
   }
 
   function changeUnit(next: Unit) {
@@ -346,7 +354,14 @@ export function ProductPicker({
                                 <div className="h-10 w-10 shrink-0 rounded bg-[var(--color-muted)]" />
                               )}
                               <span className="min-w-0 flex-1">
-                                <span className="block truncate font-medium">{product.name}</span>
+                                <span className="block truncate font-medium">
+                                  {product.prettyName ?? product.name}
+                                </span>
+                                {product.prettyName && (
+                                  <span className="block truncate text-xs text-[var(--text3)]">
+                                    {product.name}
+                                  </span>
+                                )}
                                 <span className="block truncate text-xs text-[var(--color-muted-foreground)]">
                                   {product.source === "kassal" && product.brand
                                     ? product.brand
@@ -461,7 +476,10 @@ export function ProductPicker({
         ) : (
           <div className="space-y-3">
             <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] p-3">
-              <p className="font-medium">{selected.name}</p>
+              <p className="font-medium">{selected.prettyName ?? selected.name}</p>
+              {selected.prettyName && (
+                <p className="text-xs text-[var(--text3)] truncate">{selected.name}</p>
+              )}
               <p className="text-xs text-[var(--color-muted-foreground)]">{sourceLabel(selected)}</p>
               {selected.kcalPer100g != null ? (
                 <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
@@ -471,6 +489,22 @@ export function ProductPicker({
                 <p className="mt-1 text-xs text-[#9a5b45]">Mangler kaloridata for dette produktet.</p>
               )}
             </div>
+
+            {selected.id && (
+              <div>
+                <Label htmlFor="pretty-name" className="flex items-center gap-1">
+                  <Pencil className="h-3 w-3" /> Kort navn
+                </Label>
+                <Input
+                  id="pretty-name"
+                  value={prettyNameInput}
+                  onChange={(e) => setPrettyNameInput(e.target.value)}
+                  onBlur={savePrettyName}
+                  placeholder={selected.name}
+                  className="text-sm"
+                />
+              </div>
+            )}
 
             <div>
               <Label htmlFor="quantity-grams">Mengde</Label>

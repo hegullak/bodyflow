@@ -39,6 +39,7 @@ function rowToSummary(row: FoodProduct): FoodProductSummary {
     source: row.source,
     externalId: row.externalId,
     name: row.name,
+    prettyName: row.prettyName ?? null,
     brand: row.brand,
     ean: row.ean,
     image: row.imageUrl,
@@ -53,6 +54,7 @@ function kassalToSummary(product: KassalProductSummary, cached: FoodProduct | nu
     source: "kassal",
     externalId: String(product.id),
     name: product.name,
+    prettyName: cached?.prettyName ?? null,
     brand: product.brand,
     ean: product.ean,
     image: product.image,
@@ -218,9 +220,13 @@ export async function searchFoodProducts(query: string): Promise<FoodProductSumm
   }
 
   const sourceOrder = { kassal: 0, matvaretabellen: 1, custom: 2 } as const;
-  merged.sort(
-    (a, b) => (sourceOrder[a.source] ?? 9) - (sourceOrder[b.source] ?? 9),
-  );
+  const q = trimmed.toLowerCase();
+  merged.sort((a, b) => {
+    const aPrefix = (a.prettyName ?? a.name).toLowerCase().startsWith(q) ? 0 : 1;
+    const bPrefix = (b.prettyName ?? b.name).toLowerCase().startsWith(q) ? 0 : 1;
+    if (aPrefix !== bPrefix) return aPrefix - bPrefix;
+    return (sourceOrder[a.source] ?? 9) - (sourceOrder[b.source] ?? 9);
+  });
 
   return merged.slice(0, 25);
 }

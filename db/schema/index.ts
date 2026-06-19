@@ -262,6 +262,8 @@ export const foodProducts = pgTable(
 
     name: text("name").notNull(),
 
+    prettyName: text("pretty_name"),
+
     brand: text("brand"),
 
     imageUrl: text("image_url"),
