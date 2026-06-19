@@ -154,6 +154,10 @@ export const userProfiles = pgTable(
 
     notes: text("notes"),
 
+    lookingForwardTo: text("looking_forward_to"),
+
+    vibe: text("vibe"),
+
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
