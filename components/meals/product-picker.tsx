@@ -142,6 +142,8 @@ export function ProductPicker({
 
   async function handleToggleFavorite(product: FoodProductSummary, e: React.MouseEvent) {
     e.stopPropagation();
+    // Uncached kassal products (id = null) have no local row yet — skip silently.
+    // Once the user logs the product it gets a local ID and the star becomes active.
     if (!product.id) return;
     const result = await toggleFavoriteAction(product.id);
     if (!result.ok) return;
@@ -151,7 +153,6 @@ export function ProductPicker({
       else next.delete(product.id!);
       return next;
     });
-    // Keep favorites list in sync if it's already loaded
     if (favoritesLoaded) {
       if (result.isFavorited) {
         setFavoriteProducts((prev) => [...prev, product]);
@@ -415,20 +416,22 @@ export function ProductPicker({
                                 </span>
                               </span>
                             </button>
-                            {product.id && (
-                              <button
-                                type="button"
-                                aria-label={favoriteIds.has(product.id) ? "Fjern favoritt" : "Legg til favoritt"}
-                                onClick={(e) => handleToggleFavorite(product, e)}
-                                className="flex shrink-0 items-center px-2.5 hover:bg-[var(--color-muted)]"
-                              >
-                                <Star
-                                  className={cn("h-4 w-4 transition-colors", favoriteIds.has(product.id)
+                            <button
+                              type="button"
+                              aria-label={product.id && favoriteIds.has(product.id) ? "Fjern favoritt" : "Legg til favoritt"}
+                              onClick={(e) => handleToggleFavorite(product, e)}
+                              className="flex shrink-0 items-center px-3 hover:bg-[var(--color-muted)]"
+                            >
+                              <Star
+                                className={cn("h-5 w-5 transition-colors",
+                                  product.id && favoriteIds.has(product.id)
                                     ? "fill-[var(--amber)] text-[var(--amber)]"
-                                    : "text-[var(--text3)]")}
-                                />
-                              </button>
-                            )}
+                                    : product.id
+                                      ? "text-[var(--color-muted-foreground)]"
+                                      : "text-[var(--color-muted-foreground)] opacity-30"
+                                )}
+                              />
+                            </button>
                           </li>
                         ))}
                       </ul>
@@ -524,9 +527,9 @@ export function ProductPicker({
                           type="button"
                           aria-label="Fjern favoritt"
                           onClick={(e) => handleToggleFavorite(product, e)}
-                          className="flex shrink-0 items-center px-2.5 hover:bg-[var(--color-muted)]"
+                          className="flex shrink-0 items-center px-3 hover:bg-[var(--color-muted)]"
                         >
-                          <Star className="h-4 w-4 fill-[var(--amber)] text-[var(--amber)] transition-colors" />
+                          <Star className="h-5 w-5 fill-[var(--amber)] text-[var(--amber)] transition-colors" />
                         </button>
                       </li>
                     ))}
@@ -596,20 +599,22 @@ export function ProductPicker({
                   <p className="mt-1 text-xs text-[#9a5b45]">Mangler kaloridata for dette produktet.</p>
                 )}
               </div>
-              {selected.id && (
-                <button
-                  type="button"
-                  aria-label={favoriteIds.has(selected.id) ? "Fjern favoritt" : "Legg til favoritt"}
-                  onClick={(e) => handleToggleFavorite(selected, e)}
-                  className="shrink-0 p-1"
-                >
-                  <Star
-                    className={cn("h-5 w-5 transition-colors", favoriteIds.has(selected.id)
+              <button
+                type="button"
+                aria-label={selected.id && favoriteIds.has(selected.id) ? "Fjern favoritt" : "Legg til favoritt"}
+                onClick={(e) => handleToggleFavorite(selected, e)}
+                className="shrink-0 p-1"
+              >
+                <Star
+                  className={cn("h-6 w-6 transition-colors",
+                    selected.id && favoriteIds.has(selected.id)
                       ? "fill-[var(--amber)] text-[var(--amber)]"
-                      : "text-[var(--text3)]")}
-                  />
-                </button>
-              )}
+                      : selected.id
+                        ? "text-[var(--color-muted-foreground)]"
+                        : "text-[var(--color-muted-foreground)] opacity-30"
+                  )}
+                />
+              </button>
             </div>
 
             {selected.id && (
