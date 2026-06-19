@@ -581,18 +581,34 @@ export function ProductPicker({
           </>
         ) : (
           <div className="space-y-3">
-            <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] p-3">
-              <p className="font-medium">{selected.prettyName ?? selected.name}</p>
-              {selected.prettyName && (
-                <p className="text-xs text-[var(--text3)] truncate">{selected.name}</p>
-              )}
-              <p className="text-xs text-[var(--color-muted-foreground)]">{sourceLabel(selected)}</p>
-              {selected.kcalPer100g != null ? (
-                <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-                  {selected.kcalPer100g} kcal per 100 g
-                </p>
-              ) : (
-                <p className="mt-1 text-xs text-[#9a5b45]">Mangler kaloridata for dette produktet.</p>
+            <div className="flex items-start gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] p-3">
+              <div className="min-w-0 flex-1">
+                <p className="font-medium">{selected.prettyName ?? selected.name}</p>
+                {selected.prettyName && (
+                  <p className="text-xs text-[var(--text3)] truncate">{selected.name}</p>
+                )}
+                <p className="text-xs text-[var(--color-muted-foreground)]">{sourceLabel(selected)}</p>
+                {selected.kcalPer100g != null ? (
+                  <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+                    {selected.kcalPer100g} kcal per 100 g
+                  </p>
+                ) : (
+                  <p className="mt-1 text-xs text-[#9a5b45]">Mangler kaloridata for dette produktet.</p>
+                )}
+              </div>
+              {selected.id && (
+                <button
+                  type="button"
+                  aria-label={favoriteIds.has(selected.id) ? "Fjern favoritt" : "Legg til favoritt"}
+                  onClick={(e) => handleToggleFavorite(selected, e)}
+                  className="shrink-0 p-1"
+                >
+                  <Star
+                    className={cn("h-5 w-5 transition-colors", favoriteIds.has(selected.id)
+                      ? "fill-[var(--amber)] text-[var(--amber)]"
+                      : "text-[var(--text3)]")}
+                  />
+                </button>
               )}
             </div>
 
