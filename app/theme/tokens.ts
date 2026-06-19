@@ -7,14 +7,16 @@
 
 // ─── Theme names ─────────────────────────────────────────────────────────────
 
-export type EchoTheme = "sand" | "slate" | "golden";
+export type EchoTheme = "sand" | "slate" | "golden" | "training" | "measurement";
 
 // ─── Background color (used as inline style on root View) ────────────────────
 
 export const THEME_BG: Record<EchoTheme, string> = {
-  sand:   "#D7D3CA",
-  slate:  "#1A1E26",
-  golden: "#0E0C0A",
+  sand:        "#D7D3CA",
+  slate:       "#1A1E26",
+  golden:      "#0E0C0A",
+  training:    "#0D0908",
+  measurement: "#09100A",
 };
 
 // ─── Semantic token map (mirrors CSS custom properties) ──────────────────────
@@ -130,6 +132,60 @@ export const THEME_TOKENS: Record<EchoTheme, ThemeTokens> = {
     gold:        "#F59E0B",
     goldLight:   "rgba(245, 158,  11, 0.14)",
   },
+
+  training: {
+    bg:          "#0D0908",
+    bg2:         "#0A0706",
+    card:        "#1A0E0C",
+    card2:       "#241610",
+    border:      "rgba(255, 160, 130, 0.10)",
+    text1:       "#F5EFEC",
+    text2:       "#B89888",
+    text3:       "#6E4E42",
+    accent:      "#D4623A",
+    accentLight: "rgba(212,  98,  58, 0.14)",
+    green:       "#84CC16",
+    greenLight:  "rgba(132, 204,  22, 0.14)",
+    amber:       "#E8A040",
+    amberLight:  "rgba(232, 160,  64, 0.14)",
+    red:         "#F87171",
+    redLight:    "rgba(248, 113, 113, 0.14)",
+    sage:        "#A39052",
+    sageLight:   "rgba(163, 144,  82, 0.14)",
+    dusk:        "#C49280",
+    duskLight:   "rgba(196, 146, 128, 0.14)",
+    blue:        "#60A5FA",
+    blueLight:   "rgba( 96, 165, 250, 0.12)",
+    gold:        "#D48A40",
+    goldLight:   "rgba(212, 138,  64, 0.14)",
+  },
+
+  measurement: {
+    bg:          "#09100A",
+    bg2:         "#070D08",
+    card:        "#0E1A10",
+    card2:       "#142016",
+    border:      "rgba(140, 210, 150, 0.10)",
+    text1:       "#EDF5EE",
+    text2:       "#8AAE90",
+    text3:       "#4E6850",
+    accent:      "#5AA86A",
+    accentLight: "rgba( 90, 168, 106, 0.14)",
+    green:       "#84CC16",
+    greenLight:  "rgba(132, 204,  22, 0.14)",
+    amber:       "#D4BA7A",
+    amberLight:  "rgba(212, 186, 122, 0.14)",
+    red:         "#F87171",
+    redLight:    "rgba(248, 113, 113, 0.14)",
+    sage:        "#82B882",
+    sageLight:   "rgba(130, 184, 130, 0.14)",
+    dusk:        "#8AA882",
+    duskLight:   "rgba(138, 168, 130, 0.14)",
+    blue:        "#60A5FA",
+    blueLight:   "rgba( 96, 165, 250, 0.12)",
+    gold:        "#A0C870",
+    goldLight:   "rgba(160, 200, 112, 0.14)",
+  },
 };
 
 // ─── Stripe / category colors ────────────────────────────────────────────────
@@ -163,6 +219,24 @@ export const STRIPE_COLORS: Record<EchoTheme, Record<StripeColor, string>> = {
     dusk:   "#C4A882",
     sage:   "#A3A352",
     accent: "#F59E0B",
+  },
+  training: {
+    blue:   "#60A5FA",
+    amber:  "#E8A040",
+    gold:   "#D48A40",
+    green:  "#84CC16",
+    dusk:   "#C49280",
+    sage:   "#A39052",
+    accent: "#D4623A",
+  },
+  measurement: {
+    blue:   "#60A5FA",
+    amber:  "#D4BA7A",
+    gold:   "#A0C870",
+    green:  "#84CC16",
+    dusk:   "#8AA882",
+    sage:   "#82B882",
+    accent: "#5AA86A",
   },
 };
 
@@ -200,5 +274,17 @@ export const TAB_BAR_UI: Record<EchoTheme, { accent: string; inactive: string; b
     inactive: "#6E5E40",
     bg:       "rgba(24, 20, 16, 0.92)",
     overlay:  "rgba(245, 158, 11, 0.08)",
+  },
+  training: {
+    accent:   "#D4623A",
+    inactive: "#6E4E42",
+    bg:       "rgba(26, 14, 12, 0.92)",
+    overlay:  "rgba(212, 98, 58, 0.08)",
+  },
+  measurement: {
+    accent:   "#5AA86A",
+    inactive: "#4E6850",
+    bg:       "rgba(14, 26, 16, 0.92)",
+    overlay:  "rgba(90, 168, 106, 0.08)",
   },
 };

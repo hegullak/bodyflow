@@ -28,7 +28,8 @@ export function ThemeProvider({
   // Read persisted theme on mount
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY) as EchoTheme | null;
-    if (stored && (stored === 'sand' || stored === 'slate' || stored === 'golden')) {
+    const valid: EchoTheme[] = ['sand', 'slate', 'golden', 'training', 'measurement'];
+    if (stored && valid.includes(stored)) {
       setThemeState(stored);
     }
   }, []);
@@ -36,7 +37,7 @@ export function ThemeProvider({
   // Apply class to <html> and persist whenever theme changes
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.remove('dark', 'golden');
+    root.classList.remove('dark', 'golden', 'training', 'measurement');
     const cls = themeClassFor(theme);
     if (cls) root.classList.add(cls);
     localStorage.setItem(STORAGE_KEY, theme);
