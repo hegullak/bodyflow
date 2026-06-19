@@ -1,6 +1,7 @@
 import { ProfileForm } from "@/components/forms/profile-form";
 import { WithingsCard } from "@/components/integrations/withings-card";
 import { Card } from "@/components/ui/card";
+import { ThemePicker } from "@/components/ui/ThemePicker";
 import { ReminderSettingsForm } from "@/components/reminders/reminder-settings-form";
 import { getReminderForUser } from "@/lib/actions/reminders";
 import { getProfileForUser } from "@/lib/actions/profile";
@@ -34,6 +35,11 @@ export default async function ProfilePage({
 
       <Card className="card-compact">
         <ProfileForm profile={profile} />
+      </Card>
+
+      <Card className="card-compact mt-3">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-[var(--text3)]">Tema</p>
+        <ThemePicker />
       </Card>
 
       <Card className="card-compact mt-3">
