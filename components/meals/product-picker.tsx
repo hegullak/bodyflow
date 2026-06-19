@@ -18,6 +18,14 @@ import { BookOpen, Camera, ScanBarcode, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Mode = "search" | "scan" | "photo" | "saved";
+type Unit = "g" | "dl" | "flaske" | "boks";
+
+const UNIT_FACTOR: Record<Unit, number> = { g: 1, dl: 100, flaske: 333, boks: 500 };
+const UNITS: Unit[] = ["g", "dl", "flaske", "boks"];
+
+function toGrams(qty: number, unit: Unit): number {
+  return Math.round(qty * UNIT_FACTOR[unit]);
+}
 
 function sourceLabel(product: FoodProductSummary): string {
   if (product.source === "matvaretabellen") return "Matvaretabellen";
@@ -79,7 +87,8 @@ export function ProductPicker({
   }, []);
   const [results, setResults] = useState<FoodProductSummary[]>([]);
   const [selected, setSelected] = useState<FoodProductSummary | null>(null);
-  const [quantityGrams, setQuantityGrams] = useState("");
+  const [quantityInput, setQuantityInput] = useState("");
+  const [unit, setUnit] = useState<Unit>("g");
   const [eanInput, setEanInput] = useState("");
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [eanNotFound, setEanNotFound] = useState(false);
@@ -145,11 +154,11 @@ export function ProductPicker({
   }
 
   const kcalPreview = useMemo(() => {
-    if (!selected?.kcalPer100g || !quantityGrams) return null;
-    const grams = Number(quantityGrams);
-    if (!Number.isFinite(grams) || grams <= 0) return null;
-    return calculateCaloriesFromGrams(selected.kcalPer100g, grams);
-  }, [quantityGrams, selected]);
+    if (!selected?.kcalPer100g || !quantityInput) return null;
+    const qty = Number(quantityInput);
+    if (!Number.isFinite(qty) || qty <= 0) return null;
+    return calculateCaloriesFromGrams(selected.kcalPer100g, toGrams(qty, unit));
+  }, [selected, quantityInput, unit]);
 
   useEffect(() => {
     const trimmed = query.trim();
@@ -185,9 +194,17 @@ export function ProductPicker({
   function selectProduct(product: FoodProductSummary) {
     setSelected(product);
     setLookupError(null);
-    if (product.packageGrams) {
-      setQuantityGrams(String(Math.round(product.packageGrams)));
+    setUnit("g");
+    setQuantityInput(product.packageGrams ? String(Math.round(product.packageGrams)) : "");
+  }
+
+  function changeUnit(next: Unit) {
+    const current = Number(quantityInput);
+    if (Number.isFinite(current) && current > 0) {
+      const converted = (current * UNIT_FACTOR[unit]) / UNIT_FACTOR[next];
+      setQuantityInput(String(parseFloat(converted.toFixed(2))));
     }
+    setUnit(next);
   }
 
   async function lookupEan(ean: string) {
@@ -225,7 +242,7 @@ export function ProductPicker({
     formData.set("source", selected.source);
     formData.set("externalId", selected.externalId);
     if (selected.ean) formData.set("ean", selected.ean);
-    formData.set("quantityGrams", quantityGrams);
+    formData.set("quantityGrams", String(toGrams(Number(quantityInput), unit)));
 
     startTransition(async () => {
       const result = await addMealItemAction(null, formData);
@@ -456,25 +473,41 @@ export function ProductPicker({
             </div>
 
             <div>
-              <Label htmlFor="quantity-grams">Vekt (gram)</Label>
-              <Input
-                id="quantity-grams"
-                name="quantityGrams"
-                type="number"
-                inputMode="decimal"
-                step="1"
-                min="1"
-                value={quantityGrams}
-                onChange={(e) => setQuantityGrams(e.target.value)}
-                placeholder="150"
-              />
+              <Label htmlFor="quantity-grams">Mengde</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="quantity-grams"
+                  type="number"
+                  inputMode="decimal"
+                  value={quantityInput}
+                  onChange={(e) => setQuantityInput(e.target.value)}
+                  placeholder={unit === "g" ? "150" : unit === "dl" ? "2" : "1"}
+                  className="flex-1"
+                  autoFocus
+                />
+                <div className="flex shrink-0 overflow-hidden rounded-xl border border-[var(--border)]">
+                  {UNITS.map((u) => (
+                    <button
+                      key={u}
+                      type="button"
+                      onClick={() => changeUnit(u)}
+                      className={cn(
+                        "px-2.5 py-2 text-xs font-medium transition-colors",
+                        u === unit
+                          ? "bg-[var(--accent)] text-[var(--card)]"
+                          : "text-[var(--text3)] hover:text-[var(--text1)]",
+                      )}
+                    >
+                      {u}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <FieldError message={lookupError ?? undefined} />
             </div>
 
             {kcalPreview != null ? (
-              <p className="text-sm font-medium text-[var(--color-primary)]">
-                ≈ {kcalPreview} kcal
-              </p>
+              <p className="text-sm font-medium text-[var(--accent)]">≈ {kcalPreview} kcal</p>
             ) : null}
 
             <div className="flex gap-2">
@@ -485,7 +518,7 @@ export function ProductPicker({
                 type="button"
                 size="sm"
                 className="flex-1"
-                disabled={pending || !selected.kcalPer100g || !quantityGrams}
+                disabled={pending || !selected.kcalPer100g || !quantityInput}
                 onClick={handleAdd}
               >
                 {pending ? "Lagrer..." : "Legg til"}
