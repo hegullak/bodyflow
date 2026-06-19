@@ -21,6 +21,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import type { ActiveSession, CompletedSet, LastSetRow } from "@/lib/training/sessions";
 import type { ProgramBlock, ProgramExerciseRow } from "@/lib/training/programs";
+import { useT } from "@/components/providers/lang-provider";
 
 // ---------------------------------------------------------------------------
 // Local state types
@@ -183,6 +184,7 @@ function blockDragId(block: ProgramBlock) {
 // ---------------------------------------------------------------------------
 
 export function WorkoutRunner({ session }: { session: ActiveSession }) {
+  const t = useT();
   const router = useRouter();
   const timer = useRestTimer();
   const [blocks, setBlocks] = useState(session.blocks);
@@ -452,7 +454,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
   }
 
   async function handleEnd() {
-    if (!confirm("End workout?")) return;
+    if (!confirm(t.workout.endWorkout)) return;
     setEnding(true);
     try {
       await fetch(`/api/training/sessions/${session.id}`, { method: "PUT" });
@@ -531,13 +533,13 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
             disabled={ending}
             className="shrink-0 rounded-full border border-[var(--border)] px-4 py-1.5 text-sm text-[var(--text2)] hover:bg-[var(--card2)] disabled:opacity-50"
           >
-            Avslutt
+            {t.workout.endSession}
           </button>
         </div>
 
         {/* Blocks */}
         {blocks.length === 0 ? (
-          <p className="py-8 text-center text-sm text-[var(--text3)]">This program has no exercises.</p>
+          <p className="py-8 text-center text-sm text-[var(--text3)]">{t.workout.noExercises}</p>
         ) : (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={blockIds} strategy={verticalListSortingStrategy}>
@@ -597,7 +599,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
           className="flex items-center justify-center gap-2 rounded-[var(--radius-md)] border border-dashed border-[var(--border)] py-4 text-[var(--text2)] active:bg-[var(--card)]"
         >
           <Plus className="h-5 w-5" />
-          Legg til øvelse
+          {t.training.addExercise}
         </a>
 
         {/* Always-visible end workout button */}
@@ -606,7 +608,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
           disabled={ending}
           className="mt-2 w-full rounded-[var(--radius-md)] border border-[var(--border)] py-4 text-sm font-medium text-[var(--text2)] active:bg-[var(--card)] disabled:opacity-50"
         >
-          {ending ? "Avslutter…" : "Avslutt økt"}
+          {ending ? t.workout.ending : t.workout.endSession}
         </button>
       </div>
 
@@ -869,6 +871,7 @@ interface SetRowItemProps {
 }
 
 function SetRowItem({ idx, row, last, isBodyweight, isNextSet, isResting, timerSeconds, isActiveWeight, isActiveReps, activeValue, activeSelected, onActivateSet, onToggle, onFocusWeight, onFocusReps }: SetRowItemProps) {
+  const t = useT();
   const weightDisplay = isActiveWeight ? activeValue : (row.weightKg ? String(row.weightKg) : "");
   const repsDisplay = isActiveReps ? activeValue : (row.reps ? String(row.reps) : "");
 
@@ -888,11 +891,11 @@ function SetRowItem({ idx, row, last, isBodyweight, isNextSet, isResting, timerS
       {/* Set number / GO / REST */}
       {isResting ? (
         <div className="flex flex-col leading-tight">
-          <span className="text-[9px] font-bold uppercase tracking-wide text-[var(--green)]">REST</span>
+          <span className="text-[9px] font-bold uppercase tracking-wide text-[var(--green)]">{t.workout.restLabel}</span>
           <span className="text-xs font-bold tabular-nums text-[var(--green)]">{fmtTimer(timerSeconds)}</span>
         </div>
       ) : isNextSet ? (
-        <span className="text-xs font-bold text-[var(--accent)]">GO</span>
+        <span className="text-xs font-bold text-[var(--accent)]">{t.workout.go}</span>
       ) : (
         <span className={`text-sm font-semibold ${row.completed ? "text-[var(--green)]" : "text-[var(--text3)]"}`}>
           {idx + 1}
@@ -1058,6 +1061,7 @@ interface RestTimerBarProps {
 }
 
 function RestTimerBar({ seconds, running, nextExercise, onAdd, onPause, onSkip }: RestTimerBarProps) {
+  const t = useT();
   const [nextImgError, setNextImgError] = useState(false);
 
   return (
@@ -1067,13 +1071,13 @@ function RestTimerBar({ seconds, running, nextExercise, onAdd, onPause, onSkip }
         className="flex w-full items-center justify-between bg-[var(--accent)] px-5 py-3 active:opacity-90"
       >
         <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/60">
-          {running ? "Rest" : "Paused"}
+          {running ? t.workout.rest : t.workout.paused}
         </span>
         <span className="text-3xl font-bold tabular-nums leading-none text-white">
           {fmtTimer(seconds)}
         </span>
         <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/60">
-          tap to {running ? "pause" : "resume"}
+          {running ? t.workout.tapToPause : t.workout.tapToResume}
         </span>
       </button>
 
@@ -1096,7 +1100,7 @@ function RestTimerBar({ seconds, running, nextExercise, onAdd, onPause, onSkip }
           onClick={onSkip}
           className="flex flex-1 items-center justify-center py-2.5 text-sm font-semibold text-[var(--accent)] active:bg-[var(--card2)]"
         >
-          Skip
+          {t.workout.skip}
         </button>
       </div>
 
@@ -1117,7 +1121,7 @@ function RestTimerBar({ seconds, running, nextExercise, onAdd, onPause, onSkip }
             </div>
           )}
           <p className="flex-1 truncate text-sm font-medium text-[var(--text2)]">
-            Neste: {nextExercise.exerciseName}
+            {t.workout.next}: {nextExercise.exerciseName}
           </p>
           <button
             onClick={onSkip}

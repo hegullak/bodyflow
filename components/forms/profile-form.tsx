@@ -6,8 +6,11 @@ import type { UserProfile } from "@/db/schema";
 import { upsertProfileAction } from "@/lib/actions/profile";
 import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label, Select } from "@/components/ui/field";
+import { useT } from "@/components/providers/lang-provider";
 
 export function ProfileForm({ profile }: { profile: UserProfile | null }) {
+  const t = useT();
+  const p = t.profile;
   const [state, formAction, pending] = useActionState(upsertProfileAction, null);
 
   return (
@@ -15,18 +18,18 @@ export function ProfileForm({ profile }: { profile: UserProfile | null }) {
     <form action={formAction} className="form-compact">
       <div className="form-grid-2">
         <div>
-          <Label htmlFor="sex">Sex</Label>
+          <Label htmlFor="sex">{p.sex}</Label>
           <Select id="sex" name="sex" defaultValue={profile?.sex ?? ""}>
-            <option value="">Select</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-            <option value="other">Other</option>
-            <option value="prefer_not_to_say">Prefer not</option>
+            <option value="">{p.selectSex}</option>
+            <option value="male">{p.male}</option>
+            <option value="female">{p.female}</option>
+            <option value="other">{p.other}</option>
+            <option value="prefer_not_to_say">{p.preferNotToSay}</option>
           </Select>
           <FieldError message={state?.ok === false ? state.fieldErrors?.sex?.[0] : undefined} />
         </div>
         <div>
-          <Label htmlFor="heightCm">Height (cm)</Label>
+          <Label htmlFor="heightCm">{p.height}</Label>
           <Input
             id="heightCm"
             name="heightCm"
@@ -42,7 +45,7 @@ export function ProfileForm({ profile }: { profile: UserProfile | null }) {
 
       <div className="form-grid-2">
         <div>
-          <Label htmlFor="birthYear">Fødselsår</Label>
+          <Label htmlFor="birthYear">{p.birthYear}</Label>
           <Input
             id="birthYear"
             name="birthYear"
@@ -57,32 +60,32 @@ export function ProfileForm({ profile }: { profile: UserProfile | null }) {
 
       <div className="form-grid-2">
         <div>
-          <Label htmlFor="activityLevel">Activity</Label>
+          <Label htmlFor="activityLevel">{p.activity}</Label>
           <Select
             id="activityLevel"
             name="activityLevel"
             defaultValue={profile?.activityLevel ?? "moderate"}
           >
-            <option value="sedentary">Sedentary</option>
-            <option value="light">Light</option>
-            <option value="moderate">Moderate</option>
-            <option value="active">Active</option>
-            <option value="very_active">Very active</option>
+            <option value="sedentary">{p.sedentary}</option>
+            <option value="light">{p.light}</option>
+            <option value="moderate">{p.moderate}</option>
+            <option value="active">{p.active}</option>
+            <option value="very_active">{p.veryActive}</option>
           </Select>
         </div>
         <div>
-          <Label htmlFor="goal">Goal</Label>
+          <Label htmlFor="goal">{p.goal}</Label>
           <Select id="goal" name="goal" defaultValue={profile?.goal ?? "maintenance"}>
-            <option value="fat_loss">Fat loss</option>
-            <option value="maintenance">Maintenance</option>
-            <option value="muscle_gain">Muscle gain</option>
+            <option value="fat_loss">{p.fatLoss}</option>
+            <option value="maintenance">{p.maintenance}</option>
+            <option value="muscle_gain">{p.muscleGain}</option>
           </Select>
         </div>
       </div>
 
       <div className="form-grid-2">
         <div>
-          <Label htmlFor="dailyCalorieTarget">Daily kcal</Label>
+          <Label htmlFor="dailyCalorieTarget">{p.dailyKcal}</Label>
           <Input
             id="dailyCalorieTarget"
             name="dailyCalorieTarget"
@@ -98,7 +101,7 @@ export function ProfileForm({ profile }: { profile: UserProfile | null }) {
           />
         </div>
         <div>
-          <Label htmlFor="targetWeightKg">Target (kg)</Label>
+          <Label htmlFor="targetWeightKg">{p.targetWeight}</Label>
           <Input
             id="targetWeightKg"
             name="targetWeightKg"
@@ -111,24 +114,24 @@ export function ProfileForm({ profile }: { profile: UserProfile | null }) {
       </div>
 
       <div>
-        <Label htmlFor="preferredUnits">Units</Label>
+        <Label htmlFor="preferredUnits">{p.units}</Label>
         <Select
           id="preferredUnits"
           name="preferredUnits"
           defaultValue={profile?.preferredUnits ?? "metric"}
         >
-          <option value="metric">Metric</option>
-          <option value="imperial">Imperial</option>
+          <option value="metric">{p.metric}</option>
+          <option value="imperial">{p.imperial}</option>
         </Select>
       </div>
 
       {state?.ok === false && !state.fieldErrors ? (
         <p className="text-xs text-[#9a5b45]">{state.error}</p>
       ) : null}
-      {state?.ok ? <p className="text-xs text-[var(--color-primary)]">Profile saved.</p> : null}
+      {state?.ok ? <p className="text-xs text-[var(--color-primary)]">{p.profileSaved}</p> : null}
 
       <Button type="submit" disabled={pending} size="sm" className="h-9 w-full">
-        {pending ? "Saving..." : "Save profile"}
+        {pending ? p.saving : p.saveProfile}
       </Button>
     </form>
     </ClientOnly>

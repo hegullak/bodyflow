@@ -24,6 +24,8 @@ export type Translations = {
     error: string;
     remove: string;
     duplicate: string;
+    loading: string;
+    retry: string;
   };
   dashboard: {
     title: string;
@@ -104,6 +106,19 @@ export type Translations = {
     savedMeals: string;
     favorites: string;
     noProductsYet: string;
+    search: string;
+    quickAddCalories: string;
+    caloriesKcal: string;
+    addItem: string;
+    addingItem: string;
+    swipeRightToCopy: string;
+    mealNamePlaceholder: string;
+    quickAddDesc: string;
+    nameOptional: string;
+    added: string;
+    noSavedMeals: string;
+    addWithPhoto: string;
+    missingCalorieData: string;
   };
   mealItem: {
     calories: string;
@@ -146,6 +161,7 @@ export type Translations = {
     deleteProgram: (name: string) => string;
     duplicateProgram: string;
     deleteLabel: string;
+    setLabel: string;
   };
   workout: {
     rest: string;
@@ -202,6 +218,7 @@ export type Translations = {
     saveReminder: string;
     reminderSaved: string;
     notes: string;
+    weekdayNames: string[];
   };
   statistics: {
     title: string;

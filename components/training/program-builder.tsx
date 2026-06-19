@@ -31,6 +31,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { ProgramDetail, ProgramBlock, ProgramExerciseRow } from "@/lib/training/programs";
+import { useT } from "@/components/providers/lang-provider";
 
 interface Props {
   program: ProgramDetail;
@@ -42,6 +43,7 @@ function blockDragId(block: ProgramBlock) {
 }
 
 export function ProgramBuilder({ program: initial, activeSessionId }: Props) {
+  const t = useT();
   const router = useRouter();
   const [program, setProgram] = useState(initial);
   const [editingName, setEditingName] = useState(false);
@@ -68,7 +70,7 @@ export function ProgramBuilder({ program: initial, activeSessionId }: Props) {
   }
 
   async function handleDelete() {
-    if (!confirm(`Slett "${program.name}"?`)) return;
+    if (!confirm(t.training.deleteProgram(program.name))) return;
     setDeleting(true);
     try {
       await fetch(`/api/training/programs/${program.id}`, { method: "DELETE" });
@@ -189,7 +191,7 @@ export function ProgramBuilder({ program: initial, activeSessionId }: Props) {
           <button
             onClick={handleDuplicate}
             disabled={duplicating}
-            title="Dupliser"
+            title={t.training.duplicateProgram}
             className="rounded-full p-2 text-[var(--text3)] hover:bg-[var(--card2)] hover:text-[var(--text1)]"
           >
             <Copy className="h-4 w-4" />
@@ -197,7 +199,7 @@ export function ProgramBuilder({ program: initial, activeSessionId }: Props) {
           <button
             onClick={handleDelete}
             disabled={deleting}
-            title="Slett"
+            title={t.training.deleteLabel}
             className="rounded-full p-2 text-[var(--text3)] hover:bg-[var(--red-light)] hover:text-[var(--red)]"
           >
             <Trash2 className="h-4 w-4" />
@@ -236,7 +238,7 @@ export function ProgramBuilder({ program: initial, activeSessionId }: Props) {
       {totalExercises === 0 ? (
         <div className="py-8 text-center text-[var(--text3)]">
           <Dumbbell className="mx-auto mb-2 h-8 w-8" />
-          <p>Ingen øvelser ennå.</p>
+          <p>{t.training.noExercisesYet}</p>
         </div>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -248,13 +250,13 @@ export function ProgramBuilder({ program: initial, activeSessionId }: Props) {
                     <div>
                       <div className="flex items-center justify-between px-0 py-2">
                         <span className="text-xs font-medium uppercase tracking-wide text-[var(--accent)]">
-                          Supersett
+                          {t.training.superset}
                         </span>
                         <button
                           onClick={() => block.supersetId && handleRemoveSuperset(block.supersetId)}
                           className="flex items-center gap-1 text-xs text-[var(--text3)] hover:text-[var(--text1)]"
                         >
-                          <Link2Off className="h-3 w-3" /> Løs opp
+                          <Link2Off className="h-3 w-3" /> {t.training.unSuperset}
                         </button>
                       </div>
                       {block.exercises.map((ex, exIdx) => (
@@ -310,12 +312,12 @@ export function ProgramBuilder({ program: initial, activeSessionId }: Props) {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
               </span>
-              {starting ? "Åpner…" : "Fortsett treningsøkt"}
+              {starting ? t.training.startingSession : t.training.continueSession}
             </>
           ) : (
             <>
               <Play className="h-4 w-4 fill-white" />
-              {starting ? "Starter…" : "Start treningsøkt"}
+              {starting ? t.training.startingSession : t.training.startSession}
             </>
           )}
         </button>
@@ -327,7 +329,7 @@ export function ProgramBuilder({ program: initial, activeSessionId }: Props) {
         className="flex items-center justify-center gap-2 rounded-[var(--radius-md)] border border-dashed border-[var(--border)] py-4 text-[var(--text2)] active:bg-[var(--card)]"
       >
         <Plus className="h-5 w-5" />
-        Legg til øvelse
+        {t.training.addExercise}
       </Link>
 
       <div className="pb-4" />
@@ -374,6 +376,7 @@ interface ExerciseRowProps {
 }
 
 function ExerciseRow({ ex, onUpdate, onRemove, showDivider, canSuperset, adjacentId, onCreateSuperset }: ExerciseRowProps) {
+  const t = useT();
   const [imgError, setImgError] = useState(false);
 
   return (
@@ -398,7 +401,7 @@ function ExerciseRow({ ex, onUpdate, onRemove, showDivider, canSuperset, adjacen
           )}
           <div className="min-w-0">
             <p className="truncate font-medium text-[var(--text1)]">{ex.exerciseName}</p>
-            <p className="text-xs text-[var(--text3)]">{ex.sets} sett · {ex.reps} reps · {ex.restSeconds}s hvile</p>
+            <p className="text-xs text-[var(--text3)]">{t.training.setsSummary(ex.sets, ex.reps, ex.restSeconds)}</p>
           </div>
         </div>
         {/* Plus and delete buttons */}
@@ -406,14 +409,14 @@ function ExerciseRow({ ex, onUpdate, onRemove, showDivider, canSuperset, adjacen
           <button
             onClick={() => onUpdate({ sets: Math.min(20, ex.sets + 1) })}
             className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text2)] hover:bg-[var(--card2)]"
-            title="Legg til sett"
+            title={t.training.addSet}
           >
             <Plus className="h-4 w-4" />
           </button>
           <button
             onClick={onRemove}
             className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text2)] hover:bg-[var(--red)]/10 hover:text-[var(--red)]"
-            title="Fjern øvelse"
+            title={t.training.removeExercise}
           >
             <Trash2 className="h-4 w-4" />
           </button>
@@ -424,7 +427,7 @@ function ExerciseRow({ ex, onUpdate, onRemove, showDivider, canSuperset, adjacen
       <div className="space-y-1 px-0 py-2">
         {Array.from({ length: ex.sets }, (_, i) => (
           <div key={i} className="grid grid-cols-[2.5rem_1fr_1fr_1fr] items-center gap-2 rounded-[var(--radius-sm)] bg-[var(--card2)] px-3 py-2">
-            <span className="text-xs font-medium text-[var(--text3)]">Sett {i + 1}</span>
+            <span className="text-xs font-medium text-[var(--text3)]">{t.training.setLabel} {i + 1}</span>
             <RepsControl value={ex.reps} onChange={(v) => onUpdate({ reps: v })} />
             <RestControl value={ex.restSeconds} onChange={(v) => onUpdate({ restSeconds: v })} />
             <div className="flex items-center justify-end">
@@ -432,7 +435,7 @@ function ExerciseRow({ ex, onUpdate, onRemove, showDivider, canSuperset, adjacen
                 <button
                   onClick={() => onUpdate({ sets: ex.sets - 1 })}
                   className="flex h-6 w-6 items-center justify-center text-[var(--text2)] hover:text-[var(--red)]"
-                  title="Fjern sett"
+                  title={t.common.remove}
                 >
                   <Trash2 className="h-3 w-3" />
                 </button>
@@ -449,7 +452,7 @@ function ExerciseRow({ ex, onUpdate, onRemove, showDivider, canSuperset, adjacen
             onClick={() => onCreateSuperset([ex.id, adjacentId])}
             className="flex items-center gap-1 rounded-full px-3 py-1.5 text-xs text-[var(--accent)] hover:bg-[var(--accent-light)]"
           >
-            <Link2 className="h-3 w-3" /> Supersett med neste
+            <Link2 className="h-3 w-3" /> {t.training.supersetWithNext}
           </button>
         </div>
       )}

@@ -13,8 +13,8 @@ import { BarcodeScanner, cameraErrorMessage, requestCameraStream } from "@/compo
 import { FoodScanWizard } from "@/components/meals/food-scan-wizard";
 import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label } from "@/components/ui/field";
-import { MEAL_LABELS } from "@/lib/meals/constants";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/providers/lang-provider";
 
 type Tab = "search" | "favorites" | "scan" | "quick" | "saved";
 type Unit = "g" | "dl" | "flaske" | "boks";
@@ -51,6 +51,8 @@ function groupResults(products: FoodProductSummary[]) {
 }
 
 export function MealAddView({ logDate, mealType }: { logDate: string; mealType: MealType }) {
+  const t = useT();
+  const m = t.meals;
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("search");
 
@@ -288,11 +290,11 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
   }
 
   const tabs: Array<{ id: Tab; label: string; icon: typeof Search }> = [
-    { id: "search",    label: "Søk",        icon: Search },
-    { id: "favorites", label: "Favoritter", icon: Star },
-    { id: "scan",      label: "Strekkode",  icon: ScanBarcode },
-    { id: "quick",     label: "Hurtig",     icon: Zap },
-    { id: "saved",     label: "Måltider",   icon: BookOpen },
+    { id: "search",    label: m.search,         icon: Search },
+    { id: "favorites", label: m.favorites,      icon: Star },
+    { id: "scan",      label: m.scanBarcode,    icon: ScanBarcode },
+    { id: "quick",     label: m.quickAdd,       icon: Zap },
+    { id: "saved",     label: m.savedMeals,     icon: BookOpen },
   ];
 
   // ---------- Selected product confirm ----------
@@ -300,7 +302,7 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
     return (
       <div className="app-content space-y-4">
         <button type="button" onClick={() => setSelected(null)} className="flex items-center gap-1 text-sm text-[var(--color-muted-foreground)]">
-          <ArrowLeft className="h-4 w-4" /> Tilbake
+          <ArrowLeft className="h-4 w-4" /> {t.common.back}
         </button>
         <div className="flex items-start gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] p-3">
           <div className="min-w-0 flex-1">
@@ -311,11 +313,11 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
             <p className="text-xs text-[var(--color-muted-foreground)]">{sourceLabel(selected)}</p>
             {selected.kcalPer100g != null
               ? <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">{selected.kcalPer100g} kcal per 100 g</p>
-              : <p className="mt-1 text-xs text-[#9a5b45]">Mangler kaloridata.</p>}
+              : <p className="mt-1 text-xs text-[#9a5b45]">{m.missingCalorieData}</p>}
           </div>
           <button
             type="button"
-            aria-label={selected.id && favoriteIds.has(selected.id) ? "Fjern favoritt" : "Legg til favoritt"}
+            aria-label={selected.id && favoriteIds.has(selected.id) ? m.removeFavorite : m.addFavorite}
             onClick={(e) => handleToggleFavorite(selected, e)}
             className="shrink-0 p-1"
           >
@@ -329,7 +331,7 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
           </button>
         </div>
         <div>
-          <Label htmlFor="qty">Mengde</Label>
+          <Label htmlFor="qty">{m.quantity}</Label>
           <div className="flex gap-2">
             <Input
               id="qty"
@@ -365,7 +367,7 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
         )}
         {addError && <p className="text-xs text-[var(--red)]">{addError}</p>}
         <Button type="button" className="w-full" disabled={pending || !selected.kcalPer100g || !quantityInput} onClick={handleAdd}>
-          {pending ? "Legger til..." : "Legg til"}
+          {pending ? m.addingItem : m.addToMeal}
         </Button>
       </div>
     );
@@ -394,7 +396,7 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]">
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <h1 className="text-base font-semibold">{MEAL_LABELS[mealType]}</h1>
+          <h1 className="text-base font-semibold">{m.mealLabel(mealType)}</h1>
         </div>
 
         {/* Tabs */}
@@ -423,7 +425,7 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
               id="food-search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Søk matvare…"
+              placeholder={m.searchPlaceholder}
               autoComplete="off"
               enterKeyHint="search"
             />
@@ -432,7 +434,7 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
             {query.trim().length < 2 && recentItems.length > 0 && (
               <div>
                 <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
-                  Nylig brukt
+                  {m.recentlyUsed}
                 </p>
                 <ul>
                   {recentItems.map((item) => (
@@ -447,7 +449,7 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
                       {item.foodProductId && (
                         <button
                           type="button"
-                          aria-label={favoriteIds.has(item.foodProductId) ? "Fjern favoritt" : "Legg til favoritt"}
+                          aria-label={favoriteIds.has(item.foodProductId) ? m.removeFavorite : m.addFavorite}
                           onClick={async (e) => {
                             e.stopPropagation();
                             const result = await toggleFavoriteAction(item.foodProductId!);
@@ -487,7 +489,7 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
               <>
                 {searchError && <p className="text-xs text-[#9a5b45]">{searchError}</p>}
                 {results.length === 0 && !searchError && (
-                  <p className="text-xs text-[var(--color-muted-foreground)]">Ingen resultater.</p>
+                  <p className="text-xs text-[var(--color-muted-foreground)]">{m.noSearchResults}</p>
                 )}
                 <ul className="space-y-px">
                   {groupResults(results).map((group) => (
@@ -515,7 +517,7 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
                             </button>
                             <button
                               type="button"
-                              aria-label={p.id && favoriteIds.has(p.id) ? "Fjern favoritt" : "Legg til favoritt"}
+                              aria-label={p.id && favoriteIds.has(p.id) ? m.removeFavorite : m.addFavorite}
                               onClick={(e) => handleToggleFavorite(p, e)}
                               className="shrink-0 px-3 py-2.5 hover:bg-[var(--color-muted)]"
                             >
@@ -542,10 +544,10 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
         {tab === "favorites" && (
           <div className="space-y-1">
             {!favoritesLoaded ? (
-              <p className="text-xs text-[var(--color-muted-foreground)]">Laster…</p>
+              <p className="text-xs text-[var(--color-muted-foreground)]">{t.common.loading}</p>
             ) : favoriteProducts.length === 0 ? (
               <p className="text-xs text-[var(--color-muted-foreground)]">
-                Ingen favoritter ennå. Trykk ★ ved siden av et søkeresultat for å lagre det.
+                {m.favoritesFallback}
               </p>
             ) : (
               <ul>
@@ -568,7 +570,7 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
                     </button>
                     <button
                       type="button"
-                      aria-label="Fjern favoritt"
+                      aria-label={m.removeFavorite}
                       onClick={(e) => handleToggleFavorite(p, e)}
                       className="shrink-0 px-3 py-2.5 hover:bg-[var(--color-muted)]"
                     >
@@ -608,7 +610,7 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
                 {eanNotFound && (
                   <Button type="button" variant="secondary" size="sm" className="w-full"
                     onClick={() => { setPhotoInitialEan(eanInput.replace(/\D/g, "") || undefined); setEanNotFound(false); setEanError(null); setShowWizard(true); }}>
-                    Legg til selv med bilde →
+                    {m.addWithPhoto}
                   </Button>
                 )}
               </div>
@@ -620,10 +622,10 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
         {tab === "quick" && (
           <div className="space-y-4">
             <p className="text-sm text-[var(--color-muted-foreground)]">
-              Registrer raskt uten å søke opp produkt.
+              {m.quickAddDesc}
             </p>
             <div>
-              <Label htmlFor="quick-name">Navn (valgfritt)</Label>
+              <Label htmlFor="quick-name">{m.nameOptional}</Label>
               <Input
                 id="quick-name"
                 value={quickName}
@@ -632,7 +634,7 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
               />
             </div>
             <div>
-              <Label htmlFor="quick-kcal">Kalorier (kcal)</Label>
+              <Label htmlFor="quick-kcal">{m.caloriesKcal}</Label>
               <Input
                 id="quick-kcal"
                 type="number"
@@ -651,7 +653,7 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
               disabled={pending || quickDone}
               onClick={handleQuickAdd}
             >
-              {quickDone ? "✓ Lagt til" : pending ? "Legger til..." : "Legg til"}
+              {quickDone ? m.added : pending ? m.addingItem : m.addItem}
             </Button>
           </div>
         )}
@@ -660,7 +662,7 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
         {tab === "saved" && (
           <div className="space-y-2">
             {!savedLoaded ? (
-              <p className="text-sm text-[var(--color-muted-foreground)]">Laster…</p>
+              <p className="text-sm text-[var(--color-muted-foreground)]">{t.common.loading}</p>
             ) : savedError ? (
               <div className="space-y-2">
                 <p className="text-sm text-[#9a5b45]">{savedError}</p>
@@ -669,12 +671,12 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
                   onClick={() => switchTab("saved")}
                   className="text-sm font-medium text-[var(--color-primary)]"
                 >
-                  Prøv igjen
+                  {t.common.retry}
                 </button>
               </div>
             ) : savedMeals.length === 0 ? (
               <p className="text-sm text-[var(--color-muted-foreground)]">
-                Ingen lagrede måltider ennå. Logg et måltid og trykk «+ Legg til som eget måltid».
+                {m.noSavedMeals}
               </p>
             ) : (
               savedMeals.map((meal) => (
@@ -692,7 +694,7 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
                     </p>
                   </div>
                   <span className="shrink-0 text-xs font-semibold text-[var(--color-primary)]">
-                    {addingSavedId === meal.id ? "..." : "+ Legg til"}
+                    {addingSavedId === meal.id ? "..." : `+ ${m.addItem}`}
                   </span>
                 </button>
               ))

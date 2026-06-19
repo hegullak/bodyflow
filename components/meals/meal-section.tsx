@@ -6,10 +6,10 @@ import { Pencil, Plus, Trash2, Zap } from "lucide-react";
 import type { MealLogItem, MealType } from "@/db/schema";
 import { removeMealItemAction, updateMealItemAction, copyMealsFromPreviousDateAction, quickAddMealItemAction } from "@/lib/actions/meals";
 import { saveMealAction } from "@/lib/actions/saved-meals";
-import { MEAL_LABELS } from "@/lib/meals/constants";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/field";
 import { addDaysToIsoDate } from "@/lib/utils";
+import { useT } from "@/components/providers/lang-provider";
 
 // ---------------------------------------------------------------------------
 // Swipeable meal item — tap to edit, swipe left to delete
@@ -31,6 +31,7 @@ function SwipeableMealItem({
   onRemove: (id: string) => void;
   onEdit: (item: MealLogItem) => void;
 }) {
+  const t = useT();
   const innerRef = useRef<HTMLDivElement>(null);
   const sw = useRef({ startX: 0, startY: 0, tracking: false, revealed: false, dragging: false });
   const [deleting, startDelete] = useTransition();
@@ -91,7 +92,7 @@ function SwipeableMealItem({
           type="button"
           onClick={handleEdit}
           className="flex w-14 items-center justify-center bg-blue-500 text-white active:opacity-80"
-          aria-label="Rediger"
+          aria-label={t.common.edit}
         >
           <Pencil className="h-4 w-4" />
         </button>
@@ -100,7 +101,7 @@ function SwipeableMealItem({
           onClick={handleDelete}
           disabled={deleting}
           className="flex w-14 items-center justify-center bg-[var(--red)] text-white active:opacity-80 disabled:opacity-50"
-          aria-label="Slett"
+          aria-label={t.common.delete}
         >
           <Trash2 className="h-4 w-4" />
         </button>
@@ -145,6 +146,8 @@ function EditMealSheet({
   onClose: () => void;
   onSaved: (updated: MealLogItem) => void;
 }) {
+  const t = useT();
+  const m = t.meals;
   const [grams, setGrams] = useState(String(Math.round(item.quantityGrams)));
   const [saving, startSave] = useTransition();
 
@@ -180,12 +183,12 @@ function EditMealSheet({
         <div className="mb-4 flex items-center justify-between">
           <p className="text-sm font-semibold">{item.productName}</p>
           <button type="button" onClick={onClose} className="text-xs text-[var(--text3)]">
-            Avbryt
+            {t.common.cancel}
           </button>
         </div>
         <div className="space-y-3">
           <div>
-            <Label htmlFor="meal-grams">Mengde (g)</Label>
+            <Label htmlFor="meal-grams">{m.quantity}</Label>
             <Input
               id="meal-grams"
               type="number"
@@ -197,12 +200,12 @@ function EditMealSheet({
             />
           </div>
           <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card2)] p-3">
-            <p className="text-xs text-[var(--color-muted-foreground)]">Estimert kalorier</p>
+            <p className="text-xs text-[var(--color-muted-foreground)]">{m.estimatedCalories}</p>
             <p className="mt-1 text-2xl font-bold">{kcal} <span className="text-sm">kcal</span></p>
           </div>
         </div>
         <Button type="button" disabled={saving || !valid} onClick={handleSave} className="mt-4 w-full">
-          {saving ? "Lagrer…" : "Lagre"}
+          {saving ? t.common.saving : t.common.save}
         </Button>
       </div>
     </>
@@ -224,6 +227,8 @@ function QuickAddSheet({
   onClose: () => void;
   onAdded: () => void;
 }) {
+  const t = useT();
+  const m = t.meals;
   const [kcal, setKcal] = useState("");
   const [saving, startSave] = useTransition();
 
@@ -256,14 +261,14 @@ function QuickAddSheet({
         }}
       >
         <div className="mb-4 flex items-center justify-between">
-          <p className="text-sm font-semibold">Legg til kalorier</p>
+          <p className="text-sm font-semibold">{m.quickAddCalories}</p>
           <button type="button" onClick={onClose} className="text-xs text-[var(--text3)]">
-            Avbryt
+            {t.common.cancel}
           </button>
         </div>
         <div className="space-y-3">
           <div>
-            <Label htmlFor="quick-kcal">Kalorier (kcal)</Label>
+            <Label htmlFor="quick-kcal">{m.caloriesKcal}</Label>
             <Input
               id="quick-kcal"
               type="number"
@@ -275,7 +280,7 @@ function QuickAddSheet({
           </div>
         </div>
         <Button type="button" disabled={saving || !valid} onClick={handleAdd} className="mt-4 w-full">
-          {saving ? "Legger til…" : "Legg til"}
+          {saving ? m.addingItem : m.addItem}
         </Button>
       </div>
     </>
@@ -291,13 +296,15 @@ function SaveMealForm({ onSave, onCancel, saving }: {
   onCancel: () => void;
   saving: boolean;
 }) {
+  const t = useT();
+  const m = t.meals;
   const [name, setName] = useState("");
   return (
     <div className="mt-2 flex gap-2">
       <Input
         value={name}
         onChange={(e) => setName(e.target.value)}
-        placeholder="Navn på måltid…"
+        placeholder={m.mealNamePlaceholder}
         className="flex-1 text-sm"
         onKeyDown={(e) => {
           if (e.key === "Enter" && name.trim()) onSave(name);
@@ -305,10 +312,10 @@ function SaveMealForm({ onSave, onCancel, saving }: {
         }}
       />
       <Button type="button" size="sm" disabled={saving || !name.trim()} onClick={() => onSave(name)}>
-        {saving ? "..." : "Lagre"}
+        {saving ? "..." : t.common.save}
       </Button>
       <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
-        Avbryt
+        {t.common.cancel}
       </Button>
     </div>
   );
@@ -333,6 +340,8 @@ export function MealSection({
   twoDaysAgoItems: MealLogItem[];
   onChanged: () => void;
 }) {
+  const t = useT();
+  const m = t.meals;
   const router = useRouter();
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<MealLogItem | null>(null);
@@ -357,7 +366,7 @@ export function MealSection({
     : twoDaysAgoMeals.length > 0
       ? addDaysToIsoDate(logDate, -2)
       : null;
-  const copyLabel = previousDayMeals.length > 0 ? "Kopier fra i går" : "Kopier fra i forgårs";
+  const copyLabel = previousDayMeals.length > 0 ? m.copyFromYesterday : m.copyFromTwoDaysAgo;
   const hasPreviousMeals = copySourceDate !== null;
 
   function handleRemove(itemId: string) {
@@ -424,7 +433,7 @@ export function MealSection({
     <section className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] p-3">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <h3 className="text-base font-bold">{MEAL_LABELS[mealType]}</h3>
+          <h3 className="text-base font-bold">{t.meals.mealLabel(mealType)}</h3>
           <p className="text-sm font-medium text-[var(--color-muted-foreground)]">{subtotal} kcal</p>
         </div>
         <div className="flex gap-2">
@@ -433,7 +442,7 @@ export function MealSection({
             variant="secondary"
             size="sm"
             onClick={() => setShowQuickAdd(true)}
-            title="Quick add kalorier"
+            title={m.quickAddCalories}
           >
             <Zap className="h-4 w-4" />
           </Button>
@@ -442,7 +451,7 @@ export function MealSection({
             variant="secondary"
             size="sm"
             onClick={() => router.push(`/meals/add?date=${logDate}&type=${mealType}`)}
-            title="Legg til måltid"
+            title={m.addToMeal}
           >
             <Plus className="h-4 w-4" />
           </Button>
@@ -476,11 +485,11 @@ export function MealSection({
             {showCopyButtons ? (
               <button type="button" className="text-xs text-[var(--color-muted-foreground)]"
                 onClick={() => { setShowCopyButtons(false); setCopyOffset(0); }}>
-                Lukk
+                {t.common.close}
               </button>
             ) : (
               <p className="text-xs text-[var(--color-muted-foreground)]">
-                {hasPreviousMeals ? "Sveip høyre for å kopiere fra tidligere." : "Ingen produkter ennå."}
+                {hasPreviousMeals ? m.swipeRightToCopy : m.noProductsYet}
               </p>
             )}
           </div>
@@ -507,7 +516,7 @@ export function MealSection({
           ) : (
             <button type="button" onClick={() => setShowSaveForm(true)}
               className="mt-2 text-xs text-[var(--color-muted-foreground)] hover:text-[var(--color-primary)]">
-              + Legg til som eget måltid
+              {m.saveAsMeal}
             </button>
           )}
         </>

@@ -15,6 +15,7 @@ import {
 } from "@/lib/reminders/constants";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/field";
+import { useT } from "@/components/providers/lang-provider";
 
 function readNotificationPermission(): NotificationPermission | "unsupported" {
   if (!("Notification" in window)) return "unsupported";
@@ -28,6 +29,8 @@ function ReminderSettingsFormInner({
   reminderType: "weigh_in";
   reminder: Reminder | null;
 }) {
+  const t = useT();
+  const r = t.profile;
   const definition = REMINDER_DEFINITIONS[reminderType];
   const [state, formAction, pending] = useActionState(upsertReminderAction, null);
   const [permission, setPermission] = useState(readNotificationPermission);
@@ -63,16 +66,16 @@ function ReminderSettingsFormInner({
           defaultChecked={reminder?.enabled ?? false}
           className="h-4 w-4 accent-[var(--color-primary)]"
         />
-        Enable reminder
+        {r.enableReminder}
       </label>
 
       <div>
-        <Label>Weekdays</Label>
+        <Label>{r.weekdays}</Label>
         <div className="grid grid-cols-7 gap-0.5">
           {WEEKDAY_SHORT_LABELS.map((label, index) => (
             <label
               key={`${label}-${index}`}
-              title={["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"][index]}
+              title={r.weekdayNames[index]}
               className="flex min-w-0 flex-col items-center gap-0.5 rounded-[var(--radius-sm)] border border-[var(--color-border)] px-0.5 py-1 text-[9px] leading-none"
             >
               <input
@@ -90,7 +93,7 @@ function ReminderSettingsFormInner({
 
       <div className="form-grid-2">
         <div>
-          <Label htmlFor={`${reminderType}-time`}>Time</Label>
+          <Label htmlFor={`${reminderType}-time`}>{r.time}</Label>
           <Input
             id={`${reminderType}-time`}
             name="reminderTime"
@@ -100,7 +103,7 @@ function ReminderSettingsFormInner({
           />
         </div>
         <div>
-          <Label htmlFor={`${reminderType}-timezone`}>Timezone</Label>
+          <Label htmlFor={`${reminderType}-timezone`}>{r.timezone}</Label>
           <Input
             id={`${reminderType}-timezone`}
             value={timezone}
@@ -112,11 +115,11 @@ function ReminderSettingsFormInner({
 
       {permission !== "granted" ? (
         <Button type="button" variant="secondary" size="sm" onClick={handleEnableNotifications}>
-          Allow notifications
+          {r.allowNotifications}
         </Button>
       ) : (
         <p className="text-xs text-[var(--color-muted-foreground)]">
-          Notifications allowed. Opens {definition.defaultTargetRoute} when tapped.
+          {r.notificationsAllowed}
         </p>
       )}
 
@@ -124,11 +127,11 @@ function ReminderSettingsFormInner({
         <p className="text-xs text-[#9a5b45]">{state.error}</p>
       ) : null}
       {state?.ok ? (
-        <p className="text-xs text-[var(--color-primary)]">Reminder settings saved.</p>
+        <p className="text-xs text-[var(--color-primary)]">{r.reminderSaved}</p>
       ) : null}
 
       <Button type="submit" size="sm" disabled={pending} className="w-full">
-        {pending ? "Saving..." : "Save reminder"}
+        {pending ? t.common.saving : r.saveReminder}
       </Button>
     </form>
   );
