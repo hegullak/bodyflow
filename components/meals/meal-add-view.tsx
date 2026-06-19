@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, BookOpen, ScanBarcode, Search, Zap } from "lucide-react";
+import { ArrowLeft, BookOpen, ScanBarcode, Search, Star, Zap } from "lucide-react";
 import type { MealType } from "@/db/schema";
 import { addMealItemAction, quickAddMealItemAction, getRecentMealItemsAction, reAddMealItemAction, type RecentMealItem } from "@/lib/actions/meals";
 import { addSavedMealToLogAction, getSavedMealsAction } from "@/lib/actions/saved-meals";
+import { getFavoriteIdsAction, getFavoriteProductsAction, toggleFavoriteAction } from "@/lib/actions/foods";
 import type { FoodProductSummary } from "@/lib/foods/types";
 import { calculateCaloriesFromGrams } from "@/lib/kassal/nutrition";
 import { BarcodeScanner, cameraErrorMessage, requestCameraStream } from "@/components/meals/barcode-scanner";
@@ -15,7 +16,7 @@ import { FieldError, Input, Label } from "@/components/ui/field";
 import { MEAL_LABELS } from "@/lib/meals/constants";
 import { cn } from "@/lib/utils";
 
-type Tab = "search" | "scan" | "quick" | "saved";
+type Tab = "search" | "favorites" | "scan" | "quick" | "saved";
 type Unit = "g" | "dl" | "flaske" | "boks";
 
 const UNIT_FACTOR: Record<Unit, number> = { g: 1, dl: 100, flaske: 333, boks: 500 };
@@ -32,7 +33,7 @@ function sourceLabel(p: FoodProductSummary) {
   return p.brand ? `Kassal.app · ${p.brand}` : "Kassal.app";
 }
 
-const SOURCE_ORDER = { kassal: 0, matvaretabellen: 1, custom: 2 } as const;
+const SOURCE_ORDER = { matvaretabellen: 0, kassal: 1, custom: 2 } as const;
 
 function groupResults(products: FoodProductSummary[]) {
   const sorted = [...products].sort(
@@ -91,6 +92,11 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
   const [savedError, setSavedError] = useState<string | null>(null);
   const [addingSavedId, setAddingSavedId] = useState<string | null>(null);
 
+  // Favorites
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const [favoriteProducts, setFavoriteProducts] = useState<FoodProductSummary[]>([]);
+  const [favoritesLoaded, setFavoritesLoaded] = useState(false);
+
   useEffect(() => {
     if (!recentLoaded) {
       getRecentMealItemsAction().then((res) => {
@@ -98,6 +104,7 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
         setRecentLoaded(true);
       });
     }
+    getFavoriteIdsAction().then((ids) => setFavoriteIds(new Set(ids)));
   }, [recentLoaded]);
 
   const stopCamera = useCallback(() => {
@@ -124,6 +131,29 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [query]);
 
+  async function loadFavorites() {
+    const products = await getFavoriteProductsAction();
+    setFavoriteProducts(products);
+    setFavoritesLoaded(true);
+  }
+
+  async function handleToggleFavorite(product: FoodProductSummary, e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!product.id) return;
+    const result = await toggleFavoriteAction(product.id);
+    if (!result.ok) return;
+    setFavoriteIds((prev) => {
+      const next = new Set(prev);
+      if (result.isFavorited) next.add(product.id!);
+      else next.delete(product.id!);
+      return next;
+    });
+    if (favoritesLoaded) {
+      if (result.isFavorited) setFavoriteProducts((prev) => [...prev, product]);
+      else setFavoriteProducts((prev) => prev.filter((p) => p.id !== product.id));
+    }
+  }
+
   async function switchTab(t: Tab) {
     stopCamera();
     setSelected(null);
@@ -141,13 +171,11 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
       setSavedError(null);
       setSavedLoaded(false);
       const res = await getSavedMealsAction();
-      if (res.ok) {
-        setSavedMeals(res.data);
-      } else {
-        setSavedError("Henting feilet — prøv igjen.");
-      }
+      if (res.ok) setSavedMeals(res.data);
+      else setSavedError("Henting feilet — prøv igjen.");
       setSavedLoaded(true);
     }
+    if (t === "favorites") void loadFavorites();
   }
 
   function selectProduct(p: FoodProductSummary) {
@@ -238,10 +266,11 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
   }
 
   const tabs: Array<{ id: Tab; label: string; icon: typeof Search }> = [
-    { id: "search", label: "Søk", icon: Search },
-    { id: "scan", label: "Strekkode", icon: ScanBarcode },
-    { id: "quick", label: "Hurtig", icon: Zap },
-    { id: "saved", label: "Måltider", icon: BookOpen },
+    { id: "search",    label: "Søk",        icon: Search },
+    { id: "favorites", label: "Favoritter", icon: Star },
+    { id: "scan",      label: "Strekkode",  icon: ScanBarcode },
+    { id: "quick",     label: "Hurtig",     icon: Zap },
+    { id: "saved",     label: "Måltider",   icon: BookOpen },
   ];
 
   // ---------- Selected product confirm ----------
@@ -251,12 +280,31 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
         <button type="button" onClick={() => setSelected(null)} className="flex items-center gap-1 text-sm text-[var(--color-muted-foreground)]">
           <ArrowLeft className="h-4 w-4" /> Tilbake
         </button>
-        <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] p-3">
-          <p className="font-medium">{selected.name}</p>
-          <p className="text-xs text-[var(--color-muted-foreground)]">{sourceLabel(selected)}</p>
-          {selected.kcalPer100g != null
-            ? <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">{selected.kcalPer100g} kcal per 100 g</p>
-            : <p className="mt-1 text-xs text-[#9a5b45]">Mangler kaloridata.</p>}
+        <div className="flex items-start gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] p-3">
+          <div className="min-w-0 flex-1">
+            <p className="font-medium">{selected.prettyName ?? selected.name}</p>
+            {selected.prettyName && (
+              <p className="text-xs text-[var(--color-muted-foreground)]">{selected.name}</p>
+            )}
+            <p className="text-xs text-[var(--color-muted-foreground)]">{sourceLabel(selected)}</p>
+            {selected.kcalPer100g != null
+              ? <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">{selected.kcalPer100g} kcal per 100 g</p>
+              : <p className="mt-1 text-xs text-[#9a5b45]">Mangler kaloridata.</p>}
+          </div>
+          <button
+            type="button"
+            aria-label={selected.id && favoriteIds.has(selected.id) ? "Fjern favoritt" : "Legg til favoritt"}
+            onClick={(e) => handleToggleFavorite(selected, e)}
+            className="shrink-0 p-1"
+          >
+            <Star className={cn("h-6 w-6 transition-colors",
+              selected.id && favoriteIds.has(selected.id)
+                ? "fill-[var(--amber)] text-[var(--amber)]"
+                : selected.id
+                  ? "text-[var(--color-muted-foreground)]"
+                  : "text-[var(--color-muted-foreground)] opacity-30"
+            )} />
+          </button>
         </div>
         <div>
           <Label htmlFor="qty">Mengde</Label>
@@ -403,18 +451,35 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
                       </p>
                       <ul>
                         {group.items.map((p) => (
-                          <li key={`${p.source}-${p.externalId}`}>
+                          <li key={`${p.source}-${p.externalId}`} className="flex items-center border-b border-[var(--color-border)]">
                             <button
                               type="button"
                               onClick={() => selectProduct(p)}
-                              className="flex w-full items-center gap-3 border-b border-[var(--color-border)] py-2.5 text-left hover:bg-[var(--color-muted)]"
+                              className="flex min-w-0 flex-1 items-center gap-3 py-2.5 text-left hover:bg-[var(--color-muted)]"
                             >
                               <span className="min-w-0 flex-1">
-                                <span className="block truncate text-sm font-medium">{p.name}</span>
+                                <span className="block truncate text-sm font-medium">{p.prettyName ?? p.name}</span>
+                                {p.prettyName && (
+                                  <span className="block truncate text-xs text-[var(--color-muted-foreground)] opacity-60">{p.name}</span>
+                                )}
                                 <span className="block truncate text-xs text-[var(--color-muted-foreground)]">
                                   {p.brand ?? sourceLabel(p)}{p.kcalPer100g != null ? ` · ${p.kcalPer100g} kcal/100g` : ""}
                                 </span>
                               </span>
+                            </button>
+                            <button
+                              type="button"
+                              aria-label={p.id && favoriteIds.has(p.id) ? "Fjern favoritt" : "Legg til favoritt"}
+                              onClick={(e) => handleToggleFavorite(p, e)}
+                              className="shrink-0 px-3 py-2.5 hover:bg-[var(--color-muted)]"
+                            >
+                              <Star className={cn("h-5 w-5 transition-colors",
+                                p.id && favoriteIds.has(p.id)
+                                  ? "fill-[var(--amber)] text-[var(--amber)]"
+                                  : p.id
+                                    ? "text-[var(--color-muted-foreground)]"
+                                    : "text-[var(--color-muted-foreground)] opacity-30"
+                              )} />
                             </button>
                           </li>
                         ))}
@@ -423,6 +488,49 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
                   ))}
                 </ul>
               </>
+            )}
+          </div>
+        )}
+
+        {/* ---- FAVORITES ---- */}
+        {tab === "favorites" && (
+          <div className="space-y-1">
+            {!favoritesLoaded ? (
+              <p className="text-xs text-[var(--color-muted-foreground)]">Laster…</p>
+            ) : favoriteProducts.length === 0 ? (
+              <p className="text-xs text-[var(--color-muted-foreground)]">
+                Ingen favoritter ennå. Trykk ★ ved siden av et søkeresultat for å lagre det.
+              </p>
+            ) : (
+              <ul>
+                {favoriteProducts.map((p) => (
+                  <li key={`fav-${p.id}`} className="flex items-center border-b border-[var(--color-border)]">
+                    <button
+                      type="button"
+                      onClick={() => selectProduct(p)}
+                      className="flex min-w-0 flex-1 items-center gap-3 py-2.5 text-left hover:bg-[var(--color-muted)]"
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium">{p.prettyName ?? p.name}</span>
+                        {p.prettyName && (
+                          <span className="block truncate text-xs text-[var(--color-muted-foreground)] opacity-60">{p.name}</span>
+                        )}
+                        <span className="block truncate text-xs text-[var(--color-muted-foreground)]">
+                          {p.brand ?? sourceLabel(p)}{p.kcalPer100g != null ? ` · ${p.kcalPer100g} kcal/100g` : ""}
+                        </span>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Fjern favoritt"
+                      onClick={(e) => handleToggleFavorite(p, e)}
+                      className="shrink-0 px-3 py-2.5 hover:bg-[var(--color-muted)]"
+                    >
+                      <Star className="h-5 w-5 fill-[var(--amber)] text-[var(--amber)] transition-colors" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         )}
