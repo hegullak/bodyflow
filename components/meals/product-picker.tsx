@@ -37,7 +37,7 @@ function sourceLabel(product: FoodProductSummary): string {
   return "Ukjent kilde";
 }
 
-const SOURCE_ORDER = { kassal: 0, matvaretabellen: 1, custom: 2 } as const;
+const SOURCE_ORDER = { matvaretabellen: 0, kassal: 1, custom: 2 } as const;
 
 function sortBySource(products: FoodProductSummary[]): FoodProductSummary[] {
   return [...products].sort(
