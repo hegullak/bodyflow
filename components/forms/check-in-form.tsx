@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label } from "@/components/ui/field";
 import { formatWeekdayDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/providers/lang-provider";
 
 function DiffBadge({ diff }: { diff: number | null | undefined }) {
   if (diff == null || diff === 0) return null;
@@ -34,6 +35,8 @@ export function CheckInForm({
   today: CheckInSnapshot;
   focusWeight?: boolean;
 }) {
+  const t = useT();
+  const ci = t.checkIn;
   const router = useRouter();
   const [state, formAction, pending] = useActionState(upsertCheckInAction, null);
   const weightRef = useRef<HTMLInputElement>(null);
@@ -60,7 +63,7 @@ export function CheckInForm({
           {/* Weight — full width */}
           <div>
             <Label htmlFor="weightKg">
-              Vekt (kg)
+              {ci.weightKg}
               <DiffBadge diff={diff?.weightKg} />
             </Label>
             <Input
@@ -80,7 +83,7 @@ export function CheckInForm({
           <div className="grid grid-cols-3 gap-2">
             <div>
               <Label htmlFor="waistCm">
-                Midje
+                {ci.waist}
                 <DiffBadge diff={diff?.waistCm} />
               </Label>
               <Input
@@ -95,7 +98,7 @@ export function CheckInForm({
             </div>
             <div>
               <Label htmlFor="chestCm">
-                Bryst
+                {ci.chest}
                 <DiffBadge diff={diff?.chestCm} />
               </Label>
               <Input
@@ -110,7 +113,7 @@ export function CheckInForm({
             </div>
             <div>
               <Label htmlFor="hipCm">
-                Hofte
+                {ci.hip}
                 <DiffBadge diff={diff?.hipCm} />
               </Label>
               <Input
@@ -131,7 +134,7 @@ export function CheckInForm({
         ) : null}
 
         <Button type="submit" disabled={pending} className="w-full">
-          {pending ? "Lagrer..." : "Lagre"}
+          {pending ? ci.saving : ci.save}
         </Button>
       </form>
     </div>

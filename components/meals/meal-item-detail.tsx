@@ -9,6 +9,7 @@ import { getFavoriteIdsAction, toggleFavoriteAction } from "@/lib/actions/foods"
 import { Button } from "@/components/ui/button";
 import { MEAL_LABELS } from "@/lib/meals/constants";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/providers/lang-provider";
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr + "T12:00:00").toLocaleDateString("nb-NO", {
@@ -18,6 +19,8 @@ function formatDate(dateStr: string): string {
 }
 
 export function MealItemDetail({ item }: { item: MealLogItem }) {
+  const t = useT();
+  const mi = t.mealItem;
   const router = useRouter();
   const [grams, setGrams] = useState(String(Math.round(item.quantityGrams)));
   const [error, setError] = useState<string | null>(null);
@@ -84,7 +87,7 @@ export function MealItemDetail({ item }: { item: MealLogItem }) {
         {item.foodProductId && (
           <button
             type="button"
-            aria-label={isFavorited ? "Fjern favoritt" : "Legg til favoritt"}
+            aria-label={isFavorited ? mi.removeFavorite : mi.addFavorite}
             onClick={handleToggleFavorite}
             className="shrink-0 p-1"
           >
@@ -100,7 +103,7 @@ export function MealItemDetail({ item }: { item: MealLogItem }) {
       <div className="mt-6 space-y-3">
         {/* Calories */}
         <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] px-4 py-3">
-          <p className="text-xs text-[var(--color-muted-foreground)]">Kalorier</p>
+          <p className="text-xs text-[var(--color-muted-foreground)]">{mi.calories}</p>
           <p className="mt-0.5 text-3xl font-bold">
             {kcal}{" "}
             <span className="text-base font-normal text-[var(--color-muted-foreground)]">kcal</span>
@@ -109,7 +112,7 @@ export function MealItemDetail({ item }: { item: MealLogItem }) {
 
         {/* Quantity */}
         <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] px-4 py-3">
-          <p className="text-xs text-[var(--color-muted-foreground)]">Mengde</p>
+          <p className="text-xs text-[var(--color-muted-foreground)]">{mi.quantity}</p>
           <div className="mt-1.5 flex items-center gap-2">
             <input
               type="number"
@@ -127,23 +130,23 @@ export function MealItemDetail({ item }: { item: MealLogItem }) {
         {/* Per 100g breakdown */}
         <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] px-4 py-3">
           <p className="mb-2 text-xs font-medium text-[var(--color-muted-foreground)]">
-            Næringsinnhold per 100 g
+            {mi.nutritionPer100g}
           </p>
           <div className="space-y-1.5">
             <div className="flex justify-between text-sm">
-              <span>Kalorier</span>
+              <span>{mi.calories}</span>
               <span className="font-medium">{Math.round(item.kcalPer100g)} kcal</span>
             </div>
             <div className="flex justify-between text-sm text-[var(--color-muted-foreground)]">
-              <span>Protein</span>
+              <span>{mi.protein}</span>
               <span>–</span>
             </div>
             <div className="flex justify-between text-sm text-[var(--color-muted-foreground)]">
-              <span>Karbohydrater</span>
+              <span>{mi.carbs}</span>
               <span>–</span>
             </div>
             <div className="flex justify-between text-sm text-[var(--color-muted-foreground)]">
-              <span>Fett</span>
+              <span>{mi.fat}</span>
               <span>–</span>
             </div>
           </div>
@@ -159,7 +162,7 @@ export function MealItemDetail({ item }: { item: MealLogItem }) {
           onClick={handleSave}
           className="w-full"
         >
-          {saving ? "Lagrer…" : "Lagre"}
+          {saving ? mi.saving : mi.save}
         </Button>
         <Button
           type="button"
@@ -168,7 +171,7 @@ export function MealItemDetail({ item }: { item: MealLogItem }) {
           onClick={handleDelete}
           className="w-full text-[var(--red)]"
         >
-          {deleting ? "Sletter…" : "Slett matvare"}
+          {deleting ? mi.deleting : mi.delete}
         </Button>
       </div>
     </div>

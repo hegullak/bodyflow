@@ -2,12 +2,15 @@ import { ProfileForm } from "@/components/forms/profile-form";
 import { WithingsCard } from "@/components/integrations/withings-card";
 import { Card } from "@/components/ui/card";
 import { ThemePicker } from "@/components/ui/ThemePicker";
+import { LanguagePicker } from "@/components/profile/language-picker";
 import { ReminderSettingsForm } from "@/components/reminders/reminder-settings-form";
 import { getReminderForUser } from "@/lib/actions/reminders";
 import { getProfileForUser } from "@/lib/actions/profile";
 import { getCurrentUserDisplayName, requireUserId } from "@/lib/auth/current-user";
 import { getWithingsConnection } from "@/lib/withings/sync";
 import { isWithingsConfigured } from "@/lib/withings/config";
+import { getLang } from "@/lib/i18n/server";
+import type { Lang } from "@/lib/i18n/types";
 
 export default async function ProfilePage({
   searchParams,
@@ -16,11 +19,12 @@ export default async function ProfilePage({
 }) {
   const userId = await requireUserId();
   const params = await searchParams;
-  const [profile, weighInReminder, displayName, withingsConn] = await Promise.all([
+  const [profile, weighInReminder, displayName, withingsConn, lang] = await Promise.all([
     getProfileForUser(userId),
     getReminderForUser(userId, "weigh_in"),
     getCurrentUserDisplayName(),
     getWithingsConnection(userId),
+    getLang(),
   ]);
 
   const withingsPublic = {
@@ -38,8 +42,17 @@ export default async function ProfilePage({
       </Card>
 
       <Card className="card-compact mt-3">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-[var(--text3)]">Tema</p>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-[var(--text3)]">
+          {lang === "en" ? "Theme" : "Tema"}
+        </p>
         <ThemePicker />
+      </Card>
+
+      <Card className="card-compact mt-3">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-[var(--text3)]">
+          {lang === "en" ? "Language" : "Språk"}
+        </p>
+        <LanguagePicker current={lang as Lang} />
       </Card>
 
       <Card className="card-compact mt-3">

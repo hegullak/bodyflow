@@ -3,25 +3,25 @@ import { Dumbbell, BookOpen, Library, History } from "lucide-react";
 import { requireUserId } from "@/lib/auth/current-user";
 import { getActiveSession } from "@/lib/training/sessions";
 import { ActiveWorkoutBanner } from "@/components/training/active-workout-banner";
+import { getT } from "@/lib/i18n/server";
 
 export default async function TrainingPage() {
   const userId = await requireUserId();
-  const activeSession = await getActiveSession(userId);
+  const [activeSession, t] = await Promise.all([getActiveSession(userId), getT()]);
+  const tr = t.training;
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="page-title">Trening</h1>
+      <h1 className="page-title">{tr.title}</h1>
 
-      {activeSession && (
-        <ActiveWorkoutBanner programName={activeSession.programName} />
-      )}
+      {activeSession && <ActiveWorkoutBanner programName={activeSession.programName} />}
 
       <Link
         href="/training/programs?start=1"
         className="flex items-center justify-center gap-3 rounded-[var(--radius-lg)] bg-[var(--accent)] py-6 text-[var(--bg)] shadow-lg active:opacity-90"
       >
         <Dumbbell className="h-6 w-6" />
-        <span className="text-xl font-semibold">Start økt</span>
+        <span className="text-xl font-semibold">{tr.startSession}</span>
       </Link>
 
       <div className="grid grid-cols-1 gap-3">
@@ -31,8 +31,8 @@ export default async function TrainingPage() {
         >
           <BookOpen className="h-5 w-5 text-[var(--accent)]" />
           <div>
-            <p className="font-medium text-[var(--text1)]">Programmer</p>
-            <p className="text-sm text-[var(--text3)]">Bygg og administrer treningsprogrammer</p>
+            <p className="font-medium text-[var(--text1)]">{tr.programs}</p>
+            <p className="text-sm text-[var(--text3)]">{tr.programsDesc}</p>
           </div>
         </Link>
 
@@ -42,8 +42,8 @@ export default async function TrainingPage() {
         >
           <Library className="h-5 w-5 text-[var(--accent)]" />
           <div>
-            <p className="font-medium text-[var(--text1)]">Øvelsesoversikt</p>
-            <p className="text-sm text-[var(--text3)]">Søk i 1500+ øvelser</p>
+            <p className="font-medium text-[var(--text1)]">{tr.exercises}</p>
+            <p className="text-sm text-[var(--text3)]">{tr.exercisesDesc}</p>
           </div>
         </Link>
 
@@ -53,8 +53,8 @@ export default async function TrainingPage() {
         >
           <History className="h-5 w-5 text-[var(--accent)]" />
           <div>
-            <p className="font-medium text-[var(--text1)]">Historikk</p>
-            <p className="text-sm text-[var(--text3)]">Se tidligere treningsøkter</p>
+            <p className="font-medium text-[var(--text1)]">{tr.history}</p>
+            <p className="text-sm text-[var(--text3)]">{tr.historyDesc}</p>
           </div>
         </Link>
       </div>

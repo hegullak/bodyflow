@@ -158,6 +158,8 @@ export const userProfiles = pgTable(
 
     vibe: text("vibe"),
 
+    language: text("language").notNull().default("no"),
+
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

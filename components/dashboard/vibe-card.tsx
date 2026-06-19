@@ -4,6 +4,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Card, CardTitle } from "@/components/ui/card";
 import { updateVibeAction } from "@/lib/actions/dashboard";
+import { useT } from "@/components/providers/lang-provider";
 
 type Vibe = "good" | "undecided" | "improve";
 
@@ -19,6 +20,8 @@ const OPTIONS: Array<{
 ];
 
 export function VibeCard({ initialVibe }: { initialVibe: string | null }) {
+  const t = useT();
+  const d = t.dashboard;
   const [vibe, setVibe] = useState<Vibe | null>((initialVibe as Vibe) ?? null);
 
   async function toggle(v: Vibe) {
@@ -28,6 +31,7 @@ export function VibeCard({ initialVibe }: { initialVibe: string | null }) {
   }
 
   const current = OPTIONS.find((o) => o.vibe === vibe);
+  const labels: Record<Vibe, string> = { good: d.good, undecided: d.undecided, improve: d.canImprove };
 
   return (
     <Card
@@ -37,7 +41,7 @@ export function VibeCard({ initialVibe }: { initialVibe: string | null }) {
           : undefined
       }
     >
-      <CardTitle>Total overall vibe</CardTitle>
+      <CardTitle>{d.totalOverallVibe}</CardTitle>
 
       <div className="mt-3 flex gap-2">
         {OPTIONS.map((opt) => {
@@ -63,7 +67,7 @@ export function VibeCard({ initialVibe }: { initialVibe: string | null }) {
                   : undefined
               }
             >
-              {opt.label}
+              {labels[opt.vibe]}
             </button>
           );
         })}

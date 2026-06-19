@@ -78,6 +78,16 @@ export async function upsertProfileAction(
   return { ok: true, data: undefined };
 }
 
+export async function updateLanguageAction(lang: "no" | "en"): Promise<void> {
+  const userId = await requireUserId();
+  const db = getDb();
+  await db
+    .update(userProfiles)
+    .set({ language: lang, updatedAt: new Date() })
+    .where(eq(userProfiles.userId, userId));
+  revalidatePath("/", "layout");
+}
+
 export async function getProfileForUser(userId: string) {
   const db = getDb();
   return (
