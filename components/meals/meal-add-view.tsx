@@ -16,6 +16,15 @@ import { MEAL_LABELS } from "@/lib/meals/constants";
 import { cn } from "@/lib/utils";
 
 type Tab = "search" | "scan" | "quick" | "saved";
+type Unit = "g" | "dl" | "flaske" | "boks";
+
+const UNIT_FACTOR: Record<Unit, number> = { g: 1, dl: 100, flaske: 333, boks: 500 };
+const UNIT_LABEL: Record<Unit, string> = { g: "g", dl: "dl", flaske: "flaske", boks: "boks" };
+const UNITS: Unit[] = ["g", "dl", "flaske", "boks"];
+
+function toGrams(qty: number, unit: Unit): number {
+  return Math.round(qty * UNIT_FACTOR[unit]);
+}
 
 function sourceLabel(p: FoodProductSummary) {
   if (p.source === "matvaretabellen") return "Matvaretabellen";
@@ -52,7 +61,8 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
 
   // Selected product
   const [selected, setSelected] = useState<FoodProductSummary | null>(null);
-  const [quantityGrams, setQuantityGrams] = useState("");
+  const [quantityInput, setQuantityInput] = useState("");
+  const [unit, setUnit] = useState<Unit>("g");
   const [addError, setAddError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -143,8 +153,19 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
   function selectProduct(p: FoodProductSummary) {
     setSelected(p);
     setAddError(null);
-    if (p.packageGrams) setQuantityGrams(String(Math.round(p.packageGrams)));
-    else setQuantityGrams("");
+    setUnit("g");
+    if (p.packageGrams) setQuantityInput(String(Math.round(p.packageGrams)));
+    else setQuantityInput("");
+  }
+
+  function changeUnit(next: Unit) {
+    const current = Number(quantityInput);
+    if (Number.isFinite(current) && current > 0) {
+      const grams = current * UNIT_FACTOR[unit];
+      const converted = grams / UNIT_FACTOR[next];
+      setQuantityInput(String(parseFloat(converted.toFixed(2))));
+    }
+    setUnit(next);
   }
 
   async function lookupEan(ean: string) {
@@ -164,11 +185,11 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
   }
 
   const kcalPreview = useMemo(() => {
-    if (!selected?.kcalPer100g || !quantityGrams) return null;
-    const g = Number(quantityGrams);
-    if (!Number.isFinite(g) || g <= 0) return null;
-    return calculateCaloriesFromGrams(selected.kcalPer100g, g);
-  }, [selected, quantityGrams]);
+    if (!selected?.kcalPer100g || !quantityInput) return null;
+    const qty = Number(quantityInput);
+    if (!Number.isFinite(qty) || qty <= 0) return null;
+    return calculateCaloriesFromGrams(selected.kcalPer100g, toGrams(qty, unit));
+  }, [selected, quantityInput, unit]);
 
   function handleAdd() {
     if (!selected?.kcalPer100g) return;
@@ -179,7 +200,7 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
     fd.set("source", selected.source);
     fd.set("externalId", selected.externalId);
     if (selected.ean) fd.set("ean", selected.ean);
-    fd.set("quantityGrams", quantityGrams);
+    fd.set("quantityGrams", String(toGrams(Number(quantityInput), unit)));
     startTransition(async () => {
       const result = await addMealItemAction(null, fd);
       if (result.ok) router.back();
@@ -236,15 +257,42 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
             : <p className="mt-1 text-xs text-[#9a5b45]">Mangler kaloridata.</p>}
         </div>
         <div>
-          <Label htmlFor="qty">Vekt (gram)</Label>
-          <Input id="qty" type="number" inputMode="decimal" value={quantityGrams}
-            onChange={(e) => setQuantityGrams(e.target.value)} placeholder="150" autoFocus />
+          <Label htmlFor="qty">Mengde</Label>
+          <div className="flex gap-2">
+            <Input
+              id="qty"
+              type="number"
+              inputMode="decimal"
+              value={quantityInput}
+              onChange={(e) => setQuantityInput(e.target.value)}
+              placeholder={unit === "g" ? "150" : unit === "dl" ? "2" : "1"}
+              autoFocus
+              className="flex-1"
+            />
+            <div className="flex rounded-xl border border-[var(--border)] overflow-hidden shrink-0">
+              {UNITS.map((u) => (
+                <button
+                  key={u}
+                  type="button"
+                  onClick={() => changeUnit(u)}
+                  className={cn(
+                    "px-2.5 py-2 text-xs font-medium transition-colors",
+                    u === unit
+                      ? "bg-[var(--accent)] text-[var(--card)]"
+                      : "text-[var(--text3)] hover:text-[var(--text1)]",
+                  )}
+                >
+                  {UNIT_LABEL[u]}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
         {kcalPreview != null && (
-          <p className="text-sm font-semibold text-[var(--color-primary)]">≈ {kcalPreview} kcal</p>
+          <p className="text-sm font-semibold text-[var(--accent)]">≈ {kcalPreview} kcal</p>
         )}
-        {addError && <p className="text-xs text-[#9a5b45]">{addError}</p>}
-        <Button type="button" className="w-full" disabled={pending || !selected.kcalPer100g || !quantityGrams} onClick={handleAdd}>
+        {addError && <p className="text-xs text-[var(--red)]">{addError}</p>}
+        <Button type="button" className="w-full" disabled={pending || !selected.kcalPer100g || !quantityInput} onClick={handleAdd}>
           {pending ? "Legger til..." : "Legg til"}
         </Button>
       </div>
