@@ -6,7 +6,7 @@ import { ArrowLeft, BookOpen, ScanBarcode, Search, Star, Zap } from "lucide-reac
 import type { MealType } from "@/db/schema";
 import { addMealItemAction, quickAddMealItemAction, getRecentMealItemsAction, reAddMealItemAction, type RecentMealItem } from "@/lib/actions/meals";
 import { addSavedMealToLogAction, getSavedMealsAction } from "@/lib/actions/saved-meals";
-import { getFavoriteIdsAction, getFavoriteProductsAction, toggleFavoriteAction } from "@/lib/actions/foods";
+import { ensureAndToggleFavoriteAction, getFavoriteIdsAction, getFavoriteProductsAction, toggleFavoriteAction } from "@/lib/actions/foods";
 import type { FoodProductSummary } from "@/lib/foods/types";
 import { calculateCaloriesFromGrams } from "@/lib/kassal/nutrition";
 import { BarcodeScanner, cameraErrorMessage, requestCameraStream } from "@/components/meals/barcode-scanner";
@@ -139,18 +139,40 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
 
   async function handleToggleFavorite(product: FoodProductSummary, e: React.MouseEvent) {
     e.stopPropagation();
-    if (!product.id) return;
-    const result = await toggleFavoriteAction(product.id);
-    if (!result.ok) return;
-    setFavoriteIds((prev) => {
-      const next = new Set(prev);
-      if (result.isFavorited) next.add(product.id!);
-      else next.delete(product.id!);
-      return next;
-    });
-    if (favoritesLoaded) {
-      if (result.isFavorited) setFavoriteProducts((prev) => [...prev, product]);
-      else setFavoriteProducts((prev) => prev.filter((p) => p.id !== product.id));
+    if (product.id) {
+      const result = await toggleFavoriteAction(product.id);
+      if (!result.ok) return;
+      setFavoriteIds((prev) => {
+        const next = new Set(prev);
+        if (result.isFavorited) next.add(product.id!);
+        else next.delete(product.id!);
+        return next;
+      });
+      if (favoritesLoaded) {
+        if (result.isFavorited) setFavoriteProducts((prev) => [...prev, product]);
+        else setFavoriteProducts((prev) => prev.filter((p) => p.id !== product.id));
+      }
+    } else {
+      // Kassal product not yet in local DB — upsert first, then favorite
+      const result = await ensureAndToggleFavoriteAction(product);
+      if (!result.ok) return;
+      // Patch the product in results with the new local id so re-clicking works
+      setResults((prev) =>
+        prev.map((p) =>
+          p.source === product.source && p.externalId === product.externalId
+            ? { ...p, id: result.localId }
+            : p,
+        ),
+      );
+      setFavoriteIds((prev) => {
+        const next = new Set(prev);
+        if (result.isFavorited) next.add(result.localId);
+        else next.delete(result.localId);
+        return next;
+      });
+      if (favoritesLoaded && result.isFavorited) {
+        setFavoriteProducts((prev) => [...prev, { ...product, id: result.localId }]);
+      }
     }
   }
 
@@ -414,7 +436,7 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
                 </p>
                 <ul>
                   {recentItems.map((item) => (
-                    <li key={item.productName} className="flex items-center gap-3 border-b border-[var(--color-border)] py-2.5">
+                    <li key={item.productName} className="flex items-center border-b border-[var(--color-border)] py-2.5">
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{item.productName}</p>
                         <p className="text-xs text-[var(--color-muted-foreground)]">
@@ -422,6 +444,30 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
                           {item.brand ? ` · ${item.brand}` : ""}
                         </p>
                       </div>
+                      {item.foodProductId && (
+                        <button
+                          type="button"
+                          aria-label={favoriteIds.has(item.foodProductId) ? "Fjern favoritt" : "Legg til favoritt"}
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            const result = await toggleFavoriteAction(item.foodProductId!);
+                            if (!result.ok) return;
+                            setFavoriteIds((prev) => {
+                              const next = new Set(prev);
+                              if (result.isFavorited) next.add(item.foodProductId!);
+                              else next.delete(item.foodProductId!);
+                              return next;
+                            });
+                          }}
+                          className="shrink-0 px-2 py-1"
+                        >
+                          <Star className={cn("h-5 w-5 transition-colors",
+                            favoriteIds.has(item.foodProductId)
+                              ? "fill-[var(--amber)] text-[var(--amber)]"
+                              : "text-[var(--color-muted-foreground)]"
+                          )} />
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => handleReAdd(item)}

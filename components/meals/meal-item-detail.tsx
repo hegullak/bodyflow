@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Star } from "lucide-react";
 import type { MealLogItem } from "@/db/schema";
 import { updateMealItemAction, removeMealItemAction } from "@/lib/actions/meals";
+import { getFavoriteIdsAction, toggleFavoriteAction } from "@/lib/actions/foods";
 import { Button } from "@/components/ui/button";
 import { MEAL_LABELS } from "@/lib/meals/constants";
+import { cn } from "@/lib/utils";
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr + "T12:00:00").toLocaleDateString("nb-NO", {
@@ -21,6 +23,18 @@ export function MealItemDetail({ item }: { item: MealLogItem }) {
   const [error, setError] = useState<string | null>(null);
   const [saving, startSave] = useTransition();
   const [deleting, startDelete] = useTransition();
+  const [isFavorited, setIsFavorited] = useState(false);
+
+  useEffect(() => {
+    if (!item.foodProductId) return;
+    getFavoriteIdsAction().then((ids) => setIsFavorited(ids.includes(item.foodProductId!)));
+  }, [item.foodProductId]);
+
+  async function handleToggleFavorite() {
+    if (!item.foodProductId) return;
+    const result = await toggleFavoriteAction(item.foodProductId);
+    if (result.ok) setIsFavorited(result.isFavorited);
+  }
 
   const parsed = parseFloat(grams);
   const valid = !isNaN(parsed) && parsed > 0;
@@ -57,13 +71,31 @@ export function MealItemDetail({ item }: { item: MealLogItem }) {
         Tilbake
       </button>
 
-      <h1 className="text-xl font-bold leading-tight">{item.productName}</h1>
-      {item.brand && (
-        <p className="text-sm text-[var(--color-muted-foreground)]">{item.brand}</p>
-      )}
-      <p className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">
-        {MEAL_LABELS[item.mealType]} · {formatDate(item.logDate)}
-      </p>
+      <div className="flex items-start gap-2">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl font-bold leading-tight">{item.productName}</h1>
+          {item.brand && (
+            <p className="text-sm text-[var(--color-muted-foreground)]">{item.brand}</p>
+          )}
+          <p className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">
+            {MEAL_LABELS[item.mealType]} · {formatDate(item.logDate)}
+          </p>
+        </div>
+        {item.foodProductId && (
+          <button
+            type="button"
+            aria-label={isFavorited ? "Fjern favoritt" : "Legg til favoritt"}
+            onClick={handleToggleFavorite}
+            className="shrink-0 p-1"
+          >
+            <Star className={cn("h-6 w-6 transition-colors",
+              isFavorited
+                ? "fill-[var(--amber)] text-[var(--amber)]"
+                : "text-[var(--color-muted-foreground)]"
+            )} />
+          </button>
+        )}
+      </div>
 
       <div className="mt-6 space-y-3">
         {/* Calories */}
