@@ -7,7 +7,6 @@ import type { MealLogItem } from "@/db/schema";
 import { updateMealItemAction, removeMealItemAction } from "@/lib/actions/meals";
 import { getFavoriteIdsAction, toggleFavoriteAction } from "@/lib/actions/foods";
 import { Button } from "@/components/ui/button";
-import { MEAL_LABELS } from "@/lib/meals/constants";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/providers/lang-provider";
 
@@ -81,7 +80,7 @@ export function MealItemDetail({ item }: { item: MealLogItem }) {
             <p className="text-sm text-[var(--color-muted-foreground)]">{item.brand}</p>
           )}
           <p className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">
-            {MEAL_LABELS[item.mealType]} · {formatDate(item.logDate)}
+            {t.meals.mealLabel(item.mealType)} · {formatDate(item.logDate)}
           </p>
         </div>
         {item.foodProductId && (
