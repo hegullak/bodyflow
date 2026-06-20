@@ -55,7 +55,7 @@ export const no: Translations = {
   },
   checkIn: {
     title: "Innsjekk",
-    weightKg: "Vekt (kg)",
+    weightKg: "Vekt",
     waist: "Midje",
     chest: "Bryst",
     hip: "Hofte",

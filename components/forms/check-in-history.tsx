@@ -88,6 +88,7 @@ function SwipeRow({
 
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
     sw.current = { startX: e.clientX, startY: e.clientY, tracking: true, dragging: false, revealed: sw.current.revealed };
+    e.currentTarget.setPointerCapture(e.pointerId);
     if (innerRef.current) innerRef.current.style.transition = "none";
   }
 
@@ -127,11 +128,12 @@ function SwipeRow({
 
   return (
     <div className="relative overflow-hidden">
+      {/* Revealed action buttons */}
       <div className="absolute inset-y-0 right-0 flex" style={{ width: REVEAL_W }}>
         <button
           type="button"
           onClick={handleEdit}
-          className="flex w-14 items-center justify-center bg-blue-500 text-white active:opacity-80"
+          className="flex w-14 items-center justify-center bg-[var(--accent)] text-[var(--card)] active:opacity-80"
           aria-label="Rediger"
         >
           <Pencil className="h-4 w-4" />
@@ -207,19 +209,14 @@ function EditSheet({
 
   return (
     <>
+      <div className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div
-        className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <div
-        className="fixed bottom-24 left-4 right-4 z-[61] rounded-[var(--radius-lg)] border border-[var(--border)] p-4 shadow-2xl overflow-y-auto"
-        style={{
-          maxHeight: "calc(100vh - 10rem)",
-          backgroundColor: "rgba(20,24,36,0.95)",
-          backdropFilter: "blur(30px)",
-          WebkitBackdropFilter: "blur(30px)",
-        }}
+        className="fixed bottom-0 left-0 right-0 z-[61] rounded-t-[var(--radius-lg)] border-t border-[var(--border)] bg-[var(--card)] p-4 pb-8 shadow-2xl"
+        style={{ maxHeight: "80vh", overflowY: "auto" }}
       >
+        <div className="mb-1 flex justify-center">
+          <div className="h-1 w-10 rounded-full bg-[var(--border)]" />
+        </div>
         <div className="mb-4 flex items-center justify-between">
           <p className="text-sm font-semibold">{formatWeekdayDate(entry.logDate)}</p>
           <button type="button" onClick={onClose} className="text-xs text-[var(--text3)]">
@@ -228,12 +225,13 @@ function EditSheet({
         </div>
         <div className="space-y-3">
           <div>
-            <Label htmlFor={`es-w-${entry.logDate}`}>Vekt (kg)</Label>
+            <Label htmlFor={`es-w-${entry.logDate}`}>Vekt</Label>
             <Input
               id={`es-w-${entry.logDate}`}
               type="number" inputMode="decimal" step="0.1" placeholder="78.4"
               value={fields.weightKg}
               onChange={(e) => set("weightKg", e.target.value)}
+              autoFocus
             />
           </div>
           <div className="grid grid-cols-3 gap-2">

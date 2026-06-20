@@ -55,7 +55,7 @@ export const en: Translations = {
   },
   checkIn: {
     title: "Check-in",
-    weightKg: "Weight (kg)",
+    weightKg: "Weight",
     waist: "Waist",
     chest: "Chest",
     hip: "Hip",
