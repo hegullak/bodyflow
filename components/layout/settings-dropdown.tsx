@@ -3,7 +3,7 @@
 import { useClerk, useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { BarChart3, LogOut, Settings, UserRound, Wifi, WifiOff } from "lucide-react";
+import { BarChart3, LogOut, Settings, ShieldCheck, UserRound, Wifi, WifiOff } from "lucide-react";
 
 export function SettingsDropdown({ withingsConnected }: { withingsConnected: boolean }) {
   const { user } = useUser();
@@ -72,6 +72,14 @@ export function SettingsDropdown({ withingsConnected }: { withingsConnected: boo
             >
               <BarChart3 className="h-4 w-4 text-[var(--text3)]" strokeWidth={1.5} />
               Statistics
+            </button>
+
+            <button
+              onClick={() => { setOpen(false); router.push("/admin"); }}
+              className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-2 py-2 text-sm text-[var(--text1)] hover:bg-[var(--card2)] transition-colors"
+            >
+              <ShieldCheck className="h-4 w-4 text-[var(--text3)]" strokeWidth={1.5} />
+              Admin
             </button>
 
             <button

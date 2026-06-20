@@ -1,10 +1,18 @@
 "use client";
 
 import { useState, useTransition, useCallback } from "react";
+import Image from "next/image";
 import { searchExercisesAdminAction, updateExerciseNamesAction } from "@/lib/actions/admin";
 import { Input } from "@/components/ui/field";
 
-type Row = { id: string; name: string; nameNo: string | null; slug: string; equipment: string };
+type Row = {
+  id: string;
+  name: string;
+  nameNo: string | null;
+  slug: string;
+  equipment: string;
+  imageUrl: string | null;
+};
 
 function ExerciseRow({ row, onSaved }: { row: Row; onSaved: (r: Row) => void }) {
   const [editing, setEditing] = useState(false);
@@ -28,14 +36,36 @@ function ExerciseRow({ row, onSaved }: { row: Row; onSaved: (r: Row) => void }) 
     setEditing(false);
   }
 
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter") { e.preventDefault(); handleSave(); }
+    if (e.key === "Escape") handleCancel();
+  }
+
   if (editing) {
     return (
       <tr className="bg-[var(--card2)]">
         <td className="px-3 py-2">
-          <Input value={name} onChange={(e) => setName(e.target.value)} className="text-xs" autoFocus />
+          {row.imageUrl && (
+            <Image src={row.imageUrl} alt={row.name} width={40} height={40} className="rounded object-cover" unoptimized />
+          )}
         </td>
         <td className="px-3 py-2">
-          <Input value={nameNo} onChange={(e) => setNameNo(e.target.value)} className="text-xs" placeholder="Norsk navn…" />
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="text-xs"
+            autoFocus
+          />
+        </td>
+        <td className="px-3 py-2">
+          <Input
+            value={nameNo}
+            onChange={(e) => setNameNo(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Norsk navn…"
+            className="text-xs"
+          />
         </td>
         <td className="px-3 py-2 text-xs text-[var(--text3)]">{row.equipment}</td>
         <td className="px-3 py-2">
@@ -59,8 +89,17 @@ function ExerciseRow({ row, onSaved }: { row: Row; onSaved: (r: Row) => void }) 
 
   return (
     <tr className="border-t border-[var(--card-border)] hover:bg-[var(--card2)]">
+      <td className="px-3 py-2">
+        {row.imageUrl ? (
+          <Image src={row.imageUrl} alt={row.name} width={40} height={40} className="rounded object-cover" unoptimized />
+        ) : (
+          <div className="h-10 w-10 rounded bg-[var(--card2)]" />
+        )}
+      </td>
       <td className="px-3 py-2 text-sm">{row.name}</td>
-      <td className="px-3 py-2 text-sm text-[var(--text2)]">{row.nameNo ?? <span className="italic text-[var(--text3)]">–</span>}</td>
+      <td className="px-3 py-2 text-sm text-[var(--text2)]">
+        {row.nameNo ?? <span className="italic text-[var(--text3)]">–</span>}
+      </td>
       <td className="px-3 py-2 text-xs text-[var(--text3)]">{row.equipment}</td>
       <td className="px-3 py-2">
         <button type="button" onClick={() => setEditing(true)} className="text-xs text-[var(--accent)]">
@@ -106,7 +145,6 @@ export function ExerciseTable({ initial }: { initial: Row[] }) {
 
   return (
     <div>
-      {/* Search + export */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <Input
           value={query}
@@ -135,6 +173,7 @@ export function ExerciseTable({ initial }: { initial: Row[] }) {
         <table className="w-full text-left">
           <thead>
             <tr className="border-b border-[var(--card-border)]">
+              <th className="px-3 py-2 w-14" />
               <th className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--text3)]">Engelsk</th>
               <th className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--text3)]">Norsk</th>
               <th className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--text3)]">Utstyr</th>

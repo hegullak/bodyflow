@@ -45,6 +45,7 @@ export async function searchExercisesAdminAction(query: string, offset = 0, limi
       nameNo: exercises.nameNo,
       slug: exercises.slug,
       equipment: exercises.equipment,
+      imageUrl: exercises.imageUrl,
     })
     .from(exercises)
     .where(q ? or(ilike(exercises.name, `%${q}%`), ilike(exercises.nameNo, `%${q}%`)) : undefined)

@@ -30,6 +30,11 @@ function FoodRow({ row, onSaved }: { row: Row; onSaved: (r: Row) => void }) {
     });
   }
 
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter") { e.preventDefault(); handleSave(); }
+    if (e.key === "Escape") { setPrettyName(row.prettyName ?? ""); setEditing(false); }
+  }
+
   if (editing) {
     return (
       <tr className="bg-[var(--card2)]">
@@ -39,6 +44,7 @@ function FoodRow({ row, onSaved }: { row: Row; onSaved: (r: Row) => void }) {
           <Input
             value={prettyName}
             onChange={(e) => setPrettyName(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder="Pent navn…"
             className="text-xs"
             autoFocus
