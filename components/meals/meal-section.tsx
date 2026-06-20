@@ -1,14 +1,15 @@
 "use client";
 
-import { useRef, useTransition, useState } from "react";
+import { useEffect, useRef, useTransition, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Plus, Trash2, Zap } from "lucide-react";
+import { Pencil, Plus, Star, Trash2, Zap } from "lucide-react";
 import type { MealLogItem, MealType } from "@/db/schema";
 import { removeMealItemAction, updateMealItemAction, copyMealsFromPreviousDateAction, quickAddMealItemAction } from "@/lib/actions/meals";
 import { saveMealAction } from "@/lib/actions/saved-meals";
+import { getFavoriteIdsAction, toggleFavoriteAction } from "@/lib/actions/foods";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/field";
-import { addDaysToIsoDate } from "@/lib/utils";
+import { addDaysToIsoDate, cn } from "@/lib/utils";
 import { useT } from "@/components/providers/lang-provider";
 
 // ---------------------------------------------------------------------------
@@ -150,6 +151,19 @@ function EditMealSheet({
   const m = t.meals;
   const [grams, setGrams] = useState(String(Math.round(item.quantityGrams)));
   const [saving, startSave] = useTransition();
+  const [isFavorited, setIsFavorited] = useState(false);
+
+  useEffect(() => {
+    if (!item.foodProductId) return;
+    getFavoriteIdsAction().then((ids) => setIsFavorited(ids.includes(item.foodProductId!)));
+  }, [item.foodProductId]);
+
+  async function handleToggleFavorite(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!item.foodProductId) return;
+    const result = await toggleFavoriteAction(item.foodProductId);
+    if (result.ok) setIsFavorited(result.isFavorited);
+  }
 
   const parsed = parseFloat(grams);
   const valid = !isNaN(parsed) && parsed > 0;
@@ -180,11 +194,22 @@ function EditMealSheet({
           WebkitBackdropFilter: "blur(30px)",
         }}
       >
-        <div className="mb-4 flex items-center justify-between">
-          <p className="text-sm font-semibold">{item.productName}</p>
-          <button type="button" onClick={onClose} className="text-xs text-[var(--text3)]">
-            {t.common.cancel}
-          </button>
+        <div className="mb-4 flex items-center justify-between gap-2">
+          <p className="min-w-0 flex-1 truncate text-sm font-semibold">{item.productName}</p>
+          <div className="flex shrink-0 items-center gap-2">
+            {item.foodProductId && (
+              <button type="button" onClick={handleToggleFavorite} aria-label={isFavorited ? m.removeFavorite : m.addFavorite}>
+                <Star className={cn("h-5 w-5 transition-colors",
+                  isFavorited
+                    ? "fill-[var(--amber)] text-[var(--amber)]"
+                    : "text-[var(--text2)]"
+                )} />
+              </button>
+            )}
+            <button type="button" onClick={onClose} className="text-xs text-[var(--text3)]">
+              {t.common.cancel}
+            </button>
+          </div>
         </div>
         <div className="space-y-3">
           <div>

@@ -32,7 +32,7 @@ function computeDiff(cur: CheckInSnapshot, prev: CheckInSnapshot | null): CheckI
 
 type Part = { label: string; value: number; dv: number | null };
 
-function SummaryLine({ entry, diff }: { entry: CheckInSnapshot; diff: CheckInDiff | null }) {
+function SummaryLine({ entry, diff, showDiff }: { entry: CheckInSnapshot; diff: CheckInDiff | null; showDiff: boolean }) {
   const parts: Part[] = (
     [
       { label: "V", value: entry.weightKg, dv: diff?.weightKg ?? null },
@@ -45,21 +45,15 @@ function SummaryLine({ entry, diff }: { entry: CheckInSnapshot; diff: CheckInDif
   if (parts.length === 0) return <p className="mt-0.5 text-xs text-[var(--text3)]">—</p>;
 
   return (
-    <p className="mt-0.5 text-xs leading-relaxed">
+    <p className="mt-0.5 text-xs leading-relaxed text-[var(--text2)]">
       {parts.map((p, i) => {
-        const hasDiff = p.dv != null && p.dv !== 0;
+        const hasDiff = showDiff && p.dv != null && p.dv !== 0;
         const sign = p.dv != null && p.dv > 0 ? "+" : "";
-        const tone =
-          p.dv != null && p.dv > 0
-            ? "text-[#9a5b45]"
-            : p.dv != null && p.dv < 0
-              ? "text-[var(--color-primary)]"
-              : "text-[var(--text2)]";
         return (
-          <span key={p.label} className={tone}>
+          <span key={p.label}>
             {i > 0 && <span className="text-[var(--text3)]"> · </span>}
             {p.label} {p.value}
-            {hasDiff && ` (${sign}${p.dv})`}
+            {hasDiff && <span className="text-[var(--text3)]"> ({sign}{p.dv})</span>}
           </span>
         );
       })}
@@ -70,11 +64,13 @@ function SummaryLine({ entry, diff }: { entry: CheckInSnapshot; diff: CheckInDif
 function SwipeRow({
   entry,
   diff,
+  showDiff,
   onEditOpen,
   onDeleted,
 }: {
   entry: CheckInSnapshot;
   diff: CheckInDiff | null;
+  showDiff: boolean;
   onEditOpen: () => void;
   onDeleted: () => void;
 }) {
@@ -161,7 +157,7 @@ function SwipeRow({
         style={{ touchAction: "pan-y", transform: "translateX(0)" }}
       >
         <p className="text-sm font-medium text-[var(--text1)]">{formatWeekdayDate(entry.logDate)}</p>
-        <SummaryLine entry={entry} diff={diff} />
+        <SummaryLine entry={entry} diff={diff} showDiff={showDiff} />
       </div>
     </div>
   );
@@ -310,6 +306,7 @@ export function CheckInHistory({
               key={entry.logDate}
               entry={entry}
               diff={computeDiff(entry, entries[i + 1] ?? null)}
+              showDiff={i === 0}
               onEditOpen={() => setEditingEntry(entry)}
               onDeleted={() =>
                 setEntries((prev) => prev.filter((e) => e.logDate !== entry.logDate))
