@@ -1,6 +1,6 @@
 import { and, count, desc, eq, gte, isNotNull, lte } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { bodyMeasurements, dailyBodyLogs, userProfiles, workoutSessions } from "@/db/schema";
+import { bodyMeasurements, dailyBodyLogs, scheduledSessions, userProfiles, workoutSessions } from "@/db/schema";
 import { scopeBy } from "@/lib/auth/scope";
 import {
   calculateBmi,
@@ -33,7 +33,7 @@ export async function getDashboardData(userId: string, referenceDate = new Date(
   // For workout session query we still need a Date
   const weekStart = weekStartDate;
 
-  const [profile, todayLog, recentLogs, latestMeasurement, weekLogs, weekSessionsResult] =
+  const [profile, todayLog, recentLogs, latestMeasurement, weekLogs, weekSessionsResult, weekCardioResult] =
     await Promise.all([
       db.query.userProfiles.findFirst({ where: eq(userProfiles.userId, userId) }),
       db.query.dailyBodyLogs.findFirst({
@@ -65,6 +65,18 @@ export async function getDashboardData(userId: string, referenceDate = new Date(
             isNotNull(workoutSessions.endedAt),
           ),
         ),
+      db
+        .select({ cardioSlug: scheduledSessions.cardioSlug })
+        .from(scheduledSessions)
+        .where(
+          and(
+            eq(scheduledSessions.userId, userId),
+            gte(scheduledSessions.date, weekStartIso),
+            lte(scheduledSessions.date, today),
+            eq(scheduledSessions.isCompleted, true),
+            isNotNull(scheduledSessions.cardioSlug),
+          ),
+        ),
     ]);
 
   const latestWeightLog = recentLogs.find((log) => log.weightKg != null) ?? null;
@@ -89,6 +101,9 @@ export async function getDashboardData(userId: string, referenceDate = new Date(
       : null;
 
   const weekSessionsCount = weekSessionsResult[0]?.count ?? 0;
+  const weekCompletedCardioSlugs = weekCardioResult
+    .map((r) => r.cardioSlug)
+    .filter((s): s is string => s != null);
 
   const measurementDate = latestMeasurement?.measuredOn ?? null;
   const weightDate = latestWeightLog?.logDate ?? null;
@@ -114,6 +129,7 @@ export async function getDashboardData(userId: string, referenceDate = new Date(
     measurementsHeaderDate,
     lookingForwardTo: profile?.lookingForwardTo ?? null,
     vibe: profile?.vibe ?? null,
+    weekCompletedCardioSlugs,
   };
 }
 
