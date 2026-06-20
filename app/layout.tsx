@@ -20,6 +20,10 @@ export const metadata: Metadata = {
   title: "bodyflow",
   description: "Private personal body and calorie tracking",
   manifest: "/manifest.webmanifest",
+  icons: {
+    icon: "/icons/favicon.png",
+    apple: "/icons/apple-touch-icon.png",
+  },
 };
 
 export const viewport: Viewport = {
