@@ -93,10 +93,10 @@ function DaySheet({
   return (
     <>
       {/* backdrop */}
-      <div className="fixed inset-0 z-40 bg-black/40" onClick={onClose} />
+      <div className="fixed inset-0 z-[60] bg-black/40" onClick={onClose} />
 
       {/* sheet */}
-      <div className="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl bg-[var(--card)] border-t border-[var(--border)] pb-8">
+      <div className="fixed inset-x-0 bottom-0 z-[70] rounded-t-2xl bg-[var(--card)] border-t border-[var(--border)] pb-8">
         {/* drag pill */}
         <div className="flex justify-center pt-2 pb-1">
           <div className="h-1 w-10 rounded-full bg-[var(--border)]" />
