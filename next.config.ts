@@ -14,6 +14,7 @@ const csp = [
   "connect-src 'self' https://*.clerk.accounts.dev https://api.kassal.app",
   "frame-src 'self' https://challenges.cloudflare.com",
   "frame-ancestors 'none'",
+  "worker-src blob:",
 ].join("; ");
 
 const securityHeaders = [
