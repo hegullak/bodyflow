@@ -72,12 +72,18 @@ export async function getDashboardData(userId: string, referenceDate = new Date(
     profile?.dailyCalorieTarget ?? null,
   );
 
+  // Days elapsed since Monday (including today), clamped 1–7
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const weekDaysElapsed = Math.min(
+    7,
+    Math.max(1, Math.round((new Date(today + "T00:00:00").getTime() - weekStart.getTime()) / msPerDay) + 1),
+  );
+
   const weekCaloriesEntries = weekLogs.filter((l) => l.calorieIntake != null);
   const weekAvgCalories =
     weekCaloriesEntries.length > 0
       ? Math.round(
-          weekCaloriesEntries.reduce((s, l) => s + l.calorieIntake!, 0) /
-            weekCaloriesEntries.length,
+          weekCaloriesEntries.reduce((s, l) => s + l.calorieIntake!, 0) / weekDaysElapsed,
         )
       : null;
 

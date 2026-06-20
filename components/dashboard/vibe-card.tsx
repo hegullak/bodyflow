@@ -8,17 +8,6 @@ import { useT } from "@/components/providers/lang-provider";
 
 type Vibe = "good" | "undecided" | "improve";
 
-const OPTIONS: Array<{
-  vibe: Vibe;
-  label: string;
-  colorVar: string;
-  bgVar: string;
-}> = [
-  { vibe: "good",      label: "🟢  Good",        colorVar: "--color-green", bgVar: "--color-green-light" },
-  { vibe: "undecided", label: "🟡  Undecided",   colorVar: "--color-amber", bgVar: "--color-amber-light" },
-  { vibe: "improve",   label: "🔴  Can improve", colorVar: "--color-red",   bgVar: "--color-red-light"   },
-];
-
 export function VibeCard({ initialVibe }: { initialVibe: string | null }) {
   const t = useT();
   const d = t.dashboard;
@@ -30,21 +19,17 @@ export function VibeCard({ initialVibe }: { initialVibe: string | null }) {
     await updateVibeAction(next);
   }
 
-  const current = OPTIONS.find((o) => o.vibe === vibe);
-  const labels: Record<Vibe, string> = { good: d.good, undecided: d.undecided, improve: d.canImprove };
+  const options: Array<{ vibe: Vibe; label: string }> = [
+    { vibe: "good",      label: d.good },
+    { vibe: "undecided", label: d.undecided },
+    { vibe: "improve",   label: d.canImprove },
+  ];
 
   return (
-    <Card
-      style={
-        current
-          ? { backgroundColor: `var(${current.bgVar})`, borderColor: `var(${current.colorVar})` }
-          : undefined
-      }
-    >
+    <Card>
       <CardTitle>{d.totalOverallVibe}</CardTitle>
-
       <div className="mt-3 flex gap-2">
-        {OPTIONS.map((opt) => {
+        {options.map((opt) => {
           const active = vibe === opt.vibe;
           return (
             <button
@@ -54,20 +39,15 @@ export function VibeCard({ initialVibe }: { initialVibe: string | null }) {
               className={cn(
                 "flex-1 rounded-[var(--radius-sm)] border py-1.5 text-xs font-medium transition-all",
                 active
-                  ? "border-transparent"
-                  : "border-[var(--border)] bg-[var(--card)] text-[var(--text2)]",
+                  ? opt.vibe === "good"
+                    ? "border-[var(--green)] bg-[var(--green-light)] text-[var(--green)]"
+                    : opt.vibe === "undecided"
+                      ? "border-[var(--amber)] bg-[var(--amber-light)] text-[var(--amber)]"
+                      : "border-[var(--red)] bg-[var(--red-light)] text-[var(--red)]"
+                  : "border-[var(--card-border)] bg-transparent text-[var(--text2)]",
               )}
-              style={
-                active
-                  ? {
-                      backgroundColor: `var(${opt.bgVar})`,
-                      color: `var(${opt.colorVar})`,
-                      borderColor: `var(${opt.colorVar})`,
-                    }
-                  : undefined
-              }
             >
-              {labels[opt.vibe]}
+              {opt.label}
             </button>
           );
         })}

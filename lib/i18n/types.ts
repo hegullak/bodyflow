@@ -53,6 +53,7 @@ export type Translations = {
     good: string;
     undecided: string;
     canImprove: string;
+    dailyReviewTitle: string;
   };
   checkIn: {
     title: string;
