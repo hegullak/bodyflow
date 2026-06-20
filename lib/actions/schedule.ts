@@ -7,8 +7,6 @@ import { scheduledSessions } from "@/db/schema";
 import { requireUserId } from "@/lib/auth/current-user";
 import type { CardioSlug } from "@/lib/training/cardio";
 
-export type { CardioSlug };
-
 export async function getScheduledSessionsForMonth(year: number, month: number) {
   const userId = await requireUserId();
   const db = getDb();
