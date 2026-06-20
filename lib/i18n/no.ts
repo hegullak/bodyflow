@@ -127,6 +127,7 @@ export const no: Translations = {
     noSavedMeals: "Ingen lagrede måltider ennå.",
     addWithPhoto: "Legg til selv med bilde →",
     missingCalorieData: "Mangler kaloridata.",
+    today: "I dag",
   },
   mealItem: {
     calories: "Kalorier",
@@ -210,7 +211,7 @@ export const no: Translations = {
     maintenance: "Vedlikehold",
     muscleGain: "Muskelbygging",
     dailyKcal: "Daglig kcal-mål",
-    targetWeight: "Målvekt (kg)",
+    targetWeight: "Målvekt",
     units: "Enheter",
     metric: "Metrisk",
     imperial: "Imperialt",

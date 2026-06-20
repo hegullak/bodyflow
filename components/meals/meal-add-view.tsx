@@ -13,7 +13,7 @@ import { BarcodeScanner, cameraErrorMessage, requestCameraStream } from "@/compo
 import { FoodScanWizard } from "@/components/meals/food-scan-wizard";
 import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label } from "@/components/ui/field";
-import { cn } from "@/lib/utils";
+import { cn, addDaysToIsoDate, todayIsoDate } from "@/lib/utils";
 import { useT } from "@/components/providers/lang-provider";
 
 type Tab = "search" | "favorites" | "scan" | "quick" | "saved";
@@ -35,6 +35,23 @@ function sourceLabel(p: FoodProductSummary) {
 
 const SOURCE_ORDER = { matvaretabellen: 0, kassal: 1, custom: 2 } as const;
 
+function buildDateOptions(weekdayNames: string[], todayLabel: string) {
+  const today = todayIsoDate();
+  return [0, 1, 2, 3, 4].map((offset) => {
+    const iso = addDaysToIsoDate(today, offset);
+    let label: string;
+    if (offset === 0) {
+      label = todayLabel;
+    } else {
+      const d = new Date(iso + "T00:00:00");
+      // getDay: 0=Sun,1=Mon,...,6=Sat → weekdayNames is Mon..Sun (index 0..6)
+      const idx = (d.getDay() + 6) % 7;
+      label = `${weekdayNames[idx]!.slice(0, 3)} ${d.getDate()}`;
+    }
+    return { iso, label };
+  });
+}
+
 function groupResults(products: FoodProductSummary[]) {
   const sorted = [...products].sort(
     (a, b) => (SOURCE_ORDER[a.source] ?? 9) - (SOURCE_ORDER[b.source] ?? 9),
@@ -55,6 +72,9 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
   const m = t.meals;
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("search");
+
+  // Date selection (today + next 4 days)
+  const [selectedDate, setSelectedDate] = useState(logDate);
 
   // Search
   const [query, setQuery] = useState("");
@@ -158,13 +178,18 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
       // Kassal product not yet in local DB — upsert first, then favorite
       const result = await ensureAndToggleFavoriteAction(product);
       if (!result.ok) return;
-      // Patch the product in results with the new local id so re-clicking works
+      // Patch id everywhere so re-clicking and star state work correctly
       setResults((prev) =>
         prev.map((p) =>
           p.source === product.source && p.externalId === product.externalId
             ? { ...p, id: result.localId }
             : p,
         ),
+      );
+      setSelected((prev) =>
+        prev?.source === product.source && prev.externalId === product.externalId
+          ? { ...prev, id: result.localId }
+          : prev,
       );
       setFavoriteIds((prev) => {
         const next = new Set(prev);
@@ -248,7 +273,7 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
     const grams = toGrams(Number(quantityInput), unit);
     if (!grams || grams <= 0) { setAddError("Skriv inn mengde."); return; }
     const fd = new FormData();
-    fd.set("logDate", logDate);
+    fd.set("logDate", selectedDate);
     fd.set("mealType", mealType);
     if (selected.id) fd.set("foodProductId", selected.id);
     fd.set("source", selected.source);
@@ -266,7 +291,7 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
     const kcal = Number(quickKcal);
     if (!kcal || kcal <= 0) { setQuickError("Skriv inn kalorier."); return; }
     startTransition(async () => {
-      const result = await quickAddMealItemAction(logDate, mealType, quickName, kcal);
+      const result = await quickAddMealItemAction(selectedDate, mealType, quickName, kcal);
       if (result.ok) {
         setQuickDone(true);
         setQuickName(""); setQuickKcal(""); setQuickError(null);
@@ -277,14 +302,14 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
 
   async function handleReAdd(item: RecentMealItem) {
     setAddingRecentName(item.productName);
-    const result = await reAddMealItemAction(logDate, mealType, item);
+    const result = await reAddMealItemAction(selectedDate, mealType, item);
     setAddingRecentName(null);
     if (result.ok) router.back();
   }
 
   async function handleAddSavedMeal(id: string) {
     setAddingSavedId(id);
-    const result = await addSavedMealToLogAction(id, logDate, mealType);
+    const result = await addSavedMealToLogAction(id, selectedDate, mealType);
     setAddingSavedId(null);
     if (result.ok) router.back();
   }
@@ -365,6 +390,26 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
         {kcalPreview != null && (
           <p className="text-sm font-semibold text-[var(--accent)]">≈ {kcalPreview} kcal</p>
         )}
+        {/* Date picker — today + next 4 days */}
+        <div>
+          <div className="flex gap-1 overflow-x-auto pb-1">
+            {buildDateOptions(t.profile.weekdayNames, m.today).map(({ iso, label }) => (
+              <button
+                key={iso}
+                type="button"
+                onClick={() => setSelectedDate(iso)}
+                className={cn(
+                  "flex-shrink-0 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
+                  selectedDate === iso
+                    ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--card)]"
+                    : "border-[var(--border)] text-[var(--text2)]",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
         {addError && <p className="text-xs text-[var(--red)]">{addError}</p>}
         <Button type="button" className="w-full" disabled={pending || !selected.kcalPer100g || !quantityInput} onClick={handleAdd}>
           {pending ? m.addingItem : m.addToMeal}

@@ -119,6 +119,7 @@ export type Translations = {
     noSavedMeals: string;
     addWithPhoto: string;
     missingCalorieData: string;
+    today: string;
   };
   mealItem: {
     calories: string;

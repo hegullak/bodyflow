@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { ClientOnly } from "@/components/client-only";
 import type { UserProfile } from "@/db/schema";
 import { upsertProfileAction } from "@/lib/actions/profile";
@@ -17,6 +17,13 @@ export function ProfileForm({ profile }: { profile: UserProfile | null }) {
   const t = useT();
   const p = t.profile;
   const [state, formAction, pending] = useActionState(upsertProfileAction, null);
+  const [units, setUnits] = useState<"metric" | "imperial">(profile?.preferredUnits ?? "metric");
+
+  const heightLabel = units === "metric" ? `${p.height} (cm)` : `${p.height} (in)`;
+  const weightLabel = units === "metric" ? `${p.weight} (kg)` : `${p.weight} (lbs)`;
+  const targetLabel = units === "metric" ? `${p.targetWeight} (kg)` : `${p.targetWeight} (lbs)`;
+  const heightPlaceholder = units === "metric" ? "173" : "68";
+  const weightPlaceholder = units === "metric" ? "80" : "176";
 
   return (
     <ClientOnly fallback={<div className="min-h-48" aria-busy="true" />}>
@@ -55,27 +62,27 @@ export function ProfileForm({ profile }: { profile: UserProfile | null }) {
       {/* Row 2: Height + Weight */}
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <Label htmlFor="heightCm">{p.height}</Label>
+          <Label htmlFor="heightCm">{heightLabel}</Label>
           <Input
             id="heightCm"
             name="heightCm"
             type="number"
             inputMode="decimal"
             step="0.1"
-            placeholder="173"
+            placeholder={heightPlaceholder}
             defaultValue={profile?.heightCm ?? ""}
           />
           <FieldError message={state?.ok === false ? state.fieldErrors?.heightCm?.[0] : undefined} />
         </div>
         <div>
-          <Label htmlFor="weightKg">{p.weight}</Label>
+          <Label htmlFor="weightKg">{weightLabel}</Label>
           <Input
             id="weightKg"
             name="weightKg"
             type="number"
             inputMode="decimal"
             step="0.1"
-            placeholder="80"
+            placeholder={weightPlaceholder}
             defaultValue={profile?.weightKg ?? ""}
           />
         </div>
@@ -98,7 +105,7 @@ export function ProfileForm({ profile }: { profile: UserProfile | null }) {
           </Select>
         </div>
         <div>
-          <Label htmlFor="targetWeightKg">{p.targetWeight}</Label>
+          <Label htmlFor="targetWeightKg">{targetLabel}</Label>
           <Input
             id="targetWeightKg"
             name="targetWeightKg"
@@ -117,7 +124,8 @@ export function ProfileForm({ profile }: { profile: UserProfile | null }) {
         <Select
           id="preferredUnits"
           name="preferredUnits"
-          defaultValue={profile?.preferredUnits ?? "metric"}
+          value={units}
+          onChange={(e) => setUnits(e.target.value as "metric" | "imperial")}
         >
           <option value="metric">{p.metric}</option>
           <option value="imperial">{p.imperial}</option>
