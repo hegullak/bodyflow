@@ -108,30 +108,22 @@ export async function DashboardCards({ data }: { data: DashboardData }) {
 
       {/* Latest measurements + weight */}
       <Card>
-        <div className="flex items-start justify-between gap-4">
-          <CardTitle>{d.latestMeasurements}</CardTitle>
-          {data.latestWeight != null && (
-            <div className="shrink-0 text-right">
-              <p className="text-base font-semibold leading-tight">{data.latestWeight} kg</p>
-            </div>
-          )}
-        </div>
+        <CardTitle>{d.latestMeasurements}</CardTitle>
 
+        {/* Weight row — always first */}
+        {data.latestWeight != null && (
+          <CardValue className="mt-0.5">{data.latestWeight} kg</CardValue>
+        )}
+
+        {/* Measurements on one line */}
         {data.latestMeasurement ? (
-          <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
-            <div>
-              <p className="text-[var(--text2)]">{d.chest}</p>
-              <p className="font-medium">{formatNumber(data.latestMeasurement.chestCm, " cm")}</p>
-            </div>
-            <div>
-              <p className="text-[var(--text2)]">{d.waist}</p>
-              <p className="font-medium">{formatNumber(data.latestMeasurement.waistCm, " cm")}</p>
-            </div>
-            <div>
-              <p className="text-[var(--text2)]">{d.hip}</p>
-              <p className="font-medium">{formatNumber(data.latestMeasurement.hipCm, " cm")}</p>
-            </div>
-          </div>
+          <p className="mt-1.5 text-sm text-[var(--text2)]">
+            {d.chest} {formatNumber(data.latestMeasurement.chestCm, " cm")}
+            {"  ·  "}
+            {d.waist} {formatNumber(data.latestMeasurement.waistCm, " cm")}
+            {"  ·  "}
+            {d.hip} {formatNumber(data.latestMeasurement.hipCm, " cm")}
+          </p>
         ) : (
           <CardHint className="mt-2">
             {data.latestWeight == null ? d.noMeasurementsOrWeight : d.noMeasurements}

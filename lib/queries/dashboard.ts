@@ -8,22 +8,30 @@ import {
   formatBmiCategory,
   getBmiCategory,
 } from "@/lib/calculations/body-metrics";
-import { todayIsoDate } from "@/lib/utils";
-
-function weekStartDate(ref: Date): Date {
-  const d = new Date(ref);
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
+function localIsoDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 export async function getDashboardData(userId: string, referenceDate = new Date()) {
   const db = getDb();
-  const today = todayIsoDate(referenceDate);
-  const weekStart = weekStartDate(referenceDate);
-  const weekStartIso = weekStart.toISOString().slice(0, 10);
+  const today = localIsoDate(referenceDate);
+
+  // Monday of current week (local time, no UTC shift)
+  const dow = referenceDate.getDay(); // 0=Sun … 6=Sat
+  const daysFromMon = dow === 0 ? 6 : dow - 1; // Mon=0, Tue=1, …, Sun=6
+  const weekStartDate = new Date(referenceDate);
+  weekStartDate.setDate(weekStartDate.getDate() - daysFromMon);
+  weekStartDate.setHours(0, 0, 0, 0);
+  const weekStartIso = localIsoDate(weekStartDate);
+
+  // Days elapsed Mon→today (Mon=1 … Sun=7)
+  const weekDaysElapsed = daysFromMon + 1;
+
+  // For workout session query we still need a Date
+  const weekStart = weekStartDate;
 
   const [profile, todayLog, recentLogs, latestMeasurement, weekLogs, weekSessionsResult] =
     await Promise.all([
@@ -70,13 +78,6 @@ export async function getDashboardData(userId: string, referenceDate = new Date(
   const calorieBalance = calculateCalorieBalance(
     todayLog?.calorieIntake,
     profile?.dailyCalorieTarget ?? null,
-  );
-
-  // Days elapsed since Monday (including today), clamped 1–7
-  const msPerDay = 1000 * 60 * 60 * 24;
-  const weekDaysElapsed = Math.min(
-    7,
-    Math.max(1, Math.round((new Date(today + "T00:00:00").getTime() - weekStart.getTime()) / msPerDay) + 1),
   );
 
   const weekCaloriesEntries = weekLogs.filter((l) => l.calorieIntake != null);
