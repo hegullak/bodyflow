@@ -187,7 +187,9 @@ export type Translations = {
     female: string;
     other: string;
     preferNotToSay: string;
+    age: string;
     height: string;
+    weight: string;
     birthYear: string;
     activity: string;
     sedentary: string;

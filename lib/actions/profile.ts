@@ -14,15 +14,18 @@ export async function upsertProfileAction(
   formData: FormData,
 ): Promise<ActionResult> {
   const userId = await requireUserId();
+
   const parsed = profileFormSchema.safeParse({
     sex: formData.get("sex") || undefined,
-    birthYear: formData.get("birthYear") ?? "",
-    heightCm: formData.get("heightCm"),
+    age: formData.get("age") ?? "",
+    heightCm: formData.get("heightCm") ?? "",
+    weightKg: formData.get("weightKg") ?? "",
     activityLevel: formData.get("activityLevel"),
-    goal: formData.get("goal"),
     targetWeightKg: formData.get("targetWeightKg") ?? "",
-    dailyCalorieTarget: formData.get("dailyCalorieTarget") ?? "",
     preferredUnits: formData.get("preferredUnits"),
+    goal: formData.get("goal") || "maintenance",
+    dailyCalorieTarget: formData.get("dailyCalorieTarget") ?? "",
+    birthYear: formData.get("birthYear") ?? "",
   });
 
   if (!parsed.success) {
@@ -33,12 +36,18 @@ export async function upsertProfileAction(
     };
   }
 
+  const currentYear = new Date().getFullYear();
+  const birthYear = parsed.data.age != null
+    ? currentYear - parsed.data.age
+    : (parsed.data.birthYear ?? null);
+
   const db = getDb();
   const values = {
     userId,
     sex: parsed.data.sex ?? null,
-    birthYear: parsed.data.birthYear ?? null,
-    heightCm: parsed.data.heightCm,
+    birthYear,
+    heightCm: parsed.data.heightCm ?? null,
+    weightKg: parsed.data.weightKg ?? null,
     activityLevel: parsed.data.activityLevel,
     goal: parsed.data.goal,
     targetWeightKg: parsed.data.targetWeightKg ?? null,
@@ -56,6 +65,7 @@ export async function upsertProfileAction(
         sex: values.sex,
         birthYear: values.birthYear,
         heightCm: values.heightCm,
+        weightKg: values.weightKg,
         activityLevel: values.activityLevel,
         goal: values.goal,
         targetWeightKg: values.targetWeightKg,

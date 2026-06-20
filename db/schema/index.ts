@@ -142,6 +142,8 @@ export const userProfiles = pgTable(
 
     heightCm: real("height_cm"),
 
+    weightKg: real("weight_kg"),
+
     activityLevel: activityLevelEnum("activity_level").notNull().default("moderate"),
 
     goal: goalEnum("goal").notNull().default("maintenance"),

@@ -10,6 +10,7 @@ import { getCurrentUserDisplayName, requireUserId } from "@/lib/auth/current-use
 import { getWithingsConnection } from "@/lib/withings/sync";
 import { isWithingsConfigured } from "@/lib/withings/config";
 import { getLang } from "@/lib/i18n/server";
+import { getT } from "@/lib/i18n/server";
 import type { Lang } from "@/lib/i18n/types";
 
 export default async function ProfilePage({
@@ -19,12 +20,13 @@ export default async function ProfilePage({
 }) {
   const userId = await requireUserId();
   const params = await searchParams;
-  const [profile, weighInReminder, displayName, withingsConn, lang] = await Promise.all([
+  const [profile, weighInReminder, displayName, withingsConn, lang, t] = await Promise.all([
     getProfileForUser(userId),
     getReminderForUser(userId, "weigh_in"),
     getCurrentUserDisplayName(),
     getWithingsConnection(userId),
     getLang(),
+    getT(),
   ]);
 
   const withingsPublic = {
@@ -34,26 +36,35 @@ export default async function ProfilePage({
 
   return (
     <div>
-      <h1 className="page-title">Profile</h1>
-      {displayName ? <p className="page-subtitle">{displayName}</p> : null}
+      {/* Title row with language picker on the right */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="page-title">{t.profile.title}</h1>
+          {displayName ? <p className="page-subtitle">{displayName}</p> : null}
+        </div>
+        <LanguagePicker current={lang as Lang} />
+      </div>
 
-      <Card className="card-compact">
+      <Card className="card-compact mt-3">
         <ProfileForm profile={profile} />
       </Card>
 
-      <Card className="card-compact mt-3">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-[var(--text3)]">
-          {lang === "en" ? "Theme" : "Tema"}
-        </p>
-        <ThemePicker />
-      </Card>
-
-      <Card className="card-compact mt-3">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-[var(--text3)]">
-          {lang === "en" ? "Language" : "Språk"}
-        </p>
-        <LanguagePicker current={lang as Lang} />
-      </Card>
+      {/* Theme — accordion, collapsed by default */}
+      <details className="group mt-3">
+        <summary className="flex cursor-pointer list-none items-center justify-between rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--card)] px-3 py-2.5 text-xs font-semibold uppercase tracking-widest text-[var(--text3)] select-none">
+          {t.profile.theme}
+          <svg
+            className="h-4 w-4 text-[var(--text3)] transition-transform group-open:rotate-180"
+            fill="none" stroke="currentColor" strokeWidth="2"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </summary>
+        <div className="mt-1 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--card)] p-3">
+          <ThemePicker />
+        </div>
+      </details>
 
       <Card className="card-compact mt-3">
         <WithingsCard
@@ -66,7 +77,7 @@ export default async function ProfilePage({
 
       <details className="group mt-3">
         <summary className="flex cursor-pointer list-none items-center justify-between rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--card)] px-3 py-2.5 text-sm font-medium text-[var(--text1)] select-none">
-          Weigh-in reminder
+          {t.profile.weighInReminder}
           <svg
             className="h-4 w-4 text-[var(--text3)] transition-transform group-open:rotate-180"
             fill="none" stroke="currentColor" strokeWidth="2"
