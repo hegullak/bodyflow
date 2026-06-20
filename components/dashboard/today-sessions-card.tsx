@@ -4,7 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Check, ChevronRight } from "lucide-react";
 import { useState, useTransition } from "react";
-import { toggleScheduledSessionAction, CARDIO_TYPES, RUN_IMAGE_URL } from "@/lib/actions/schedule";
+import { toggleScheduledSessionAction } from "@/lib/actions/schedule";
+import { CARDIO_TYPES, RUN_IMAGE_URL } from "@/lib/training/cardio";
 import { cn } from "@/lib/utils";
 
 type Session = {
