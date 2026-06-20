@@ -798,3 +798,20 @@ export const foodFavorites = pgTable(
   ],
 );
 
+export const scheduledSessions = pgTable(
+  "scheduled_session",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    date: text("date").notNull(),
+    programId: uuid("program_id").references(() => workoutPrograms.id, { onDelete: "set null" }),
+    cardioSlug: text("cardio_slug"),
+    isCompleted: boolean("is_completed").notNull().default(false),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("scheduled_session_user_date_idx").on(t.userId, t.date)],
+);
+
