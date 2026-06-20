@@ -6,6 +6,7 @@ import {
 } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { getProfileForUser } from "@/lib/actions/profile";
 
 const withingsMessages: Record<string, string> = {
   connected: "Withings connected. Open Profile to confirm sync.",
@@ -28,7 +29,15 @@ export default async function HomePage({
     if (params.withings === "connected") {
       redirect("/profile?withings=connected");
     }
-    redirect("/dashboard");
+    const profile = await getProfileForUser(userId);
+    const flow = profile?.defaultFlow ?? "dashboard";
+    const flowRoutes: Record<string, string> = {
+      dashboard: "/dashboard",
+      training: "/training",
+      meals: "/meals",
+      "check-in": "/check-in",
+    };
+    redirect(flowRoutes[flow] ?? "/dashboard");
   }
 
   const withingsMessage = params.withings ? withingsMessages[params.withings] : null;

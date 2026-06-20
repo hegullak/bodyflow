@@ -98,6 +98,18 @@ export async function updateLanguageAction(lang: "no" | "en"): Promise<void> {
   revalidatePath("/", "layout");
 }
 
+export type DefaultFlow = "dashboard" | "training" | "meals" | "check-in";
+
+export async function updateDefaultFlowAction(flow: DefaultFlow): Promise<void> {
+  const userId = await requireUserId();
+  const db = getDb();
+  await db
+    .update(userProfiles)
+    .set({ defaultFlow: flow, updatedAt: new Date() })
+    .where(eq(userProfiles.userId, userId));
+  revalidatePath("/", "layout");
+}
+
 export async function getProfileForUser(userId: string) {
   const db = getDb();
   return (

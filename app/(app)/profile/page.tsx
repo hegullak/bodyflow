@@ -3,9 +3,10 @@ import { WithingsCard } from "@/components/integrations/withings-card";
 import { Card } from "@/components/ui/card";
 import { ThemePicker } from "@/components/ui/ThemePicker";
 import { LanguagePicker } from "@/components/profile/language-picker";
+import { FlowPicker } from "@/components/profile/flow-picker";
 import { ReminderSettingsForm } from "@/components/reminders/reminder-settings-form";
 import { getReminderForUser } from "@/lib/actions/reminders";
-import { getProfileForUser } from "@/lib/actions/profile";
+import { getProfileForUser, type DefaultFlow } from "@/lib/actions/profile";
 import { getCurrentUserDisplayName, requireUserId } from "@/lib/auth/current-user";
 import { getWithingsConnection } from "@/lib/withings/sync";
 import { isWithingsConfigured } from "@/lib/withings/config";
@@ -48,6 +49,14 @@ export default async function ProfilePage({
       <Card className="card-compact mt-3">
         <ProfileForm profile={profile} />
       </Card>
+
+      {/* Flow — start page preference */}
+      <div className="mt-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--card)] px-3 py-2.5">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-[var(--text3)]">
+          Startside
+        </p>
+        <FlowPicker current={(profile?.defaultFlow ?? "dashboard") as DefaultFlow} />
+      </div>
 
       {/* Theme — accordion, collapsed by default */}
       <details className="group mt-3">
