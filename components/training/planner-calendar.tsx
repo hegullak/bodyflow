@@ -354,7 +354,6 @@ export function PlannerCalendar({
               if (!iso) return <div key={i} />;
               const ss = sessionsFor(iso);
               const isToday = iso === today;
-              const completed = ss.length > 0 && ss.every((s) => s.isCompleted);
               return (
                 <button
                   key={iso}
