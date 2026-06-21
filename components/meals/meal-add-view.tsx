@@ -640,10 +640,12 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
               <ul>
                 {favoriteProducts.map((p) => (
                   <li key={`fav-${p.id}`} className="flex items-center border-b border-[var(--color-border)]">
-                    <button
-                      type="button"
+                    <div
+                      role="button"
+                      tabIndex={0}
                       onClick={() => selectProduct(p)}
-                      className="flex min-w-0 flex-1 items-center gap-3 py-2.5 text-left hover:bg-[var(--color-muted)]"
+                      onKeyDown={(e) => { if (e.key === "Enter") selectProduct(p); }}
+                      className="flex min-w-0 flex-1 items-center gap-3 py-2.5 text-left hover:bg-[var(--color-muted)] cursor-pointer"
                     >
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium">{p.prettyName ?? p.name}</span>
@@ -654,11 +656,11 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
                           {p.brand ?? sourceLabel(p)}{p.kcalPer100g != null ? ` · ${p.kcalPer100g} kcal/100g` : ""}
                         </span>
                       </span>
-                    </button>
+                    </div>
                     <button
                       type="button"
                       aria-label={m.removeFavorite}
-                      onClick={(e) => handleToggleFavorite(p, e)}
+                      onClick={(e) => { e.stopPropagation(); handleToggleFavorite(p, e); }}
                       className="shrink-0 px-3 py-2.5 hover:bg-[var(--color-muted)]"
                     >
                       <Star className="h-5 w-5 fill-[var(--amber)] text-[var(--amber)] transition-colors" />
