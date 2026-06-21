@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { useRouter } from "next/navigation";
 import { ArrowLeft, BookOpen, ScanBarcode, Search, Star, Zap } from "lucide-react";
 import type { MealType } from "@/db/schema";
-import { addMealItemAction, quickAddMealItemAction, getRecentMealItemsAction, reAddMealItemAction, type RecentMealItem } from "@/lib/actions/meals";
+import { addMealItemAction, quickAddMealItemAction, getRecentMealItemsAction, type RecentMealItem } from "@/lib/actions/meals";
 import { addSavedMealToLogAction, getSavedMealsAction } from "@/lib/actions/saved-meals";
 import { ensureAndToggleFavoriteAction, getFavoriteIdsAction, getFavoriteProductsAction, toggleFavoriteAction } from "@/lib/actions/foods";
 import type { FoodProductSummary } from "@/lib/foods/types";
@@ -106,7 +106,6 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
   // Recent items (history)
   const [recentItems, setRecentItems] = useState<RecentMealItem[]>([]);
   const [recentLoaded, setRecentLoaded] = useState(false);
-  const [addingRecentName, setAddingRecentName] = useState<string | null>(null);
 
   // Saved meals
   const [savedMeals, setSavedMeals] = useState<Array<{ id: string; name: string; totalKcal: number; totalGrams: number }>>([]);
@@ -323,21 +322,6 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
       setQuickName(""); setQuickKcal(""); setQuickError(null);
       setTimeout(() => { setQuickDone(false); router.back(); }, 600);
     });
-  }
-
-  async function handleReAdd(item: RecentMealItem) {
-    if (selectedDates.size === 0) return;
-    setAddingRecentName(item.productName);
-    const dates = Array.from(selectedDates).sort();
-    for (const logDate of dates) {
-      const result = await reAddMealItemAction(logDate, mealType, item);
-      if (!result.ok) {
-        setAddingRecentName(null);
-        return;
-      }
-    }
-    setAddingRecentName(null);
-    router.back();
   }
 
   async function handleAddSavedMeal(id: string) {
@@ -559,11 +543,25 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
                       )}
                       <button
                         type="button"
-                        onClick={() => handleReAdd(item)}
-                        disabled={addingRecentName === item.productName}
+                        onClick={() => {
+                          // Convert recent item to FoodProductSummary and show quantity input
+                          const productSummary: FoodProductSummary = {
+                            id: item.foodProductId,
+                            source: "custom",
+                            externalId: item.productName,
+                            name: item.productName,
+                            prettyName: item.productName,
+                            brand: item.brand || null,
+                            kcalPer100g: Math.round((item.caloriesKcal / item.quantityGrams) * 100),
+                            packageGrams: item.quantityGrams,
+                            ean: null,
+                            image: null,
+                          };
+                          selectProduct(productSummary);
+                        }}
                         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-muted)] text-lg font-light text-[var(--color-primary)]"
                       >
-                        {addingRecentName === item.productName ? "…" : "+"}
+                        +
                       </button>
                     </li>
                   ))}

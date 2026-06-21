@@ -33,8 +33,8 @@ export function MealsView({
   }
 
   return (
-    <div className="space-y-3">
-      <div className="sticky top-0 z-10 bg-[var(--card)] pb-3 pt-3 mb-3">
+    <div className="space-y-3 pt-24">
+      <div className="fixed top-0 left-0 right-0 z-50 bg-[var(--card)] pb-3 pt-3 px-3.5 max-w-[640px] mx-auto">
         <CalorieBudgetCard dailyTarget={dailyTarget} usedKcal={totalKcal} />
       </div>
         <div className="flex items-center gap-2">
