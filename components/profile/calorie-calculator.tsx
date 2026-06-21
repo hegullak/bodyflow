@@ -42,11 +42,8 @@ export function CalorieCalculator({ profile }: { profile: UserProfile | null }) 
       <div>
         <div className="flex items-center gap-2 mb-1">
           <p className="text-xs font-semibold uppercase tracking-widest text-[var(--text3)]">BMR</p>
-          <span className="group relative">
+          <span title="Basal Metabolic Rate: energi kroppen bruker i hvile">
             <Info className="h-3.5 w-3.5 text-[var(--text3)] cursor-help" />
-            <span className="absolute bottom-full left-0 mb-1 hidden group-hover:block bg-[var(--card2)] text-[var(--text3)] text-xs rounded px-2 py-1 whitespace-nowrap">
-              Hvilekalorienforbruk
-            </span>
           </span>
         </div>
         <p className="text-lg font-bold text-[var(--accent)]">{bmr} kcal/dag</p>
@@ -57,11 +54,8 @@ export function CalorieCalculator({ profile }: { profile: UserProfile | null }) 
       <div>
         <div className="flex items-center gap-2 mb-1">
           <p className="text-xs font-semibold uppercase tracking-widest text-[var(--text3)]">TDEE</p>
-          <span className="group relative">
+          <span title="Total Daily Energy Expenditure: energi du bruker per dag inkl. trening">
             <Info className="h-3.5 w-3.5 text-[var(--text3)] cursor-help" />
-            <span className="absolute bottom-full left-0 mb-1 hidden group-hover:block bg-[var(--card2)] text-[var(--text3)] text-xs rounded px-2 py-1 whitespace-nowrap">
-              Totalt daglig energiforbruk
-            </span>
           </span>
         </div>
         <p className="text-lg font-bold text-[var(--accent)]">{tdee} kcal/dag</p>
