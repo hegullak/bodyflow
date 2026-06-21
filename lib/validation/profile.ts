@@ -6,7 +6,7 @@ export const profileFormSchema = z.object({
     (value) => (value === "" || value == null ? undefined : value),
     z.coerce.number().int().min(1).max(120).optional(),
   ),
-  heightCm: z.coerce.number().positive().max(300).optional().or(z.literal("").transform(() => undefined)),
+  heightCm: z.coerce.number().positive().max(300),
   weightKg: z.coerce.number().positive().max(500).optional().or(z.literal("").transform(() => undefined)),
   activityLevel: z.enum(["sedentary", "light", "moderate", "active", "very_active"]),
   targetWeightKg: z.coerce
