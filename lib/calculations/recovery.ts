@@ -56,11 +56,9 @@ export function calcRecoveryBattery(input: RecoveryBatteryInput): RecoveryBatter
     hardSessionsLast7Days,
     fullBodySessionsLast7Days,
     completedCardioSlugs7d = [],
-    todayCalories,
     averageCalories3d,
     averageCalories7d,
     dailyCalorieTarget,
-    goalType,
   } = input;
 
   const effectiveHard = hardSessionsLast7Days ?? trainingSessionsLast7Days;
@@ -180,7 +178,7 @@ type MsgContext = {
 };
 
 function buildMessages(level: RecoveryBatteryLevel, ctx: MsgContext) {
-  const { fuelMismatch, recoveryGap, trainingDaysInRow, deficit7d, totalSessions, runKm } = ctx;
+  const { fuelMismatch, recoveryGap, trainingDaysInRow, totalSessions, runKm } = ctx;
 
   const hasFuelMismatch  = fuelMismatch > 0;
   const hasRecoveryGap   = recoveryGap > 0;

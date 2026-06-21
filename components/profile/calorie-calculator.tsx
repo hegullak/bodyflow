@@ -6,7 +6,7 @@ import { calcBMR, calcTDEE, adjustedCaloricIntake, ageFromBirthYear } from "@/li
 import { updateDailyCalorieTargetAction } from "@/lib/actions/profile";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/field";
-import type { UserProfile, Goal } from "@/db/schema";
+import type { UserProfile } from "@/db/schema";
 
 export function CalorieCalculator({ profile }: { profile: UserProfile | null }) {
   const [saving, startSave] = useTransition();

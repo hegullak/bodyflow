@@ -4,9 +4,6 @@ import { calcRecoveryBattery } from "@/lib/calculations/recovery";
 function score(input: Parameters<typeof calcRecoveryBattery>[0]) {
   return calcRecoveryBattery(input).score;
 }
-function level(input: Parameters<typeof calcRecoveryBattery>[0]) {
-  return calcRecoveryBattery(input).level;
-}
 
 describe("calcRecoveryBattery", () => {
   test("no data → score 100, green", () => {

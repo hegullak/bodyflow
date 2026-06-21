@@ -25,17 +25,17 @@ export function ThemeProvider({
   children: React.ReactNode;
   defaultTheme?: EchoTheme;
 }) {
-  const [theme, setThemeState] = useState<EchoTheme>(defaultTheme);
+  const [theme, setThemeState] = useState<EchoTheme>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(STORAGE_KEY) as EchoTheme | null;
+      if (stored && VALID_THEMES.includes(stored)) {
+        return stored;
+      }
+    }
+    return defaultTheme;
+  });
   const pathname = usePathname();
   const skipSave = useRef(true);
-
-  // Read persisted theme on mount
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY) as EchoTheme | null;
-    if (stored && VALID_THEMES.includes(stored)) {
-      setThemeState(stored);
-    }
-  }, []);
 
   // Apply class to <html> on theme change OR navigation.
   // Also persists to localStorage, but skips the very first render to avoid

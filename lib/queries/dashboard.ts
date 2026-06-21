@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, isNotNull, lte, or } from "drizzle-orm";
+import { and, count, desc, eq, gte, isNotNull, lte } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { bodyMeasurements, dailyBodyLogs, scheduledSessions, userProfiles, workoutSessions } from "@/db/schema";
 import { scopeBy } from "@/lib/auth/scope";
