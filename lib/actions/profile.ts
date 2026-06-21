@@ -110,6 +110,17 @@ export async function updateDefaultFlowAction(flow: DefaultFlow): Promise<void> 
   revalidatePath("/", "layout");
 }
 
+export async function updateDailyCalorieTargetAction(target: number): Promise<void> {
+  const userId = await requireUserId();
+  const db = getDb();
+  await db
+    .update(userProfiles)
+    .set({ dailyCalorieTarget: target, updatedAt: new Date() })
+    .where(eq(userProfiles.userId, userId));
+  revalidatePath("/profile");
+  revalidatePath("/dashboard");
+}
+
 export async function getProfileForUser(userId: string) {
   const db = getDb();
   return (

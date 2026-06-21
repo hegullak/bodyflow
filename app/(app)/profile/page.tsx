@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { ThemePicker } from "@/components/ui/ThemePicker";
 import { LanguagePicker } from "@/components/profile/language-picker";
 import { FlowPicker } from "@/components/profile/flow-picker";
+import { CalorieCalculator } from "@/components/profile/calorie-calculator";
 import { ReminderSettingsForm } from "@/components/reminders/reminder-settings-form";
 import { getReminderForUser } from "@/lib/actions/reminders";
 import { getProfileForUser, type DefaultFlow } from "@/lib/actions/profile";
@@ -49,6 +50,13 @@ export default async function ProfilePage({
       <Card className="card-compact mt-3">
         <ProfileForm profile={profile} />
       </Card>
+
+      <div className="mt-3">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-[var(--text3)]">
+          Kaloribehov
+        </p>
+        <CalorieCalculator profile={profile} />
+      </div>
 
       {/* Flow — start page preference */}
       <div className="mt-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--card)] px-3 py-2.5">
