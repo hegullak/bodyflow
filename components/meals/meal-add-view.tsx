@@ -73,8 +73,8 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("search");
 
-  // Date selection (today + next 4 days)
-  const [selectedDate, setSelectedDate] = useState(logDate);
+  // Date selection (today + next 4 days) — can select multiple
+  const [selectedDates, setSelectedDates] = useState<Set<string>>(() => new Set([logDate]));
 
   // Search
   const [query, setQuery] = useState("");
@@ -235,6 +235,15 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
     else setQuantityInput("");
   }
 
+  function toggleSelectedDate(iso: string) {
+    setSelectedDates((prev) => {
+      const next = new Set(prev);
+      if (next.has(iso)) next.delete(iso);
+      else next.add(iso);
+      return next;
+    });
+  }
+
   function changeUnit(next: Unit) {
     const current = Number(quantityInput);
     if (Number.isFinite(current) && current > 0) {
@@ -272,46 +281,78 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
     if (!selected?.kcalPer100g) return;
     const grams = toGrams(Number(quantityInput), unit);
     if (!grams || grams <= 0) { setAddError("Skriv inn mengde."); return; }
-    const fd = new FormData();
-    fd.set("logDate", selectedDate);
-    fd.set("mealType", mealType);
-    if (selected.id) fd.set("foodProductId", selected.id);
-    fd.set("source", selected.source);
-    fd.set("externalId", selected.externalId);
-    if (selected.ean) fd.set("ean", selected.ean);
-    fd.set("quantityGrams", String(grams));
+    if (selectedDates.size === 0) { setAddError("Velg minst en dag."); return; }
+
     startTransition(async () => {
-      const result = await addMealItemAction(null, fd);
-      if (result.ok) router.back();
-      else setAddError(result.error ?? null);
+      // Add to each selected date
+      const dates = Array.from(selectedDates).sort();
+      for (const logDate of dates) {
+        const fd = new FormData();
+        fd.set("logDate", logDate);
+        fd.set("mealType", mealType);
+        if (selected.id) fd.set("foodProductId", selected.id);
+        fd.set("source", selected.source);
+        fd.set("externalId", selected.externalId);
+        if (selected.ean) fd.set("ean", selected.ean);
+        fd.set("quantityGrams", String(grams));
+        const result = await addMealItemAction(null, fd);
+        if (!result.ok) {
+          setAddError(result.error ?? null);
+          return;
+        }
+      }
+      router.back();
     });
   }
 
   function handleQuickAdd() {
     const kcal = Number(quickKcal);
     if (!kcal || kcal <= 0) { setQuickError("Skriv inn kalorier."); return; }
+    if (selectedDates.size === 0) { setQuickError("Velg minst en dag."); return; }
+
     startTransition(async () => {
-      const result = await quickAddMealItemAction(selectedDate, mealType, quickName, kcal);
-      if (result.ok) {
-        setQuickDone(true);
-        setQuickName(""); setQuickKcal(""); setQuickError(null);
-        setTimeout(() => { setQuickDone(false); router.back(); }, 600);
-      } else setQuickError(result.error ?? null);
+      const dates = Array.from(selectedDates).sort();
+      for (const logDate of dates) {
+        const result = await quickAddMealItemAction(logDate, mealType, quickName, kcal);
+        if (!result.ok) {
+          setQuickError(result.error ?? null);
+          return;
+        }
+      }
+      setQuickDone(true);
+      setQuickName(""); setQuickKcal(""); setQuickError(null);
+      setTimeout(() => { setQuickDone(false); router.back(); }, 600);
     });
   }
 
   async function handleReAdd(item: RecentMealItem) {
+    if (selectedDates.size === 0) return;
     setAddingRecentName(item.productName);
-    const result = await reAddMealItemAction(selectedDate, mealType, item);
+    const dates = Array.from(selectedDates).sort();
+    for (const logDate of dates) {
+      const result = await reAddMealItemAction(logDate, mealType, item);
+      if (!result.ok) {
+        setAddingRecentName(null);
+        return;
+      }
+    }
     setAddingRecentName(null);
-    if (result.ok) router.back();
+    router.back();
   }
 
   async function handleAddSavedMeal(id: string) {
+    if (selectedDates.size === 0) return;
     setAddingSavedId(id);
-    const result = await addSavedMealToLogAction(id, selectedDate, mealType);
+    const dates = Array.from(selectedDates).sort();
+    for (const logDate of dates) {
+      const result = await addSavedMealToLogAction(id, logDate, mealType);
+      if (!result.ok) {
+        setAddingSavedId(null);
+        return;
+      }
+    }
     setAddingSavedId(null);
-    if (result.ok) router.back();
+    router.back();
   }
 
   const tabs: Array<{ id: Tab; label: string; icon: typeof Search }> = [
@@ -390,17 +431,18 @@ export function MealAddView({ logDate, mealType }: { logDate: string; mealType: 
         {kcalPreview != null && (
           <p className="text-sm font-semibold text-[var(--accent)]">≈ {kcalPreview} kcal</p>
         )}
-        {/* Date picker — today + next 4 days */}
+        {/* Date picker — today + next 4 days (multi-select) */}
         <div>
+          <Label className="mb-2 block">{m.selectDays}</Label>
           <div className="flex gap-1 overflow-x-auto pb-1">
             {buildDateOptions(t.profile.weekdayNames, m.today).map(({ iso, label }) => (
               <button
                 key={iso}
                 type="button"
-                onClick={() => setSelectedDate(iso)}
+                onClick={() => toggleSelectedDate(iso)}
                 className={cn(
                   "flex-shrink-0 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
-                  selectedDate === iso
+                  selectedDates.has(iso)
                     ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--card)]"
                     : "border-[var(--border)] text-[var(--text2)]",
                 )}

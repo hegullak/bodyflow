@@ -2,6 +2,8 @@ import Link from "next/link";
 import { DashboardCards } from "@/components/dashboard/dashboard-cards";
 import { TodaySessionsCard } from "@/components/dashboard/today-sessions-card";
 import { RecoveryCard } from "@/components/dashboard/recovery-card";
+import { MeasurementsCard } from "@/components/dashboard/measurements-card";
+import { TrainingCard } from "@/components/dashboard/training-card";
 import { requireUserId } from "@/lib/auth/current-user";
 import { getDashboardData } from "@/lib/queries/dashboard";
 import { isWithingsConfigured } from "@/lib/withings/config";
@@ -44,6 +46,10 @@ export default async function DashboardPage() {
       )}
 
       <RecoveryCard data={data} />
+
+      <MeasurementsCard data={data} />
+
+      <TrainingCard sessionsCount={data.weekSessionsCount} />
 
       <TodaySessionsCard
         sessions={todaySessions as Parameters<typeof TodaySessionsCard>[0]["sessions"]}

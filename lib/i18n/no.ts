@@ -129,6 +129,7 @@ export const no: Translations = {
     addWithPhoto: "Legg til selv med bilde →",
     missingCalorieData: "Mangler kaloridata.",
     today: "I dag",
+    selectDays: "Velg dag(er)",
   },
   mealItem: {
     calories: "Kalorier",

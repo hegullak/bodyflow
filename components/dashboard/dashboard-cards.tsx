@@ -105,37 +105,6 @@ export async function DashboardCards({ data }: { data: DashboardData }) {
 
       {/* Daily flow / vibe */}
       <VibeCard initialVibe={data.vibe} />
-
-      {/* Latest measurements + weight */}
-      <Card>
-        <CardTitle>{d.latestMeasurements}</CardTitle>
-
-        {/* Weight row — always first */}
-        {data.latestWeight != null && (
-          <CardValue className="mt-0.5">{data.latestWeight} kg</CardValue>
-        )}
-
-        {/* Measurements on one line */}
-        {data.latestMeasurement ? (
-          <p className="mt-1.5 text-sm text-[var(--text2)]">
-            {d.chest} {formatNumber(data.latestMeasurement.chestCm, " cm")}
-            {"  ·  "}
-            {d.waist} {formatNumber(data.latestMeasurement.waistCm, " cm")}
-            {"  ·  "}
-            {d.hip} {formatNumber(data.latestMeasurement.hipCm, " cm")}
-          </p>
-        ) : (
-          <CardHint className="mt-2">
-            {data.latestWeight == null ? d.noMeasurementsOrWeight : d.noMeasurements}
-          </CardHint>
-        )}
-      </Card>
-
-      {/* Training this week */}
-      <Card>
-        <CardTitle>{d.trainingThisWeek}</CardTitle>
-        <CardValue>{d.sessions(data.weekSessionsCount)}</CardValue>
-      </Card>
     </div>
   );
 }

@@ -129,6 +129,7 @@ export const en: Translations = {
     addWithPhoto: "Add manually with photo →",
     missingCalorieData: "Missing calorie data.",
     today: "Today",
+    selectDays: "Select day(s)",
   },
   mealItem: {
     calories: "Calories",

@@ -33,8 +33,13 @@ export function MealsView({
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
+    <div>
+      <div className="sticky top-0 z-10 -mx-4 bg-[var(--background)] px-4 py-3 md:mx-0 md:px-0">
+        <CalorieBudgetCard dailyTarget={dailyTarget} usedKcal={totalKcal} />
+      </div>
+
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
         <button
           type="button"
           aria-label="Forrige dag"
@@ -65,8 +70,6 @@ export function MealsView({
         </button>
       </div>
 
-      <CalorieBudgetCard dailyTarget={dailyTarget} usedKcal={totalKcal} />
-
       <Link
         href="/meals/recipes"
         className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] px-4 py-3 active:bg-[var(--card2)]"
@@ -90,6 +93,7 @@ export function MealsView({
           onChanged={() => router.refresh()}
         />
       ))}
+      </div>
     </div>
   );
 }
