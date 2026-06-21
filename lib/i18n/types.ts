@@ -121,6 +121,7 @@ export type Translations = {
     addWithPhoto: string;
     missingCalorieData: string;
     today: string;
+    selectDays: string;
   };
   mealItem: {
     calories: string;
