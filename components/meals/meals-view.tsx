@@ -33,12 +33,12 @@ export function MealsView({
   }
 
   return (
-    <div>
-      <div className="sticky top-0 z-10 -mx-4 bg-[var(--background)] px-4 py-3 md:mx-0 md:px-0">
+    <div className="flex flex-col">
+      <div className="sticky top-0 z-10 bg-[var(--card)] pb-3 pt-3 mb-3">
         <CalorieBudgetCard dailyTarget={dailyTarget} usedKcal={totalKcal} />
       </div>
 
-      <div className="space-y-3">
+      <div className="flex-1 space-y-3">
         <div className="flex items-center gap-2">
         <button
           type="button"
