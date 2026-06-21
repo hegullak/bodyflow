@@ -33,12 +33,10 @@ export function MealsView({
   }
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto">
+    <div className="space-y-3">
       <div className="sticky top-0 z-10 bg-[var(--card)] pb-3 pt-3 mb-3">
         <CalorieBudgetCard dailyTarget={dailyTarget} usedKcal={totalKcal} />
       </div>
-
-      <div className="space-y-3">
         <div className="flex items-center gap-2">
         <button
           type="button"
@@ -93,7 +91,6 @@ export function MealsView({
           onChanged={() => router.refresh()}
         />
       ))}
-      </div>
     </div>
   );
 }
