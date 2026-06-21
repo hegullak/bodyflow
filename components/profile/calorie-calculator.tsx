@@ -14,8 +14,8 @@ export function CalorieCalculator({ profile }: { profile: UserProfile | null }) 
 
   const age = ageFromBirthYear(profile?.birthYear);
   const bmr = calcBMR(profile?.sex, profile?.weightKg, profile?.heightCm, age);
-  const tdee = calcTDEE(bmr, profile?.activityLevel);
-  const suggestedTarget = adjustedCaloricIntake(tdee, profile?.goal);
+  const tdee = calcTDEE(bmr, profile?.activityLevel || "moderate");
+  const suggestedTarget = adjustedCaloricIntake(tdee, profile?.goal || "maintenance");
 
   const displayTarget = customTarget ? parseInt(customTarget) : suggestedTarget;
 
@@ -28,7 +28,7 @@ export function CalorieCalculator({ profile }: { profile: UserProfile | null }) 
     }
   }
 
-  if (!profile?.heightCm || !profile?.weightKg || !age) {
+  if (!profile?.heightCm || !profile?.weightKg || !age || !profile?.sex) {
     return (
       <div className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] px-4 py-3">
         <p className="text-sm text-[var(--text3)]">Fyll inn kjønn, alder, høyde og vekt for å beregne kaloribehov.</p>
