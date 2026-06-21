@@ -4,6 +4,7 @@ import { TodaySessionsCard } from "@/components/dashboard/today-sessions-card";
 import { RecoveryCard } from "@/components/dashboard/recovery-card";
 import { MeasurementsCard } from "@/components/dashboard/measurements-card";
 import { TrainingCard } from "@/components/dashboard/training-card";
+import { ComebackBanner } from "@/components/dashboard/comeback-banner";
 import { requireUserId } from "@/lib/auth/current-user";
 import { getDashboardData } from "@/lib/queries/dashboard";
 import { isWithingsConfigured } from "@/lib/withings/config";
@@ -34,6 +35,8 @@ export default async function DashboardPage() {
   return (
     <div className="flex flex-col gap-2.5">
       <h1 className="page-title">Dashboard</h1>
+
+      <ComebackBanner lastActivityDate={data.latestWeightDate} />
 
       {showWithingsPrompt && (
         <p className="text-sm text-[var(--color-muted-foreground)]">
