@@ -30,14 +30,14 @@ export default async function HomePage({
       redirect("/profile?withings=connected");
     }
     const profile = await getProfileForUser(userId);
-    const flow = profile?.defaultFlow ?? "dashboard";
+    const flow = profile?.defaultFlow ?? "meals";
     const flowRoutes: Record<string, string> = {
       dashboard: "/dashboard",
       training: "/training",
       meals: "/meals",
       "check-in": "/check-in",
     };
-    redirect(flowRoutes[flow] ?? "/dashboard");
+    redirect(flowRoutes[flow] ?? "/meals");
   }
 
   const withingsMessage = params.withings ? withingsMessages[params.withings] : null;
@@ -46,7 +46,7 @@ export default async function HomePage({
     <div className="flex min-h-dvh flex-col">
       <header className="flex items-center justify-end gap-3 px-4 py-3">
         <Show when="signed-out">
-          <SignInButton mode="redirect" forceRedirectUrl="/dashboard">
+          <SignInButton mode="redirect" forceRedirectUrl="/meals">
             <button
               type="button"
               className="text-sm font-medium text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
@@ -54,7 +54,7 @@ export default async function HomePage({
               Sign in
             </button>
           </SignInButton>
-          <SignUpButton mode="redirect" forceRedirectUrl="/dashboard">
+          <SignUpButton mode="redirect" forceRedirectUrl="/meals">
             <button
               type="button"
               className="inline-flex h-9 items-center rounded-[var(--radius-md)] bg-[var(--color-primary)] px-3 text-sm font-medium text-[var(--color-primary-foreground)]"
@@ -90,7 +90,7 @@ export default async function HomePage({
             </p>
           ) : null}
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
-            <SignUpButton mode="redirect" forceRedirectUrl="/dashboard">
+            <SignUpButton mode="redirect" forceRedirectUrl="/meals">
               <button
                 type="button"
                 className="inline-flex h-10 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-primary)] px-4 text-sm font-medium text-[var(--color-primary-foreground)]"
@@ -98,7 +98,7 @@ export default async function HomePage({
                 Create account
               </button>
             </SignUpButton>
-            <SignInButton mode="redirect" forceRedirectUrl="/dashboard">
+            <SignInButton mode="redirect" forceRedirectUrl="/meals">
               <button
                 type="button"
                 className="inline-flex h-10 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] px-4 text-sm font-medium"

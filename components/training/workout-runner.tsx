@@ -437,6 +437,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
       if (found) {
         const row = rows(exId)[setIdx];
         if (row && !row.completed) {
+          setActiveInput(null);
           toggleSet(found.ex, setIdx, found.block);
           // Auto-focus next set after completing this one
           setTimeout(() => {
