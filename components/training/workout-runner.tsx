@@ -775,9 +775,9 @@ const ExerciseCard = React.memo(function ExerciseCard({ ex, setRows, lastSets, n
         </div>
       </div>
 
-      {/* Column headers — only show once per exercise */}
+      {/* Column headers — aligned with set rows */}
       {setRows.length > 0 && (
-        <div className="grid grid-cols-[2rem_1fr_5rem_4.5rem_3rem] items-center px-3 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-[var(--text3)]/70">
+        <div className="grid grid-cols-[2rem_1fr_5rem_4.5rem_3rem] gap-1 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-[var(--text3)]/70">
           <span className="text-center">Set</span>
           <span />
           <span className="text-right">{ex.isBodyweight ? "BW" : "kg"}</span>
@@ -934,10 +934,10 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
       </div>
 
       {/* Complete and delete buttons */}
-      <div className="flex justify-end gap-0.5">
+      <div className="flex justify-end gap-1">
         <button
           onClick={(e) => { e.stopPropagation(); onToggle(); }}
-          className={`flex h-5 w-5 items-center justify-center rounded-full border transition-colors ${
+          className={`flex h-6 w-6 items-center justify-center rounded-full border transition-colors ${
             row.completed
               ? "border-[var(--green)] bg-[var(--green)] text-white"
               : isNextSet
@@ -945,14 +945,14 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
               : "border-[var(--text3)] text-[var(--text3)]"
           }`}
         >
-          <Check className="h-2.5 w-2.5" />
+          <Check className="h-3 w-3" />
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); onRemoveSet(); }}
-          className="flex h-5 w-5 items-center justify-center rounded-full text-[var(--red)] transition-colors hover:bg-[var(--red)]/20"
+          className="flex h-6 w-6 items-center justify-center rounded-full text-[var(--red)] transition-colors hover:bg-[var(--red)]/20"
           title="Slett sett"
         >
-          <Trash2 className="h-2.5 w-2.5" />
+          <Trash2 className="h-3 w-3" />
         </button>
       </div>
     </div>
