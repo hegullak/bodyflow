@@ -211,6 +211,25 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
     if (!timer.active) setRestingSet(null);
   }, [timer.active]);
 
+  // When rest timer finishes (timer.seconds === 0 and not running), auto-focus next set
+  useEffect(() => {
+    if (timer.seconds === 0 && !timer.running && restingSet) {
+      const { exId, setIdx } = restingSet;
+      const exRows = rows(exId);
+      const nextSetInEx = exRows.findIndex((r, i) => i > setIdx && !r.completed);
+      if (nextSetInEx !== -1) {
+        // More sets in this exercise
+        focusInput(exId, nextSetInEx, "weight");
+      } else {
+        // All sets done, focus next exercise
+        const nextEx = findNextExercise(exId);
+        if (nextEx) {
+          focusInput(nextEx.id, 0, "weight");
+        }
+      }
+    }
+  }, [timer.seconds, timer.running]);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
