@@ -1,192 +1,40 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, ChevronLeft, Dumbbell, Link2, Minus, Play, Plus, Trash2, X } from "lucide-react";
+import { ChevronLeft, Plus, X } from "lucide-react";
 import {
   DndContext,
-  DragEndEvent,
+  type DragEndEvent,
   PointerSensor,
   TouchSensor,
   closestCenter,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import {
-  SortableContext,
-  arrayMove,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import type { ActiveSession, CompletedSet, LastSetRow } from "@/lib/training/sessions";
+import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import type { ActiveSession } from "@/lib/training/sessions";
 import type { ProgramBlock, ProgramExerciseRow } from "@/lib/training/programs";
 import { useT } from "@/components/providers/lang-provider";
-
-// ---------------------------------------------------------------------------
-// Local state types
-// ---------------------------------------------------------------------------
-
-interface SetRow {
-  weightKg: number;
-  reps: number;
-  completed: boolean;
-}
-
-type SetsMap = Map<string, SetRow[]>;
-
-interface ActiveInput {
-  exId: string;
-  setIdx: number;
-  field: "weight" | "reps";
-  value: string;
-  selected: boolean; // if true, next key press replaces the entire value
-}
-
-// ---------------------------------------------------------------------------
-// Rest timer hook
-// ---------------------------------------------------------------------------
-
-// Wall-clock driven timer — immune to React render timing and setInterval drift.
-// All mutable state lives in refs; React state is only updated for display.
-function useRestTimer() {
-  const [seconds, setSeconds] = useState(0);
-  const [running, setRunning] = useState(false);
-
-  // Single ref bundle — no stale-closure risk regardless of how callers cache these fns.
-  const r = useRef({
-    endAt: null as number | null, // wall-clock ms when rest ends
-    running: false,
-    seconds: 0,
-    interval: null as ReturnType<typeof setInterval> | null,
-  });
-
-  const fns = useRef({
-    stopTick() {
-      if (r.current.interval !== null) {
-        clearInterval(r.current.interval);
-        r.current.interval = null;
-      }
-    },
-    startTick(endAt: number) {
-      fns.current.stopTick();
-      r.current.interval = setInterval(() => {
-        const rem = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
-        r.current.seconds = rem;
-        setSeconds(rem);
-        if (rem <= 0) {
-          fns.current.stopTick();
-          r.current.endAt = null;
-          r.current.running = false;
-          setRunning(false);
-        }
-      }, 250);
-    },
-    start(duration: number) {
-      const endAt = Date.now() + duration * 1000;
-      r.current.endAt = endAt;
-      r.current.seconds = duration;
-      r.current.running = true;
-      setSeconds(duration);
-      setRunning(true);
-      fns.current.startTick(endAt);
-    },
-    pause() {
-      if (r.current.running) {
-        fns.current.stopTick();
-        r.current.endAt = null;
-        r.current.running = false;
-        setRunning(false);
-        // seconds display stays at whatever the last tick showed
-      } else {
-        const s = r.current.seconds;
-        if (s > 0) {
-          const endAt = Date.now() + s * 1000;
-          r.current.endAt = endAt;
-          r.current.running = true;
-          setRunning(true);
-          fns.current.startTick(endAt);
-        }
-      }
-    },
-    skip() {
-      fns.current.stopTick();
-      r.current.endAt = null;
-      r.current.running = false;
-      r.current.seconds = 0;
-      setRunning(false);
-      setSeconds(0);
-    },
-    add(n: number) {
-      if (r.current.endAt !== null) {
-        r.current.endAt += n * 1000;
-        const rem = Math.max(0, Math.ceil((r.current.endAt - Date.now()) / 1000));
-        r.current.seconds = rem;
-        setSeconds(rem);
-        fns.current.startTick(r.current.endAt);
-      } else {
-        const newS = Math.max(0, r.current.seconds + n);
-        r.current.seconds = newS;
-        setSeconds(newS);
-      }
-    },
-  });
-
-  // Cleanup on unmount only
-  useEffect(() => () => fns.current.stopTick(), []);
-
-  const start = useCallback((duration: number) => fns.current.start(duration), []);
-  const pause = useCallback(() => fns.current.pause(), []);
-  const skip  = useCallback(() => fns.current.skip(), []);
-  const add   = useCallback((n: number) => fns.current.add(n), []);
-
-  return { seconds, running, active: running || seconds > 0, start, pause, skip, add };
-}
-
-// ---------------------------------------------------------------------------
-// State initialisation
-// ---------------------------------------------------------------------------
-
-function initSets(
-  blocks: ProgramBlock[],
-  completedSets: CompletedSet[],
-  lastSets: Record<string, LastSetRow[]>,
-): SetsMap {
-  const map = new Map<string, SetRow[]>();
-  for (const block of blocks) {
-    for (const ex of block.exercises) {
-      const lastEx = lastSets[ex.id] ?? [];
-      const rows: SetRow[] = [];
-      for (let i = 0; i < ex.sets; i++) {
-        const setNum = i + 1;
-        const done = completedSets.find(
-          (s) => s.programExerciseId === ex.id && s.setNumber === setNum,
-        );
-        const last = lastEx[i];
-        rows.push({
-          weightKg: done?.weightKg ?? last?.weightKg ?? 0,
-          reps: done?.reps ?? last?.reps ?? ex.reps,
-          completed: Boolean(done),
-        });
-      }
-      map.set(ex.id, rows);
-    }
-  }
-  return map;
-}
-
-function blockDragId(block: ProgramBlock) {
-  return block.exercises[0].id;
-}
-
-// ---------------------------------------------------------------------------
-// Main component
-// ---------------------------------------------------------------------------
+import { useRestTimer } from "@/hooks/use-rest-timer";
+import {
+  type ActiveInput,
+  type SetsMap,
+  type SetRow,
+  blockDragId,
+  fmtElapsed,
+  initSets,
+} from "@/lib/training/set-utils";
+import { SortableWorkoutBlock } from "./sortable-workout-block";
+import { ExerciseCard } from "./exercise-card";
+import { WorkoutKeyboard } from "./workout-keyboard";
+import { RestTimerBar } from "./rest-timer-bar";
 
 export function WorkoutRunner({ session }: { session: ActiveSession }) {
   const t = useT();
   const router = useRouter();
   const timer = useRestTimer();
+
   const [blocks, setBlocks] = useState(session.blocks);
   const [setsMap, setSetsMap] = useState<SetsMap>(() =>
     initSets(session.blocks, session.completedSets, session.lastSets),
@@ -199,6 +47,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
   const [supersetMap, setSupersetMap] = useState<Map<string, boolean>>(new Map());
   const [fullscreenImage, setFullscreenImage] = useState<{ url: string; name: string } | null>(null);
   const [activeInput, setActiveInput] = useState<ActiveInput | null>(null);
+
   const firstExRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
@@ -207,29 +56,30 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
     else cardRefs.current.delete(exId);
   }
 
+  // Clear resting set when timer stops
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!timer.active) setRestingSet(null);
   }, [timer.active]);
 
-  // When rest timer finishes, auto-focus the set we were resting FOR (restingSet = next set)
+  // Auto-focus the next set when rest timer expires
   useEffect(() => {
     if (timer.seconds === 0 && !timer.running && restingSet) {
       focusInput(restingSet.exId, restingSet.setIdx, "weight");
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timer.seconds, timer.running]);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
-  );
-
+  // Scroll first exercise into view on mount
   useEffect(() => {
-    const t = setTimeout(() => firstExRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 300);
-    return () => clearTimeout(t);
+    const id = setTimeout(
+      () => firstExRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      300,
+    );
+    return () => clearTimeout(id);
   }, []);
 
+  // Elapsed workout time
   useEffect(() => {
     const t0 = new Date(session.startedAt).getTime();
     const tick = () => setElapsed(Math.floor((Date.now() - t0) / 1000));
@@ -238,7 +88,18 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
     return () => clearInterval(id);
   }, [session.startedAt]);
 
-  function rows(exId: string) { return setsMap.get(exId) ?? []; }
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+  );
+
+  // ---------------------------------------------------------------------------
+  // State helpers
+  // ---------------------------------------------------------------------------
+
+  function rows(exId: string): SetRow[] {
+    return setsMap.get(exId) ?? [];
+  }
 
   function patchRow(exId: string, idx: number, patch: Partial<SetRow>) {
     setSetsMap((prev) => {
@@ -249,6 +110,24 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
       return next;
     });
   }
+
+  function findExAndBlock(exId: string): { ex: ProgramExerciseRow; block: ProgramBlock } | null {
+    for (const block of blocks) {
+      const ex = block.exercises.find((e) => e.id === exId);
+      if (ex) return { ex, block };
+    }
+    return null;
+  }
+
+  function findNextExercise(exId: string): ProgramExerciseRow | null {
+    const all = blocks.flatMap((b) => b.exercises);
+    const i = all.findIndex((e) => e.id === exId);
+    return i !== -1 && i < all.length - 1 ? all[i + 1] : null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Set operations
+  // ---------------------------------------------------------------------------
 
   async function removeRow(exId: string, idx: number) {
     const r = rows(exId)[idx];
@@ -294,7 +173,6 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
       return;
     }
 
-    // Check before patching (state not yet updated)
     const exRows = rows(ex.id);
     const willAllBeCompleted = exRows.every((row, i) => i === idx || row.completed);
 
@@ -312,17 +190,15 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
       }),
     });
 
-    // Set timer to show next incomplete set in this exercise, or next exercise if all sets are done
+    // Update timer hints for RestTimerBar
     const updatedExRows = rows(ex.id);
     const nextSetInEx = updatedExRows.findIndex((r, i) => i > idx && !r.completed);
     const isSupersetMode = supersetMap.get(ex.id) ?? false;
 
     if (nextSetInEx !== -1 && !isSupersetMode) {
-      // More sets in this exercise, and not in superset mode
       setTimerNextEx(ex);
       setTimerNextSetIdx(nextSetInEx);
-    } else if (isSupersetMode || nextSetInEx === -1) {
-      // All sets done in this exercise, or superset mode — show next exercise at same set idx
+    } else {
       const all = blocks.flatMap((b) => b.exercises);
       const exIdx = all.findIndex((e) => e.id === ex.id);
       const nextEx = exIdx !== -1 && exIdx < all.length - 1 ? all[exIdx + 1] : null;
@@ -330,7 +206,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
       setTimerNextSetIdx(isSupersetMode && nextEx ? idx : null);
     }
 
-    // restingSet points to the next INCOMPLETE set (where HVILE is shown)
+    // Resolve next resting target (next incomplete set)
     const nextRestTarget = (() => {
       const nextInEx = exRows.findIndex((r, i) => i > idx && !r.completed);
       if (nextInEx !== -1) return { exId: ex.id, setIdx: nextInEx };
@@ -340,10 +216,11 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
         const firstIncomplete = nextExRows.findIndex((r) => !r.completed);
         return { exId: nextEx.id, setIdx: firstIncomplete !== -1 ? firstIncomplete : 0 };
       }
-      return null; // no next set — don't show HVILE
+      return null;
     })();
 
     if (block.type === "superset") {
+      // Only start timer when all exercises in the superset have completed this set index
       const updatedMap = new Map(setsMap);
       const updatedRows = [...(updatedMap.get(ex.id) ?? [])];
       updatedRows[idx] = { ...updatedRows[idx], completed: true };
@@ -358,66 +235,24 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
       timer.start(ex.restSeconds);
     }
 
-    // Only auto-focus the next set if there's no rest timer (restSeconds = 0).
-    // When resting, the user taps the set row manually when ready.
+    // Immediate auto-focus only when there's no rest timer
     if (ex.restSeconds === 0) {
       if (willAllBeCompleted) {
         const nextEx = findNextExercise(ex.id);
-        if (nextEx) {
-          setTimeout(() => focusInput(nextEx.id, 0, "weight"), 450);
-        }
+        if (nextEx) setTimeout(() => focusInput(nextEx.id, 0, "weight"), 450);
       } else {
         const nextSetIdx = exRows.findIndex((row, i) => i > idx && !row.completed);
-        if (nextSetIdx !== -1) {
-          setTimeout(() => focusInput(ex.id, nextSetIdx, "weight"), 450);
-        }
+        if (nextSetIdx !== -1) setTimeout(() => focusInput(ex.id, nextSetIdx, "weight"), 450);
       }
     }
-  }
-
-  // Find exercise + block by exerciseId
-  function findExAndBlock(exId: string): { ex: ProgramExerciseRow; block: ProgramBlock } | null {
-    for (const block of blocks) {
-      const ex = block.exercises.find((e) => e.id === exId);
-      if (ex) return { ex, block };
-    }
-    return null;
-  }
-
-  // Find the next exercise in flat order across all blocks
-  function findNextExercise(exId: string): ProgramExerciseRow | null {
-    const all = blocks.flatMap((b) => b.exercises);
-    const i = all.findIndex((e) => e.id === exId);
-    return i !== -1 && i < all.length - 1 ? all[i + 1] : null;
   }
 
   function removeExercise(exId: string) {
     setBlocks((prev) =>
       prev
         .map((b) => ({ ...b, exercises: b.exercises.filter((e) => e.id !== exId) }))
-        .filter((b) => b.exercises.length > 0)
+        .filter((b) => b.exercises.length > 0),
     );
-  }
-
-  // Skip rest — focus the set we were resting FOR (restingSet = next set to do)
-  function handleSkipToNext() {
-    timer.skip();
-    if (restingSet) setTimeout(() => focusInput(restingSet.exId, restingSet.setIdx, "weight"), 50);
-  }
-
-  // Auto-complete the set we're resting for with suggested values
-  function handleAutoNext() {
-    if (!restingSet) return;
-    const { exId, setIdx } = restingSet;
-    const found = findExAndBlock(exId);
-    if (!found) return;
-    const thisRow = rows(exId)[setIdx];
-    if (!thisRow || thisRow.completed) return;
-    const prev = rows(exId)[setIdx - 1];
-    const suggestKg = thisRow.weightKg || prev?.weightKg || 0;
-    const suggestReps = thisRow.reps || prev?.reps || 0;
-    patchRow(exId, setIdx, { weightKg: suggestKg, reps: suggestReps });
-    setTimeout(() => toggleSet(found.ex, setIdx, found.block), 50);
   }
 
   function toggleSupersetMode(exId: string) {
@@ -428,13 +263,43 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
     });
   }
 
-  // Custom keyboard handlers
+  // ---------------------------------------------------------------------------
+  // Timer actions
+  // ---------------------------------------------------------------------------
+
+  function handleSkipToNext() {
+    timer.skip();
+    if (restingSet) {
+      setTimeout(() => focusInput(restingSet.exId, restingSet.setIdx, "weight"), 50);
+    }
+  }
+
+  function handleAutoNext() {
+    if (!restingSet) return;
+    const { exId, setIdx } = restingSet;
+    const found = findExAndBlock(exId);
+    if (!found) return;
+    const thisRow = rows(exId)[setIdx];
+    if (!thisRow || thisRow.completed) return;
+    const prev = rows(exId)[setIdx - 1];
+    patchRow(exId, setIdx, {
+      weightKg: thisRow.weightKg || prev?.weightKg || 0,
+      reps: thisRow.reps || prev?.reps || 0,
+    });
+    setTimeout(() => toggleSet(found.ex, setIdx, found.block), 50);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Custom keyboard
+  // ---------------------------------------------------------------------------
+
   function focusInput(exId: string, setIdx: number, field: "weight" | "reps") {
     const row = rows(exId)[setIdx];
     if (!row) return;
-    const value = field === "weight"
-      ? (row.weightKg ? String(row.weightKg) : "")
-      : (row.reps ? String(row.reps) : "");
+    const value =
+      field === "weight"
+        ? row.weightKg ? String(row.weightKg) : ""
+        : row.reps ? String(row.reps) : "";
     setActiveInput({ exId, setIdx, field, value, selected: true });
   }
 
@@ -449,7 +314,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
       setActiveInput({ ...activeInput, selected: false });
       return;
     } else {
-      newVal = selected ? key : (value === "0" && key !== "." ? key : value + key);
+      newVal = selected ? key : value === "0" && key !== "." ? key : value + key;
     }
 
     const numVal = parseFloat(newVal) || 0;
@@ -467,33 +332,31 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
 
     if (field === "weight") {
       focusInput(exId, setIdx, "reps");
-    } else {
-      const found = findExAndBlock(exId);
-      if (found) {
-        const row = rows(exId)[setIdx];
-        if (row && !row.completed) {
-          // Blur native input to dismiss keyboard before timer bar appears
-          if (typeof document !== "undefined") {
-            (document.activeElement as HTMLElement)?.blur();
-          }
-          setActiveInput(null);
-          toggleSet(found.ex, setIdx, found.block);
-          // Only auto-focus next set immediately when there's no rest timer.
-          // With a rest timer, the timer-expiry effect handles focus after rest.
-          if (found.ex.restSeconds === 0) {
-            setTimeout(() => {
-              const exRows = rows(exId);
-              const nextSetIdx = exRows.findIndex((r, i) => i > setIdx && !r.completed);
-              if (nextSetIdx !== -1) {
-                focusInput(exId, nextSetIdx, "weight");
-              } else {
-                const nextEx = findNextExercise(exId);
-                if (nextEx) focusInput(nextEx.id, 0, "weight");
-              }
-            }, 100);
-          }
+      return;
+    }
+
+    const found = findExAndBlock(exId);
+    if (!found) return;
+    const row = rows(exId)[setIdx];
+    if (!row || row.completed) return;
+
+    if (typeof document !== "undefined") {
+      (document.activeElement as HTMLElement)?.blur();
+    }
+    setActiveInput(null);
+    toggleSet(found.ex, setIdx, found.block);
+
+    if (found.ex.restSeconds === 0) {
+      setTimeout(() => {
+        const exRows = rows(exId);
+        const nextSetIdx = exRows.findIndex((r, i) => i > setIdx && !r.completed);
+        if (nextSetIdx !== -1) {
+          focusInput(exId, nextSetIdx, "weight");
+        } else {
+          const nextEx = findNextExercise(exId);
+          if (nextEx) focusInput(nextEx.id, 0, "weight");
         }
-      }
+      }, 100);
     }
   }
 
@@ -529,6 +392,10 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Drag-and-drop
+  // ---------------------------------------------------------------------------
+
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -536,6 +403,10 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
     const newIdx = blocks.findIndex((b) => blockDragId(b) === over.id);
     if (oldIdx !== -1 && newIdx !== -1) setBlocks(arrayMove(blocks, oldIdx, newIdx));
   }
+
+  // ---------------------------------------------------------------------------
+  // Session end
+  // ---------------------------------------------------------------------------
 
   async function handleEnd() {
     if (!confirm(t.workout.endWorkout)) return;
@@ -548,20 +419,27 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Derived state
+  // ---------------------------------------------------------------------------
+
   const blockIds = blocks.map(blockDragId);
 
   const allExercises = blocks.flatMap((b) => b.exercises);
   let nextExId: string | null = null;
   let nextExIdx = -1;
   for (const ex of allExercises) {
-    const exRows = rows(ex.id);
-    const fi = exRows.findIndex((r) => !r.completed);
+    const fi = rows(ex.id).findIndex((r) => !r.completed);
     if (fi !== -1) { nextExId = ex.id; nextExIdx = fi; break; }
   }
 
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
+
   return (
     <>
-      {/* Fullscreen image overlay */}
+      {/* Fullscreen exercise image overlay */}
       {fullscreenImage && (
         <div
           className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm"
@@ -621,7 +499,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
           </button>
         </div>
 
-        {/* Blocks */}
+        {/* Exercise blocks */}
         {blocks.length === 0 ? (
           <p className="py-8 text-center text-sm text-[var(--text3)]">{t.workout.noExercises}</p>
         ) : (
@@ -652,7 +530,13 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
                           activeInput={activeInput?.exId === ex.id ? activeInput : null}
                           isSuperset={supersetMap.get(ex.id) ?? false}
                           onToggle={(idx) => toggleSet(ex, idx, block)}
-                          onActivateSet={(idx) => { const r = rows(ex.id)[idx]; if (r && !r.completed) { setRestingSet({ exId: ex.id, setIdx: idx }); timer.start(ex.restSeconds); } }}
+                          onActivateSet={(idx) => {
+                            const r = rows(ex.id)[idx];
+                            if (r && !r.completed) {
+                              setRestingSet({ exId: ex.id, setIdx: idx });
+                              timer.start(ex.restSeconds);
+                            }
+                          }}
                           onWeight={(idx, v) => patchRow(ex.id, idx, { weightKg: v })}
                           onReps={(idx, v) => patchRow(ex.id, idx, { reps: v })}
                           onFocusInput={(setIdx, field) => focusInput(ex.id, setIdx, field)}
@@ -660,7 +544,11 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
                           onRemoveSet={(idx) => removeRow(ex.id, idx)}
                           onRemoveExercise={() => removeExercise(ex.id)}
                           onToggleSupersetMode={() => toggleSupersetMode(ex.id)}
-                          onThumbClick={ex.imageUrl ? () => setFullscreenImage({ url: ex.imageUrl!, name: ex.exerciseName }) : undefined}
+                          onThumbClick={
+                            ex.imageUrl
+                              ? () => setFullscreenImage({ url: ex.imageUrl!, name: ex.exerciseName })
+                              : undefined
+                          }
                         />
                       </div>
                     ))}
@@ -671,7 +559,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
           </DndContext>
         )}
 
-        {/* Rest timer — fixed above bottom nav */}
+        {/* Rest timer */}
         {timer.active && (
           <RestTimerBar
             seconds={timer.seconds}
@@ -685,7 +573,6 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
           />
         )}
 
-        {/* Add exercise button */}
         <a
           href={`/training/programs/${session.programId}/add-exercise`}
           className="flex items-center justify-center gap-2 rounded-[var(--radius-md)] border border-dashed border-[var(--border)] py-4 text-[var(--text2)] active:bg-[var(--card)]"
@@ -694,7 +581,6 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
           {t.training.addExercise}
         </a>
 
-        {/* Always-visible end workout button */}
         <button
           onClick={handleEnd}
           disabled={ending}
@@ -704,7 +590,6 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
         </button>
       </div>
 
-      {/* Custom workout keyboard */}
       {activeInput && (
         <WorkoutKeyboard
           field={activeInput.field}
@@ -716,460 +601,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
         />
       )}
 
-      <style>{`
-        @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
-      `}</style>
+      <style>{`@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }`}</style>
     </>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Sortable block wrapper
-// ---------------------------------------------------------------------------
-
-function SortableWorkoutBlock({ id, children }: { id: string; children: React.ReactNode }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, position: "relative" }}
-    >
-      {/* Invisible drag handle — narrow strip on left */}
-      <div
-        {...attributes}
-        {...listeners}
-        className="absolute inset-y-0 left-0 z-10 w-8 cursor-grab touch-none active:cursor-grabbing"
-        aria-label="Drag to reorder"
-      />
-      {children}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Exercise card
-// ---------------------------------------------------------------------------
-
-interface ExerciseCardProps {
-  ex: ProgramExerciseRow;
-  setRows: SetRow[];
-  lastSets: LastSetRow[];
-  nextSetIdx: number;
-  timerActive: boolean;
-  restingSetIdx: number;
-  timerSeconds: number;
-  activeInput: ActiveInput | null;
-  isSuperset: boolean;
-  onToggle: (idx: number) => void;
-  onActivateSet: (idx: number) => void;
-  onWeight: (idx: number, v: number) => void;
-  onReps: (idx: number, v: number) => void;
-  onFocusInput: (setIdx: number, field: "weight" | "reps") => void;
-  onAddSet: () => void;
-  onRemoveSet: (idx: number) => void;
-  onRemoveExercise: () => void;
-  onToggleSupersetMode: () => void;
-  onThumbClick?: () => void;
-}
-
-const ExerciseCard = React.memo(function ExerciseCard({ ex, setRows, lastSets, nextSetIdx, timerActive, restingSetIdx, timerSeconds, activeInput, isSuperset, onToggle, onActivateSet, onWeight: _onWeight, onReps: _onReps, onFocusInput, onAddSet, onRemoveSet, onRemoveExercise: _onRemoveExercise, onToggleSupersetMode, onThumbClick }: ExerciseCardProps) {
-  const [imgError, setImgError] = useState(false);
-  const name = ex.exerciseName;
-  const meta = [ex.categoryName, ex.targetMuscleName].filter(Boolean).join(" · ");
-
-  return (
-    <div className="overflow-hidden">
-      {/* Exercise name + thumbnail */}
-      <div className="flex items-center justify-between gap-3 px-0 py-3">
-        <button
-          onClick={onThumbClick}
-          disabled={!onThumbClick}
-          className={`shrink-0 ${onThumbClick ? "cursor-pointer" : "cursor-default"}`}
-        >
-          {ex.imageUrl && !imgError ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={ex.imageUrl}
-              alt={name}
-              loading="lazy"
-              onError={() => setImgError(true)}
-              className="h-12 w-12 rounded-full bg-[var(--card2)] object-cover"
-            />
-          ) : (
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--card2)]">
-              <Dumbbell className="h-5 w-5 text-[var(--text3)]" />
-            </div>
-          )}
-        </button>
-        <div className="min-w-0 flex-1">
-          <p className="font-semibold text-[var(--text1)]">{name}</p>
-          {meta && <p className="text-xs text-[var(--text3)]">{meta} · {ex.equipment}</p>}
-        </div>
-      </div>
-
-      {/* Column headers: [set-nr | kg | reps | spacer | check | delete] */}
-      <div className="grid grid-cols-[3rem_5rem_4.5rem_1fr_3.5rem_2.5rem] items-center px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--text3)]">
-        <span className="text-center">Set</span>
-        <span className="pr-1 text-right">{ex.isBodyweight ? "BW" : "kg"}</span>
-        <span className="pr-1 text-right">Reps</span>
-        <span />
-        <span />
-        <span />
-      </div>
-
-      {/* Set rows */}
-      {setRows.map((row, idx) => (
-        <div key={idx} className="border-t border-[var(--border)]">
-          <SetRowItem
-            idx={idx}
-            row={row}
-            last={lastSets[idx] ?? null}
-            isBodyweight={ex.isBodyweight}
-            isNextSet={idx === nextSetIdx && !timerActive}
-            isResting={idx === restingSetIdx}
-            timerSeconds={timerSeconds}
-            isActiveWeight={activeInput?.setIdx === idx && activeInput?.field === "weight"}
-            isActiveReps={activeInput?.setIdx === idx && activeInput?.field === "reps"}
-            activeValue={activeInput?.setIdx === idx ? activeInput.value : ""}
-            activeSelected={activeInput?.setIdx === idx ? activeInput.selected : false}
-            onActivateSet={() => onActivateSet(idx)}
-            onToggle={() => onToggle(idx)}
-            onRemoveSet={() => onRemoveSet(idx)}
-            onFocusWeight={() => onFocusInput(idx, "weight")}
-            onFocusReps={() => onFocusInput(idx, "reps")}
-          />
-        </div>
-      ))}
-
-      {/* Footer */}
-      <div className="flex items-center justify-between gap-3 border-t border-[var(--border)] px-0 py-2 mt-2">
-        <button
-          onClick={onAddSet}
-          className="flex items-center gap-2 text-sm font-medium text-[var(--text2)] hover:text-[var(--text1)] transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Legg til sett
-        </button>
-        <button
-          onClick={onToggleSupersetMode}
-          className={`flex items-center gap-1 text-sm font-medium transition-colors ${
-            isSuperset
-              ? "text-[var(--accent)]"
-              : "text-[var(--text2)] hover:text-[var(--text1)]"
-          }`}
-          title={isSuperset ? "Superset aktivt" : "Aktiver superset"}
-        >
-          <Link2 className="h-4 w-4" />
-          Superset
-        </button>
-      </div>
-
-    </div>
-  );
-});
-
-// ---------------------------------------------------------------------------
-// Set row
-// ---------------------------------------------------------------------------
-
-interface SetRowItemProps {
-  idx: number;
-  row: SetRow;
-  last: LastSetRow | null;
-  isBodyweight: boolean;
-  isNextSet: boolean;
-  isResting: boolean;
-  timerSeconds: number;
-  isActiveWeight: boolean;
-  isActiveReps: boolean;
-  activeValue: string;
-  activeSelected: boolean;
-  onActivateSet: () => void;
-  onToggle: () => void;
-  onRemoveSet: () => void;
-  onFocusWeight: () => void;
-  onFocusReps: () => void;
-}
-
-const SetRowItem = React.memo(function SetRowItem({ idx, row, last: _last, isBodyweight, isNextSet, isResting, timerSeconds, isActiveWeight, isActiveReps, activeValue, activeSelected: _activeSelected, onActivateSet, onToggle, onRemoveSet, onFocusWeight, onFocusReps }: SetRowItemProps) {
-  const t = useT();
-  const weightDisplay = isActiveWeight ? activeValue : (row.weightKg ? String(row.weightKg) : "");
-  const repsDisplay = isActiveReps ? activeValue : (row.reps ? String(row.reps) : "");
-  const isActive = isActiveWeight || isActiveReps;
-
-  return (
-    <div
-      className={`grid grid-cols-[3rem_5rem_4.5rem_1fr_3.5rem_2.5rem] items-center px-3 border-l-2 transition-colors ${
-        isActive
-          ? "bg-[var(--accent)]/20 border-l-[var(--accent)]"
-          : isResting
-          ? "bg-[var(--green-light)] border-l-transparent"
-          : row.completed
-          ? "bg-[var(--bg2)] border-l-transparent opacity-60"
-          : isNextSet
-          ? "bg-[var(--accent)]/10 border-l-[var(--accent)]"
-          : "border-l-transparent"
-      }`}
-    >
-      {/* Set number — always clickable, full-height tap target */}
-      <div
-        onPointerDown={() => onActivateSet()}
-        className="flex min-h-[2.75rem] cursor-pointer flex-col items-center justify-center"
-      >
-        {isResting ? (
-          <>
-            <span className="text-[8px] font-bold uppercase leading-none text-[var(--green)]">{t.workout.restLabel}</span>
-            <span className="text-xs font-bold tabular-nums text-[var(--green)]">{fmtTimer(timerSeconds)}</span>
-          </>
-        ) : isNextSet ? (
-          <span className="text-xs font-bold text-[var(--accent)]">{t.workout.go}</span>
-        ) : (
-          <span className="text-sm font-semibold text-[var(--text3)]">
-            {idx + 1}
-          </span>
-        )}
-      </div>
-
-      {/* KG / bodyweight */}
-      {isBodyweight ? (
-        <p className="text-sm font-medium text-[var(--text2)]">
-          BW
-        </p>
-      ) : (
-        <div
-          onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onFocusWeight(); }}
-          className={`flex h-8 items-center justify-end rounded px-1 text-sm font-medium cursor-pointer ${
-            isActiveWeight
-              ? "bg-[var(--accent)] text-white"
-              : "text-[var(--text1)]"
-          }`}
-        >
-          {weightDisplay || <span className="opacity-30">—</span>}
-        </div>
-      )}
-
-      {/* Reps */}
-      <div
-        onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onFocusReps(); }}
-        className={`flex h-8 items-center justify-end rounded px-1 text-sm font-medium cursor-pointer ${
-          isActiveReps
-            ? "bg-[var(--accent)] text-white"
-            : "text-[var(--text1)]"
-        }`}
-      >
-        {repsDisplay || <span className="opacity-30">—</span>}
-      </div>
-
-      {/* Spacer */}
-      <div />
-
-      {/* Complete button */}
-      <button
-        onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onToggle(); }}
-        className={`flex h-7 w-7 items-center justify-center rounded-full border transition-colors ${
-          row.completed
-            ? "border-[var(--green)] bg-[var(--green)] text-white"
-            : isNextSet
-            ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]"
-            : "border-[var(--text3)] text-[var(--text3)]"
-        }`}
-      >
-        <Check className="h-4 w-4" />
-      </button>
-
-      {/* Delete button — far right */}
-      <button
-        onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onRemoveSet(); }}
-        className="flex h-7 w-7 items-center justify-center rounded-full text-[var(--red)]/50 transition-colors active:text-[var(--red)]"
-        title="Slett sett"
-      >
-        <Trash2 className="h-4 w-4" />
-      </button>
-    </div>
-  );
-});
-
-// ---------------------------------------------------------------------------
-// Custom workout keyboard
-// ---------------------------------------------------------------------------
-
-interface WorkoutKeyboardProps {
-  field: "weight" | "reps";
-  onKey: (k: string) => void;
-  onNext: () => void;
-  onPlus: () => void;
-  onMinus: () => void;
-  onDismiss: () => void;
-}
-
-const WorkoutKeyboard = React.memo(function WorkoutKeyboard({ field, onKey, onNext, onPlus, onMinus, onDismiss }: WorkoutKeyboardProps) {
-  const numBtn = "flex h-11 items-center justify-center rounded-lg bg-[var(--card2)] text-base font-semibold text-[var(--text1)] active:opacity-60 select-none";
-  const smBtn = "flex h-11 items-center justify-center rounded-lg bg-[var(--card2)] text-xs font-medium text-[var(--text2)] active:opacity-60 select-none";
-
-  return (
-    <div
-      className="fixed bottom-0 left-0 right-0 z-[300] border-t border-[var(--border)] bg-[var(--card)] px-2 pb-8 pt-2"
-      onClick={(e) => e.stopPropagation()}
-    >
-      {/* Drag handle / dismiss */}
-      <div className="mb-2 flex justify-center">
-        <button
-          onPointerDown={(e) => { e.preventDefault(); onDismiss(); }}
-          className="h-1 w-10 rounded-full bg-[var(--border)]"
-        />
-      </div>
-
-      <div className="flex gap-1.5">
-        {/* 3-column numpad */}
-        <div className="flex-[3] grid grid-cols-3 gap-1.5">
-          {["1","2","3","4","5","6","7","8","9"].map((k) => (
-            <button key={k} onPointerDown={(e) => { e.preventDefault(); onKey(k); }} className={numBtn}>{k}</button>
-          ))}
-          <button
-            onPointerDown={(e) => { e.preventDefault(); if (field === "weight") onKey("."); }}
-            className={`${numBtn} ${field === "reps" ? "opacity-30" : ""}`}
-          >
-            .
-          </button>
-          <button onPointerDown={(e) => { e.preventDefault(); onKey("0"); }} className={numBtn}>0</button>
-          <button onPointerDown={(e) => { e.preventDefault(); onKey("⌫"); }} className={numBtn}>
-            ⌫
-          </button>
-        </div>
-
-        {/* Right 2-column panel */}
-        <div className="flex flex-[2] flex-col gap-1.5">
-          <div className="grid flex-1 grid-cols-2 gap-1.5">
-            <button className={smBtn}>🏴</button>
-            <button className={smBtn}>RPE</button>
-            <button className={smBtn}>⏺</button>
-            <button className={smBtn}>COPY</button>
-            <button onPointerDown={(e) => { e.preventDefault(); onMinus(); }} className={smBtn}>
-              <Minus className="h-4 w-4" />
-            </button>
-            <button onPointerDown={(e) => { e.preventDefault(); onPlus(); }} className={smBtn}>
-              <Plus className="h-4 w-4" />
-            </button>
-          </div>
-          <button
-            onPointerDown={(e) => { e.preventDefault(); onNext(); }}
-            className="flex h-14 items-center justify-center rounded-xl bg-[var(--green)] text-lg font-bold text-white active:opacity-80 select-none"
-          >
-            NEXT
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-});
-
-// ---------------------------------------------------------------------------
-// Rest timer bar
-// ---------------------------------------------------------------------------
-
-interface RestTimerBarProps {
-  seconds: number;
-  running: boolean;
-  nextExercise: ProgramExerciseRow | null;
-  nextSetIdx: number | null;
-  onAdd: (n: number) => void;
-  onPause: () => void;
-  onSkip: () => void;
-  onAutoNext: () => void;
-}
-
-const RestTimerBar = React.memo(function RestTimerBar({ seconds, running, nextExercise, nextSetIdx, onAdd, onPause, onSkip, onAutoNext }: RestTimerBarProps) {
-  const t = useT();
-  const [nextImgError, setNextImgError] = useState(false);
-
-  return (
-    <div className="fixed left-4 right-4 z-[200] overflow-hidden rounded-3xl border border-[var(--accent)]/40 bg-[var(--card)] shadow-[0_8px_32px_rgba(0,0,0,0.5)]" style={{ bottom: 'calc(6.5rem + env(safe-area-inset-bottom, 0px))' }}>
-      <button
-        onClick={onPause}
-        className="flex w-full items-center justify-between bg-[var(--accent)] px-5 py-3 active:opacity-90"
-      >
-        <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/60">
-          {running ? t.workout.rest : t.workout.paused}
-        </span>
-        <span className="text-3xl font-bold tabular-nums leading-none text-white">
-          {fmtTimer(seconds)}
-        </span>
-        <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/60">
-          {running ? t.workout.tapToPause : t.workout.tapToResume}
-        </span>
-      </button>
-
-      <div className="flex divide-x divide-[var(--border)]">
-        <button
-          onClick={() => onAdd(-15)}
-          className="flex flex-1 items-center justify-center gap-1 py-2.5 text-sm font-medium text-[var(--text2)] active:bg-[var(--card2)]"
-        >
-          <Minus className="h-3 w-3" />
-          15s
-        </button>
-        <button
-          onClick={() => onAdd(15)}
-          className="flex flex-1 items-center justify-center gap-1 py-2.5 text-sm font-medium text-[var(--text2)] active:bg-[var(--card2)]"
-        >
-          <Plus className="h-3 w-3" />
-          15s
-        </button>
-        <button
-          onClick={onSkip}
-          className="flex flex-1 items-center justify-center py-2.5 text-sm font-semibold text-[var(--accent)] active:bg-[var(--card2)]"
-        >
-          {t.workout.skip}
-        </button>
-      </div>
-
-      {nextExercise && (
-        <div className="flex items-center gap-3 border-t border-[var(--border)] px-4 py-2.5">
-          {nextExercise.imageUrl && !nextImgError ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={nextExercise.imageUrl}
-              alt={nextExercise.exerciseName}
-              loading="lazy"
-              onError={() => setNextImgError(true)}
-              className="h-9 w-9 shrink-0 rounded-full bg-[var(--card2)] object-cover"
-            />
-          ) : (
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--card2)]">
-              <Dumbbell className="h-4 w-4 text-[var(--text3)]" />
-            </div>
-          )}
-          <p className="flex-1 truncate text-sm font-medium text-[var(--text2)]">
-            {t.workout.next}: {nextExercise.exerciseName}
-            {nextSetIdx !== null && ` – sett ${nextSetIdx + 1}`}
-          </p>
-          <button
-            onClick={onAutoNext}
-            className="flex items-center gap-0.5 rounded-full bg-[var(--accent)]/20 px-3 py-1.5 text-xs font-semibold text-[var(--accent)] active:bg-[var(--accent)]/30"
-            title="Auto-fullfør neste sett"
-          >
-            <Play className="h-3 w-3 fill-current" />
-            <Play className="-ml-1 h-3 w-3 fill-current" />
-          </button>
-        </div>
-      )}
-    </div>
-  );
-});
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function fmtTimer(s: number) {
-  const m = Math.floor(s / 60);
-  const sec = s % 60;
-  return `${m}:${String(sec).padStart(2, "0")}`;
-}
-
-function fmtElapsed(s: number) {
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m} min`;
-  return `${Math.floor(m / 60)}h ${m % 60}m`;
-}
-
