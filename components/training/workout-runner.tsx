@@ -776,9 +776,9 @@ const ExerciseCard = React.memo(function ExerciseCard({ ex, setRows, lastSets, n
       </div>
 
       {/* Column headers */}
-      <div className="grid grid-cols-[2.5rem_1fr_5rem_4.5rem_3rem] items-center px-0 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--text3)]">
-        <span>Set</span>
-        <span>Last</span>
+      <div className="grid grid-cols-[2rem_1fr_5rem_4.5rem_3rem] items-center px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--text3)]">
+        <span className="text-center">Set</span>
+        <span />
         <span className="text-right">{ex.isBodyweight ? "Type" : "kg"}</span>
         <span className="text-right">Reps</span>
         <span />
@@ -946,7 +946,7 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
 
   return (
     <div
-      className={`grid grid-cols-[2.5rem_1fr_5rem_4.5rem_3rem] items-center px-4 py-2 border-l-2 transition-colors ${
+      className={`grid grid-cols-[2rem_1fr_5rem_4.5rem_3rem] items-center px-3 py-2 border-l-2 transition-colors ${
         isActive
           ? "bg-[var(--accent)]/20 border-l-[var(--accent)]"
           : isResting
@@ -958,88 +958,72 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
           : "border-l-transparent"
       }`}
     >
-      {/* Set number / GO / REST */}
+      {/* Set number / GO / REST — clickable */}
       {isResting ? (
-        <div className="flex flex-col leading-tight">
-          <span className="text-[9px] font-bold uppercase tracking-wide text-[var(--green)]">{t.workout.restLabel}</span>
+        <div className="flex flex-col items-center leading-tight">
+          <span className="text-[8px] font-bold uppercase text-[var(--green)]">{t.workout.restLabel}</span>
           <span className="text-xs font-bold tabular-nums text-[var(--green)]">{fmtTimer(timerSeconds)}</span>
         </div>
       ) : isNextSet ? (
-        <span className="text-xs font-bold text-[var(--accent)]">{t.workout.go}</span>
+        <div className="text-center">
+          <span className="text-xs font-bold text-[var(--accent)]">{t.workout.go}</span>
+        </div>
       ) : (
-        <button
+        <div
           onClick={() => { if (!row.completed) onActivateSet(); }}
-          className={`text-sm font-semibold cursor-pointer hover:opacity-80 transition-opacity ${row.completed ? "text-[var(--green)]" : "text-[var(--text3)]"}`}
+          className={`text-center text-sm font-semibold cursor-pointer transition-opacity hover:opacity-60 ${row.completed ? "text-[var(--green)]" : "text-[var(--text3)]"}`}
         >
           {idx + 1}
-        </button>
+        </div>
       )}
-
-      {/* Last */}
-      <div className="min-w-0">
-        {last ? (
-          <>
-            <p className={`text-xs font-medium transition-opacity ${row.completed ? "text-[var(--green)]/50 opacity-50" : "text-[var(--text2)]"}`}>
-              {last.weightKg != null ? `${last.weightKg}` : "BW"}×{last.reps ?? "—"}
-            </p>
-            <p className={`text-[10px] transition-opacity ${row.completed ? "text-[var(--text3)]/50 opacity-50" : "text-[var(--text3)]"}`}>{fmtDate(last.completedAt)}</p>
-          </>
-        ) : (
-          <p className="text-xs text-[var(--text3)]">—</p>
-        )}
-      </div>
 
       {/* KG / bodyweight */}
       {isBodyweight ? (
-        <p className={`text-right text-xs font-medium ${row.completed ? "text-[var(--green)]/70" : "text-[var(--text3)]"}`}>
+        <p className={`text-right text-xs font-medium ${row.completed ? "text-[var(--green)]/70" : "text-[var(--text2)]"}`}>
           BW
         </p>
       ) : (
         <div
           onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onFocusWeight(); }}
-          className={`flex h-8 items-center justify-end rounded px-1 text-sm font-medium transition-colors ${
-            isActiveWeight && activeSelected
-              ? "bg-[var(--accent)] text-white ring-1 ring-[var(--accent)]"
-              : isActiveWeight
-              ? "bg-[var(--accent)]/10 text-[var(--accent)] ring-1 ring-[var(--accent)]"
+          className={`flex h-7 items-center justify-end rounded px-1.5 text-sm font-medium cursor-pointer transition-colors ${
+            isActiveWeight
+              ? "bg-[var(--accent)] text-white"
               : row.completed
-              ? "text-[var(--green)]"
-              : "text-[var(--text1)]"
+              ? "text-[var(--green)]/70"
+              : "text-[var(--text1)] hover:bg-[var(--accent)]/10"
           }`}
         >
-          {weightDisplay || <span className="opacity-40">0</span>}
+          {weightDisplay || <span className="opacity-40">—</span>}
         </div>
       )}
 
       {/* Reps */}
       <div
         onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onFocusReps(); }}
-        className={`flex h-8 items-center justify-end rounded px-1 text-sm font-medium transition-colors ${
-          isActiveReps && activeSelected
-            ? "bg-[var(--accent)] text-white ring-1 ring-[var(--accent)]"
-            : isActiveReps
-            ? "bg-[var(--accent)]/10 text-[var(--accent)] ring-1 ring-[var(--accent)]"
+        className={`flex h-7 items-center justify-end rounded px-1.5 text-sm font-medium cursor-pointer transition-colors ${
+          isActiveReps
+            ? "bg-[var(--accent)] text-white"
             : row.completed
-            ? "text-[var(--green)]"
-            : "text-[var(--text1)]"
+            ? "text-[var(--green)]/70"
+            : "text-[var(--text1)] hover:bg-[var(--accent)]/10"
         }`}
       >
-        {repsDisplay || <span className="opacity-40">0</span>}
+        {repsDisplay || <span className="opacity-40">—</span>}
       </div>
 
       {/* Complete button */}
       <div className="flex justify-end">
         <button
           onClick={(e) => { e.stopPropagation(); onToggle(); }}
-          className={`flex h-7 w-7 items-center justify-center rounded-full border transition-colors ${
+          className={`flex h-6 w-6 items-center justify-center rounded-full border transition-colors ${
             row.completed
               ? "border-[var(--green)] bg-[var(--green)] text-white"
               : isNextSet
-              ? "border-[var(--accent)] text-[var(--accent)]"
-              : "border-[var(--text3)] text-[var(--text3)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+              ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]"
+              : "border-[var(--text3)] text-[var(--text3)] hover:bg-[var(--accent)]/10"
           }`}
         >
-          <Check className="h-4 w-4" />
+          <Check className="h-3 w-3" />
         </button>
       </div>
     </div>
