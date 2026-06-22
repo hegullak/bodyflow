@@ -212,22 +212,10 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
     if (!timer.active) setRestingSet(null);
   }, [timer.active]);
 
-  // When rest timer finishes (timer.seconds === 0 and not running), auto-focus next set
+  // When rest timer finishes, auto-focus the set we were resting FOR (restingSet = next set)
   useEffect(() => {
     if (timer.seconds === 0 && !timer.running && restingSet) {
-      const { exId, setIdx } = restingSet;
-      const exRows = rows(exId);
-      const nextSetInEx = exRows.findIndex((r, i) => i > setIdx && !r.completed);
-      if (nextSetInEx !== -1) {
-        // More sets in this exercise
-        focusInput(exId, nextSetInEx, "weight");
-      } else {
-        // All sets done, focus next exercise
-        const nextEx = findNextExercise(exId);
-        if (nextEx) {
-          focusInput(nextEx.id, 0, "weight");
-        }
-      }
+      focusInput(restingSet.exId, restingSet.setIdx, "weight");
     }
   }, [timer.seconds, timer.running]);
 
@@ -341,6 +329,14 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
       setTimerNextSetIdx(isSupersetMode && nextEx ? idx : null);
     }
 
+    // restingSet points to the NEXT set (the one HVILE shows on, ready to do after rest)
+    const nextRestTarget = (() => {
+      if (idx + 1 < exRows.length) return { exId: ex.id, setIdx: idx + 1 };
+      const nextEx = findNextExercise(ex.id);
+      if (nextEx) return { exId: nextEx.id, setIdx: 0 };
+      return { exId: ex.id, setIdx: idx }; // last set of last exercise — fallback
+    })();
+
     if (block.type === "superset") {
       const updatedMap = new Map(setsMap);
       const updatedRows = [...(updatedMap.get(ex.id) ?? [])];
@@ -348,11 +344,11 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
       updatedMap.set(ex.id, updatedRows);
       const allDone = block.exercises.every((bex) => updatedMap.get(bex.id)?.[idx]?.completed);
       if (allDone) {
-        setRestingSet({ exId: ex.id, setIdx: idx });
+        setRestingSet(nextRestTarget);
         timer.start(ex.restSeconds);
       }
     } else {
-      setRestingSet({ exId: ex.id, setIdx: idx });
+      setRestingSet(nextRestTarget);
       timer.start(ex.restSeconds);
     }
 
@@ -397,38 +393,25 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
     );
   }
 
-  // Derive next set sequentially from restingSet — always index+1, regardless of completion
-  function nextFromResting(): { exId: string; setIdx: number } | null {
-    if (!restingSet) return null;
-    const { exId, setIdx } = restingSet;
-    const exRows = rows(exId);
-    if (setIdx + 1 < exRows.length) return { exId, setIdx: setIdx + 1 };
-    const nextEx = findNextExercise(exId);
-    if (!nextEx) return null;
-    return { exId: nextEx.id, setIdx: 0 };
-  }
-
-  // Skip timer — stay on current position, open keyboard for next set
+  // Skip rest — focus the set we were resting FOR (restingSet = next set to do)
   function handleSkipToNext() {
     timer.skip();
-    const next = nextFromResting();
-    if (next) setTimeout(() => focusInput(next.exId, next.setIdx, "weight"), 50);
+    if (restingSet) setTimeout(() => focusInput(restingSet.exId, restingSet.setIdx, "weight"), 50);
   }
 
-  // Auto-complete next set with suggested values (copies prev set's weight/reps)
+  // Auto-complete the set we're resting for with suggested values
   function handleAutoNext() {
-    const next = nextFromResting();
-    if (!next) return;
-    const found = findExAndBlock(next.exId);
+    if (!restingSet) return;
+    const { exId, setIdx } = restingSet;
+    const found = findExAndBlock(exId);
     if (!found) return;
-    const nextRows = rows(next.exId);
-    const thisRow = nextRows[next.setIdx];
+    const thisRow = rows(exId)[setIdx];
     if (!thisRow || thisRow.completed) return;
-    const prev = nextRows[next.setIdx - 1];
+    const prev = rows(exId)[setIdx - 1];
     const suggestKg = thisRow.weightKg || prev?.weightKg || 0;
     const suggestReps = thisRow.reps || prev?.reps || 0;
-    patchRow(next.exId, next.setIdx, { weightKg: suggestKg, reps: suggestReps });
-    setTimeout(() => toggleSet(found.ex, next.setIdx, found.block), 50);
+    patchRow(exId, setIdx, { weightKg: suggestKg, reps: suggestReps });
+    setTimeout(() => toggleSet(found.ex, setIdx, found.block), 50);
   }
 
   function toggleSupersetMode(exId: string) {
