@@ -775,10 +775,9 @@ const ExerciseCard = React.memo(function ExerciseCard({ ex, setRows, lastSets, n
         </div>
       </div>
 
-      {/* Column headers: [set-nr | spacer | kg | reps | actions] */}
-      <div className="grid grid-cols-[2rem_1fr_5rem_4.5rem_4.5rem] items-center px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--text3)]">
+      {/* Column headers: [set-nr | kg | reps | actions] */}
+      <div className="grid grid-cols-[3rem_1fr_4.5rem_5rem] items-center px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--text3)]">
         <span className="text-center">Set</span>
-        <span />
         <span className="text-right">{ex.isBodyweight ? "BW" : "kg"}</span>
         <span className="text-right">Reps</span>
         <span />
@@ -866,7 +865,7 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
 
   return (
     <div
-      className={`grid grid-cols-[2rem_1fr_5rem_4.5rem_4.5rem] items-center px-3 py-2 border-l-2 transition-colors ${
+      className={`grid grid-cols-[3rem_1fr_4.5rem_5rem] items-center px-3 border-l-2 transition-colors ${
         isActive
           ? "bg-[var(--accent)]/20 border-l-[var(--accent)]"
           : isResting
@@ -878,37 +877,34 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
           : "border-l-transparent"
       }`}
     >
-      {/* Set number / GO / REST — clickable */}
-      {isResting ? (
-        <div className="flex flex-col items-center leading-tight">
-          <span className="text-[8px] font-bold uppercase text-[var(--green)]">{t.workout.restLabel}</span>
-          <span className="text-xs font-bold tabular-nums text-[var(--green)]">{fmtTimer(timerSeconds)}</span>
-        </div>
-      ) : isNextSet ? (
-        <div className="text-center">
+      {/* Set number — always clickable, full-height tap target */}
+      <div
+        onClick={() => onActivateSet()}
+        className="flex min-h-[2.75rem] cursor-pointer flex-col items-center justify-center"
+      >
+        {isResting ? (
+          <>
+            <span className="text-[8px] font-bold uppercase leading-none text-[var(--green)]">{t.workout.restLabel}</span>
+            <span className="text-xs font-bold tabular-nums text-[var(--green)]">{fmtTimer(timerSeconds)}</span>
+          </>
+        ) : isNextSet ? (
           <span className="text-xs font-bold text-[var(--accent)]">{t.workout.go}</span>
-        </div>
-      ) : (
-        <div
-          onClick={() => onActivateSet()}
-          className={`text-center text-sm font-semibold cursor-pointer transition-opacity hover:opacity-60 ${row.completed ? "text-[var(--green)]" : "text-[var(--text3)]"}`}
-        >
-          {idx + 1}
-        </div>
-      )}
-
-      {/* Spacer col 2 */}
-      <div />
+        ) : (
+          <span className={`text-sm font-semibold ${row.completed ? "text-[var(--green)]" : "text-[var(--text3)]"}`}>
+            {idx + 1}
+          </span>
+        )}
+      </div>
 
       {/* KG / bodyweight */}
       {isBodyweight ? (
-        <p className={`text-right text-xs font-medium ${row.completed ? "text-[var(--green)]/70" : "text-[var(--text2)]"}`}>
+        <p className={`text-right text-sm font-medium ${row.completed ? "text-[var(--green)]/70" : "text-[var(--text2)]"}`}>
           BW
         </p>
       ) : (
         <div
           onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onFocusWeight(); }}
-          className={`flex h-6 items-center justify-end rounded px-1 text-xs font-medium cursor-pointer transition-colors ${
+          className={`flex h-8 items-center justify-end rounded px-2 text-sm font-medium cursor-pointer ${
             isActiveWeight
               ? "bg-[var(--accent)] text-white"
               : row.completed
@@ -923,7 +919,7 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
       {/* Reps */}
       <div
         onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onFocusReps(); }}
-        className={`flex h-6 items-center justify-end rounded px-1 text-xs font-medium cursor-pointer transition-colors ${
+        className={`flex h-8 items-center justify-end rounded px-2 text-sm font-medium cursor-pointer ${
           isActiveReps
             ? "bg-[var(--accent)] text-white"
             : row.completed
@@ -935,7 +931,7 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
       </div>
 
       {/* Complete and delete buttons */}
-      <div className="flex justify-end gap-2">
+      <div className="flex items-center justify-end gap-2">
         <button
           onClick={(e) => { e.stopPropagation(); onToggle(); }}
           className={`flex h-7 w-7 items-center justify-center rounded-full border transition-colors ${
