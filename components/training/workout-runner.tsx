@@ -775,13 +775,13 @@ const ExerciseCard = React.memo(function ExerciseCard({ ex, setRows, lastSets, n
         </div>
       </div>
 
-      {/* Column headers */}
-      <div className="grid grid-cols-[2rem_4rem_5rem_4.5rem_4rem] gap-2 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-[var(--text3)]/70">
-        <div className="text-center">Set</div>
-        <div />
-        <div className="text-right">{ex.isBodyweight ? "BW" : "kg"}</div>
-        <div className="text-right">reps</div>
-        <div />
+      {/* Column headers: [set-nr | spacer | kg | reps | actions] */}
+      <div className="grid grid-cols-[2rem_1fr_5rem_4.5rem_4.5rem] items-center px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--text3)]">
+        <span className="text-center">Set</span>
+        <span />
+        <span className="text-right">{ex.isBodyweight ? "BW" : "kg"}</span>
+        <span className="text-right">Reps</span>
+        <span />
       </div>
 
       {/* Set rows */}
@@ -866,7 +866,7 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
 
   return (
     <div
-      className={`grid grid-cols-[2rem_4rem_5rem_4.5rem_4rem] items-center gap-2 px-2 py-1.5 border-l-2 transition-colors ${
+      className={`grid grid-cols-[2rem_1fr_5rem_4.5rem_4.5rem] items-center px-3 py-2 border-l-2 transition-colors ${
         isActive
           ? "bg-[var(--accent)]/20 border-l-[var(--accent)]"
           : isResting
@@ -896,6 +896,9 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
           {idx + 1}
         </div>
       )}
+
+      {/* Spacer col 2 */}
+      <div />
 
       {/* KG / bodyweight */}
       {isBodyweight ? (
