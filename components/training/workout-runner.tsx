@@ -776,7 +776,7 @@ const ExerciseCard = React.memo(function ExerciseCard({ ex, setRows, lastSets, n
       </div>
 
       {/* Column headers */}
-      <div className="grid grid-cols-[2rem_1fr_5rem_4.5rem_3rem] gap-1 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-[var(--text3)]/70">
+      <div className="grid grid-cols-[2rem_4rem_5rem_4.5rem_4rem] gap-2 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-[var(--text3)]/70">
         <div className="text-center">Set</div>
         <div />
         <div className="text-right">{ex.isBodyweight ? "BW" : "kg"}</div>
@@ -866,7 +866,7 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
 
   return (
     <div
-      className={`grid grid-cols-[2rem_1fr_5rem_4.5rem_3rem] items-center gap-1 px-2 py-1.5 border-l-2 transition-colors ${
+      className={`grid grid-cols-[2rem_4rem_5rem_4.5rem_4rem] items-center gap-2 px-2 py-1.5 border-l-2 transition-colors ${
         isActive
           ? "bg-[var(--accent)]/20 border-l-[var(--accent)]"
           : isResting
@@ -932,10 +932,10 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
       </div>
 
       {/* Complete and delete buttons */}
-      <div className="flex justify-end gap-1">
+      <div className="flex justify-end gap-2">
         <button
           onClick={(e) => { e.stopPropagation(); onToggle(); }}
-          className={`flex h-6 w-6 items-center justify-center rounded-full border transition-colors ${
+          className={`flex h-7 w-7 items-center justify-center rounded-full border transition-colors ${
             row.completed
               ? "border-[var(--green)] bg-[var(--green)] text-white"
               : isNextSet
@@ -943,14 +943,14 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
               : "border-[var(--text3)] text-[var(--text3)]"
           }`}
         >
-          <Check className="h-3 w-3" />
+          <Check className="h-4 w-4" />
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); onRemoveSet(); }}
-          className="flex h-6 w-6 items-center justify-center rounded-full text-[var(--red)] transition-colors hover:bg-[var(--red)]/20"
+          className="flex h-7 w-7 items-center justify-center rounded-full text-[var(--red)] transition-colors hover:bg-[var(--red)]/20"
           title="Slett sett"
         >
-          <Trash2 className="h-3 w-3" />
+          <Trash2 className="h-4 w-4" />
         </button>
       </div>
     </div>
