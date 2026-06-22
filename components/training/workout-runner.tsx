@@ -778,8 +778,8 @@ const ExerciseCard = React.memo(function ExerciseCard({ ex, setRows, lastSets, n
       {/* Column headers: [set-nr | kg | reps | spacer | actions] */}
       <div className="grid grid-cols-[3rem_5rem_4.5rem_1fr_5rem] items-center px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--text3)]">
         <span className="text-center">Set</span>
-        <span>{ex.isBodyweight ? "BW" : "kg"}</span>
-        <span>Reps</span>
+        <span className="pr-1 text-right">{ex.isBodyweight ? "BW" : "kg"}</span>
+        <span className="pr-1 text-right">Reps</span>
         <span />
         <span />
       </div>
@@ -905,7 +905,7 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
       ) : (
         <div
           onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onFocusWeight(); }}
-          className={`flex h-8 items-center rounded px-1 text-sm font-medium cursor-pointer ${
+          className={`flex h-8 items-center justify-end rounded px-1 text-sm font-medium cursor-pointer ${
             isActiveWeight
               ? "bg-[var(--accent)] text-white"
               : row.completed
@@ -920,7 +920,7 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
       {/* Reps */}
       <div
         onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onFocusReps(); }}
-        className={`flex h-8 items-center rounded px-1 text-sm font-medium cursor-pointer ${
+        className={`flex h-8 items-center justify-end rounded px-1 text-sm font-medium cursor-pointer ${
           isActiveReps
             ? "bg-[var(--accent)] text-white"
             : row.completed
