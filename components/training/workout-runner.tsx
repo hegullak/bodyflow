@@ -194,6 +194,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
   const [ending, setEnding] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [timerNextEx, setTimerNextEx] = useState<ProgramExerciseRow | null>(null);
+  const [timerNextSetIdx, setTimerNextSetIdx] = useState<number | null>(null);
   const [restingSet, setRestingSet] = useState<{ exId: string; setIdx: number } | null>(null);
   const [fullscreenImage, setFullscreenImage] = useState<{ url: string; name: string } | null>(null);
   const [activeInput, setActiveInput] = useState<ActiveInput | null>(null);
@@ -302,9 +303,20 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
       }),
     });
 
-    const blockIdx = blocks.findIndex((b) => b.exercises.some((e) => e.id === ex.id));
-    const nextBlock = blocks[blockIdx + 1];
-    setTimerNextEx(nextBlock?.exercises[0] ?? null);
+    // Set timer to show next incomplete set in this exercise, or next exercise if all sets are done
+    const updatedExRows = rows(ex.id);
+    const nextSetInEx = updatedExRows.findIndex((r, i) => i > idx && !r.completed);
+    if (nextSetInEx !== -1) {
+      // More sets in this exercise
+      setTimerNextEx(ex);
+      setTimerNextSetIdx(nextSetInEx);
+    } else {
+      // All sets done in this exercise, show next exercise
+      const blockIdx = blocks.findIndex((b) => b.exercises.some((e) => e.id === ex.id));
+      const nextBlock = blocks[blockIdx + 1];
+      setTimerNextEx(nextBlock?.exercises[0] ?? null);
+      setTimerNextSetIdx(null);
+    }
 
     if (block.type === "superset") {
       const updatedMap = new Map(setsMap);
@@ -407,9 +419,21 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
         const row = rows(exId)[setIdx];
         if (row && !row.completed) {
           toggleSet(found.ex, setIdx, found.block);
+          // Auto-focus next set after completing this one
+          setTimeout(() => {
+            const exRows = rows(exId);
+            const nextSetIdx = exRows.findIndex((r, i) => i > setIdx && !r.completed);
+            if (nextSetIdx !== -1) {
+              focusInput(exId, nextSetIdx, "weight");
+            } else {
+              const nextEx = findNextExercise(exId);
+              if (nextEx) {
+                focusInput(nextEx.id, 0, "weight");
+              }
+            }
+          }, 100);
         }
       }
-      setActiveInput(null);
     }
   }
 
@@ -587,6 +611,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
             seconds={timer.seconds}
             running={timer.running}
             nextExercise={timerNextEx}
+            nextSetIdx={timerNextSetIdx}
             onAdd={timer.add}
             onPause={timer.pause}
             onSkip={timer.skip}
@@ -719,13 +744,6 @@ function ExerciseCard({ ex, setRows, lastSets, nextSetIdx, timerActive, restingS
             title="Legg til sett"
           >
             <Plus className="h-4 w-4" />
-          </button>
-          <button
-            onClick={onRemoveExercise}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text2)] hover:bg-[var(--red)]/10 hover:text-[var(--red)]"
-            title="Fjern øvelse"
-          >
-            <Trash2 className="h-4 w-4" />
           </button>
         </div>
       </div>
@@ -987,8 +1005,8 @@ interface WorkoutKeyboardProps {
 }
 
 function WorkoutKeyboard({ field, onKey, onNext, onPlus, onMinus, onDismiss }: WorkoutKeyboardProps) {
-  const numBtn = "flex h-14 items-center justify-center rounded-xl bg-[var(--card2)] text-xl font-semibold text-[var(--text1)] active:opacity-60 select-none";
-  const smBtn = "flex h-14 items-center justify-center rounded-xl bg-[var(--card2)] text-sm font-medium text-[var(--text2)] active:opacity-60 select-none";
+  const numBtn = "flex h-11 items-center justify-center rounded-lg bg-[var(--card2)] text-base font-semibold text-[var(--text1)] active:opacity-60 select-none";
+  const smBtn = "flex h-11 items-center justify-center rounded-lg bg-[var(--card2)] text-xs font-medium text-[var(--text2)] active:opacity-60 select-none";
 
   return (
     <div
@@ -1055,12 +1073,13 @@ interface RestTimerBarProps {
   seconds: number;
   running: boolean;
   nextExercise: ProgramExerciseRow | null;
+  nextSetIdx: number | null;
   onAdd: (n: number) => void;
   onPause: () => void;
   onSkip: () => void;
 }
 
-function RestTimerBar({ seconds, running, nextExercise, onAdd, onPause, onSkip }: RestTimerBarProps) {
+function RestTimerBar({ seconds, running, nextExercise, nextSetIdx, onAdd, onPause, onSkip }: RestTimerBarProps) {
   const t = useT();
   const [nextImgError, setNextImgError] = useState(false);
 
@@ -1122,10 +1141,12 @@ function RestTimerBar({ seconds, running, nextExercise, onAdd, onPause, onSkip }
           )}
           <p className="flex-1 truncate text-sm font-medium text-[var(--text2)]">
             {t.workout.next}: {nextExercise.exerciseName}
+            {nextSetIdx !== null && ` - Set ${nextSetIdx + 1}`}
           </p>
           <button
             onClick={onSkip}
-            className="flex items-center gap-0.5 rounded-full bg-[var(--card2)] px-3 py-1.5 text-xs font-semibold text-[var(--text2)] active:bg-[var(--border)]"
+            disabled={nextSetIdx !== null}
+            className="flex items-center gap-0.5 rounded-full bg-[var(--card2)] px-3 py-1.5 text-xs font-semibold text-[var(--text2)] active:bg-[var(--border)] disabled:opacity-40"
           >
             <Play className="h-3 w-3 fill-current" />
             <Play className="-ml-1 h-3 w-3 fill-current" />
