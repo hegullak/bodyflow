@@ -912,17 +912,20 @@ function SetRowItem({ idx, row, last, isBodyweight, isNextSet, isResting, timerS
   const t = useT();
   const weightDisplay = isActiveWeight ? activeValue : (row.weightKg ? String(row.weightKg) : "");
   const repsDisplay = isActiveReps ? activeValue : (row.reps ? String(row.reps) : "");
+  const isActive = isActiveWeight || isActiveReps;
 
   return (
     <div
-      className={`grid grid-cols-[2.5rem_1fr_5rem_4.5rem_3rem] items-center px-4 py-2 transition-colors ${
-        isResting
-          ? "bg-[var(--green-light)]"
+      className={`grid grid-cols-[2.5rem_1fr_5rem_4.5rem_3rem] items-center px-4 py-2 border-l-2 transition-colors ${
+        isActive
+          ? "bg-[var(--accent)]/20 border-l-[var(--accent)]"
+          : isResting
+          ? "bg-[var(--green-light)] border-l-transparent"
           : row.completed
-          ? "bg-[var(--green-light)]"
+          ? "bg-[var(--bg2)] border-l-transparent opacity-60"
           : isNextSet
-          ? "bg-[var(--accent)]/10 border-l-2 border-l-[var(--accent)]"
-          : ""
+          ? "bg-[var(--accent)]/10 border-l-[var(--accent)]"
+          : "border-l-transparent"
       }`}
       onClick={() => { if (!row.completed) onActivateSet(); }}
     >
@@ -944,10 +947,10 @@ function SetRowItem({ idx, row, last, isBodyweight, isNextSet, isResting, timerS
       <div className="min-w-0">
         {last ? (
           <>
-            <p className={`text-xs font-medium ${row.completed ? "text-[var(--green)]/70" : "text-[var(--text2)]"}`}>
+            <p className={`text-xs font-medium transition-opacity ${row.completed ? "text-[var(--green)]/50 opacity-50" : "text-[var(--text2)]"}`}>
               {last.weightKg != null ? `${last.weightKg}` : "BW"}×{last.reps ?? "—"}
             </p>
-            <p className="text-[10px] text-[var(--text3)]">{fmtDate(last.completedAt)}</p>
+            <p className={`text-[10px] transition-opacity ${row.completed ? "text-[var(--text3)]/50 opacity-50" : "text-[var(--text3)]"}`}>{fmtDate(last.completedAt)}</p>
           </>
         ) : (
           <p className="text-xs text-[var(--text3)]">—</p>
