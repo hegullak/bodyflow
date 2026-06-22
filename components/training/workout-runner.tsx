@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ChevronLeft, Dumbbell, Minus, Play, Plus, Trash2, X } from "lucide-react";
 import {
@@ -724,7 +724,7 @@ interface ExerciseCardProps {
   onThumbClick?: () => void;
 }
 
-function ExerciseCard({ ex, setRows, lastSets, nextSetIdx, timerActive, restingSetIdx, timerSeconds, activeInput, onToggle, onActivateSet, onWeight: _onWeight, onReps: _onReps, onFocusInput, onAddSet, onRemoveSet, onRemoveExercise, onThumbClick }: ExerciseCardProps) {
+const ExerciseCard = React.memo(function ExerciseCard({ ex, setRows, lastSets, nextSetIdx, timerActive, restingSetIdx, timerSeconds, activeInput, onToggle, onActivateSet, onWeight: _onWeight, onReps: _onReps, onFocusInput, onAddSet, onRemoveSet, onRemoveExercise, onThumbClick }: ExerciseCardProps) {
   const [imgError, setImgError] = useState(false);
   const name = ex.exerciseName;
   const meta = [ex.categoryName, ex.targetMuscleName].filter(Boolean).join(" · ");
@@ -802,7 +802,7 @@ function ExerciseCard({ ex, setRows, lastSets, nextSetIdx, timerActive, restingS
 
     </div>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // Swipeable set row — swipe left to reveal delete
@@ -908,7 +908,7 @@ interface SetRowItemProps {
   onFocusReps: () => void;
 }
 
-function SetRowItem({ idx, row, last, isBodyweight, isNextSet, isResting, timerSeconds, isActiveWeight, isActiveReps, activeValue, activeSelected, onActivateSet, onToggle, onFocusWeight, onFocusReps }: SetRowItemProps) {
+const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight, isNextSet, isResting, timerSeconds, isActiveWeight, isActiveReps, activeValue, activeSelected, onActivateSet, onToggle, onFocusWeight, onFocusReps }: SetRowItemProps) {
   const t = useT();
   const weightDisplay = isActiveWeight ? activeValue : (row.weightKg ? String(row.weightKg) : "");
   const repsDisplay = isActiveReps ? activeValue : (row.reps ? String(row.reps) : "");
@@ -1012,7 +1012,7 @@ function SetRowItem({ idx, row, last, isBodyweight, isNextSet, isResting, timerS
       </div>
     </div>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // Custom workout keyboard
@@ -1027,7 +1027,7 @@ interface WorkoutKeyboardProps {
   onDismiss: () => void;
 }
 
-function WorkoutKeyboard({ field, onKey, onNext, onPlus, onMinus, onDismiss }: WorkoutKeyboardProps) {
+const WorkoutKeyboard = React.memo(function WorkoutKeyboard({ field, onKey, onNext, onPlus, onMinus, onDismiss }: WorkoutKeyboardProps) {
   const numBtn = "flex h-11 items-center justify-center rounded-lg bg-[var(--card2)] text-base font-semibold text-[var(--text1)] active:opacity-60 select-none";
   const smBtn = "flex h-11 items-center justify-center rounded-lg bg-[var(--card2)] text-xs font-medium text-[var(--text2)] active:opacity-60 select-none";
 
@@ -1086,7 +1086,7 @@ function WorkoutKeyboard({ field, onKey, onNext, onPlus, onMinus, onDismiss }: W
       </div>
     </div>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // Rest timer bar
@@ -1102,7 +1102,7 @@ interface RestTimerBarProps {
   onSkip: () => void;
 }
 
-function RestTimerBar({ seconds, running, nextExercise, nextSetIdx, onAdd, onPause, onSkip }: RestTimerBarProps) {
+const RestTimerBar = React.memo(function RestTimerBar({ seconds, running, nextExercise, nextSetIdx, onAdd, onPause, onSkip }: RestTimerBarProps) {
   const t = useT();
   const [nextImgError, setNextImgError] = useState(false);
 
@@ -1178,7 +1178,7 @@ function RestTimerBar({ seconds, running, nextExercise, nextSetIdx, onAdd, onPau
       )}
     </div>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // Helpers
