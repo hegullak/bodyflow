@@ -786,7 +786,7 @@ const ExerciseCard = React.memo(function ExerciseCard({ ex, setRows, lastSets, n
 
       {/* Set rows */}
       {setRows.map((row, idx) => (
-        <SwipeableSetRow key={idx} onDelete={() => onRemoveSet(idx)}>
+        <div key={idx} className="border-t border-[var(--border)]">
           <SetRowItem
             idx={idx}
             row={row}
@@ -801,10 +801,11 @@ const ExerciseCard = React.memo(function ExerciseCard({ ex, setRows, lastSets, n
             activeSelected={activeInput?.setIdx === idx ? activeInput.selected : false}
             onActivateSet={() => onActivateSet(idx)}
             onToggle={() => onToggle(idx)}
+            onRemoveSet={() => onRemoveSet(idx)}
             onFocusWeight={() => onFocusInput(idx, "weight")}
             onFocusReps={() => onFocusInput(idx, "reps")}
           />
-        </SwipeableSetRow>
+        </div>
       ))}
 
       {/* Footer */}
@@ -835,88 +836,6 @@ const ExerciseCard = React.memo(function ExerciseCard({ ex, setRows, lastSets, n
 });
 
 // ---------------------------------------------------------------------------
-// Swipeable set row — swipe left to reveal delete
-// ---------------------------------------------------------------------------
-
-function SwipeableSetRow({ onDelete, children }: { onDelete: () => void; children: React.ReactNode }) {
-  const innerRef = useRef<HTMLDivElement>(null);
-  const sw = useRef({ startX: 0, startY: 0, tracking: false, revealed: false, dragging: false });
-  const DELETE_W = 56;
-  const SNAP = 20;
-
-  function snap(x: number, animate = true) {
-    const el = innerRef.current;
-    if (!el) return;
-    el.style.transition = animate ? "transform 0.25s cubic-bezier(0.4,0,0.2,1)" : "none";
-    el.style.transform = `translateX(${x}px)`;
-    sw.current.revealed = x < 0;
-  }
-
-  function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
-    sw.current = { startX: e.clientX, startY: e.clientY, tracking: true, dragging: false, revealed: sw.current.revealed };
-    if (innerRef.current) innerRef.current.style.transition = "none";
-  }
-
-  function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
-    if (!sw.current.tracking || !innerRef.current) return;
-    const dx = e.clientX - sw.current.startX;
-    const dy = e.clientY - sw.current.startY;
-    if (!sw.current.dragging && Math.abs(dy) > Math.abs(dx) + 5) { sw.current.tracking = false; return; }
-    if (!sw.current.dragging && Math.abs(dx) > 4) sw.current.dragging = true;
-    if (!sw.current.dragging) return;
-    const base = sw.current.revealed ? -DELETE_W : 0;
-    const x = Math.max(-DELETE_W, Math.min(0, base + dx));
-    innerRef.current.style.transform = `translateX(${x}px)`;
-  }
-
-  function onPointerUp(e: React.PointerEvent<HTMLDivElement>) {
-    if (!sw.current.tracking) return;
-    sw.current.tracking = false;
-    if (!sw.current.dragging) return;
-    const dx = e.clientX - sw.current.startX;
-    const base = sw.current.revealed ? -DELETE_W : 0;
-    snap(base + dx < -SNAP ? -DELETE_W : 0);
-  }
-
-  function handleDelete() {
-    snap(-DELETE_W * 3, true);
-    setTimeout(onDelete, 200);
-  }
-
-  return (
-    <div className="relative overflow-hidden border-t border-[var(--border)]">
-      <div
-        className="absolute inset-y-0 right-0 flex items-center justify-center bg-[var(--red)]"
-        style={{ width: DELETE_W }}
-      >
-        <button
-          onClick={handleDelete}
-          className="flex h-full w-full items-center justify-center"
-          aria-label="Slett sett"
-        >
-          <Trash2 className="h-5 w-5 text-white" />
-        </button>
-      </div>
-      <div
-        ref={innerRef}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={() => { sw.current.tracking = false; snap(sw.current.revealed ? -DELETE_W : 0); }}
-        className="relative bg-[var(--card)]"
-        style={{
-          touchAction: "pan-y",
-          userSelect: "none",
-          willChange: "transform",
-        }}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Set row
 // ---------------------------------------------------------------------------
 
@@ -934,11 +853,12 @@ interface SetRowItemProps {
   activeSelected: boolean;
   onActivateSet: () => void;
   onToggle: () => void;
+  onRemoveSet: () => void;
   onFocusWeight: () => void;
   onFocusReps: () => void;
 }
 
-const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight, isNextSet, isResting, timerSeconds, isActiveWeight, isActiveReps, activeValue, activeSelected, onActivateSet, onToggle, onFocusWeight, onFocusReps }: SetRowItemProps) {
+const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight, isNextSet, isResting, timerSeconds, isActiveWeight, isActiveReps, activeValue, activeSelected, onActivateSet, onToggle, onRemoveSet, onFocusWeight, onFocusReps }: SetRowItemProps) {
   const t = useT();
   const weightDisplay = isActiveWeight ? activeValue : (row.weightKg ? String(row.weightKg) : "");
   const repsDisplay = isActiveReps ? activeValue : (row.reps ? String(row.reps) : "");
@@ -970,7 +890,7 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
         </div>
       ) : (
         <div
-          onClick={() => { if (!row.completed) onActivateSet(); }}
+          onClick={() => onActivateSet()}
           className={`text-center text-sm font-semibold cursor-pointer transition-opacity hover:opacity-60 ${row.completed ? "text-[var(--green)]" : "text-[var(--text3)]"}`}
         >
           {idx + 1}
@@ -1011,8 +931,8 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
         {repsDisplay || <span className="opacity-40">—</span>}
       </div>
 
-      {/* Complete button */}
-      <div className="flex justify-end">
+      {/* Complete and delete buttons */}
+      <div className="flex justify-end gap-1">
         <button
           onClick={(e) => { e.stopPropagation(); onToggle(); }}
           className={`flex h-6 w-6 items-center justify-center rounded-full border transition-colors ${
@@ -1024,6 +944,13 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
           }`}
         >
           <Check className="h-3 w-3" />
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onRemoveSet(); }}
+          className="flex h-6 w-6 items-center justify-center rounded-full text-[var(--red)] hover:bg-[var(--red)]/10 transition-colors"
+          title="Slett sett"
+        >
+          <Trash2 className="h-3 w-3" />
         </button>
       </div>
     </div>
