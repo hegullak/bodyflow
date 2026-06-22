@@ -5,7 +5,8 @@ import { updateDefaultFlowAction, type DefaultFlow } from "@/lib/actions/profile
 import { cn } from "@/lib/utils";
 
 const FLOWS: { value: DefaultFlow; label: string; bg: string; accent: string }[] = [
-  { value: "dashboard",  label: "Dashboard",  bg: "#1A1E26", accent: "#7EB8D4" },
+  // Dashboard hidden for now — will redesign and enable later
+  // { value: "dashboard",  label: "Dashboard",  bg: "#1A1E26", accent: "#7EB8D4" },
   { value: "training",   label: "Trening",    bg: "#0D0906", accent: "#BE5228" },
   { value: "meals",      label: "Næring",     bg: "#0E0C0A", accent: "#F59E0B" },
   { value: "check-in",   label: "Mål",        bg: "#09100A", accent: "#5AA86A" },
