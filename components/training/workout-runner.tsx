@@ -757,15 +757,6 @@ const ExerciseCard = React.memo(function ExerciseCard({ ex, setRows, lastSets, n
           <p className="font-semibold text-[var(--text1)]">{name}</p>
           {meta && <p className="text-xs text-[var(--text3)]">{meta} · {ex.equipment}</p>}
         </div>
-        <div className="flex shrink-0 gap-2">
-          <button
-            onClick={onAddSet}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text2)] hover:bg-[var(--card2)]"
-            title="Legg til sett"
-          >
-            <Plus className="h-4 w-4" />
-          </button>
-        </div>
       </div>
 
       {/* Column headers */}
@@ -799,6 +790,23 @@ const ExerciseCard = React.memo(function ExerciseCard({ ex, setRows, lastSets, n
           />
         </SwipeableSetRow>
       ))}
+
+      {/* Footer */}
+      <div className="flex items-center justify-between gap-3 border-t border-[var(--border)] px-0 py-2 mt-2">
+        <button
+          onClick={onAddSet}
+          className="flex items-center gap-2 text-sm font-medium text-[var(--text2)] hover:text-[var(--text1)]"
+        >
+          <Plus className="h-4 w-4" />
+          Legg til sett
+        </button>
+        <button
+          className="flex items-center gap-2 text-sm font-medium text-[var(--text2)] hover:text-[var(--text1)]"
+          title="Superset"
+        >
+          ⚡
+        </button>
+      </div>
 
     </div>
   );

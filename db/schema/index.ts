@@ -162,7 +162,7 @@ export const userProfiles = pgTable(
 
     language: text("language").notNull().default("no"),
 
-    defaultFlow: text("default_flow").notNull().default("dashboard"),
+    defaultFlow: text("default_flow").notNull().default("meals"),
 
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 
