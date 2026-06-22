@@ -397,6 +397,42 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
     );
   }
 
+  // Skip timer and immediately focus next set for input
+  function handleSkipToNext() {
+    timer.skip();
+    if (timerNextEx) {
+      const nextIdx = timerNextSetIdx ?? 0;
+      setTimeout(() => focusInput(timerNextEx.id, nextIdx, "weight"), 50);
+    } else if (restingSet) {
+      const { exId, setIdx } = restingSet;
+      const exRows = rows(exId);
+      const nextInEx = exRows.findIndex((r, i) => i > setIdx && !r.completed);
+      if (nextInEx !== -1) {
+        setTimeout(() => focusInput(exId, nextInEx, "weight"), 50);
+      } else {
+        const nextEx = findNextExercise(exId);
+        if (nextEx) setTimeout(() => focusInput(nextEx.id, 0, "weight"), 50);
+      }
+    }
+  }
+
+  // Auto-complete next set with suggested values (copies prev set's weight/reps)
+  function handleAutoNext() {
+    if (!timerNextEx) return;
+    const nextIdx = timerNextSetIdx ?? 0;
+    const found = findExAndBlock(timerNextEx.id);
+    if (!found) return;
+    const nextRows = rows(timerNextEx.id);
+    const thisRow = nextRows[nextIdx];
+    if (!thisRow || thisRow.completed) return;
+    // Suggest values: same set's existing values, or copy from previous set
+    const prev = nextRows[nextIdx - 1];
+    const suggestKg = thisRow.weightKg || prev?.weightKg || 0;
+    const suggestReps = thisRow.reps || prev?.reps || 0;
+    patchRow(timerNextEx.id, nextIdx, { weightKg: suggestKg, reps: suggestReps });
+    setTimeout(() => toggleSet(found.ex, nextIdx, found.block), 50);
+  }
+
   function toggleSupersetMode(exId: string) {
     setSupersetMap((prev) => {
       const next = new Map(prev);
@@ -648,7 +684,8 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
             nextSetIdx={timerNextSetIdx}
             onAdd={timer.add}
             onPause={timer.pause}
-            onSkip={timer.skip}
+            onSkip={handleSkipToNext}
+            onAutoNext={handleAutoNext}
           />
         )}
 
@@ -775,11 +812,12 @@ const ExerciseCard = React.memo(function ExerciseCard({ ex, setRows, lastSets, n
         </div>
       </div>
 
-      {/* Column headers: [set-nr | kg | reps | spacer | actions] */}
-      <div className="grid grid-cols-[3rem_5rem_4.5rem_1fr_5rem] items-center px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--text3)]">
+      {/* Column headers: [set-nr | kg | reps | spacer | check | delete] */}
+      <div className="grid grid-cols-[3rem_5rem_4.5rem_1fr_2.5rem_2.5rem] items-center px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--text3)]">
         <span className="text-center">Set</span>
         <span className="pr-1 text-right">{ex.isBodyweight ? "BW" : "kg"}</span>
         <span className="pr-1 text-right">Reps</span>
+        <span />
         <span />
         <span />
       </div>
@@ -866,7 +904,7 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
 
   return (
     <div
-      className={`grid grid-cols-[3rem_5rem_4.5rem_1fr_5rem] items-center px-3 border-l-2 transition-colors ${
+      className={`grid grid-cols-[3rem_5rem_4.5rem_1fr_2.5rem_2.5rem] items-center px-3 border-l-2 transition-colors ${
         isActive
           ? "bg-[var(--accent)]/20 border-l-[var(--accent)]"
           : isResting
@@ -934,28 +972,28 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
       {/* Spacer */}
       <div />
 
-      {/* Complete and delete buttons */}
-      <div className="flex items-center justify-end gap-2">
-        <button
-          onClick={(e) => { e.stopPropagation(); onToggle(); }}
-          className={`flex h-7 w-7 items-center justify-center rounded-full border transition-colors ${
-            row.completed
-              ? "border-[var(--green)] bg-[var(--green)] text-white"
-              : isNextSet
-              ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]"
-              : "border-[var(--text3)] text-[var(--text3)]"
-          }`}
-        >
-          <Check className="h-4 w-4" />
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); onRemoveSet(); }}
-          className="flex h-7 w-7 items-center justify-center rounded-full text-[var(--red)] transition-colors hover:bg-[var(--red)]/20"
-          title="Slett sett"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
-      </div>
+      {/* Complete button */}
+      <button
+        onClick={(e) => { e.stopPropagation(); onToggle(); }}
+        className={`flex h-7 w-7 items-center justify-center rounded-full border transition-colors ${
+          row.completed
+            ? "border-[var(--green)] bg-[var(--green)] text-white"
+            : isNextSet
+            ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]"
+            : "border-[var(--text3)] text-[var(--text3)]"
+        }`}
+      >
+        <Check className="h-4 w-4" />
+      </button>
+
+      {/* Delete button — far right */}
+      <button
+        onClick={(e) => { e.stopPropagation(); onRemoveSet(); }}
+        className="flex h-7 w-7 items-center justify-center rounded-full text-[var(--red)]/50 transition-colors active:text-[var(--red)]"
+        title="Slett sett"
+      >
+        <Trash2 className="h-4 w-4" />
+      </button>
     </div>
   );
 });
@@ -1046,9 +1084,10 @@ interface RestTimerBarProps {
   onAdd: (n: number) => void;
   onPause: () => void;
   onSkip: () => void;
+  onAutoNext: () => void;
 }
 
-const RestTimerBar = React.memo(function RestTimerBar({ seconds, running, nextExercise, nextSetIdx, onAdd, onPause, onSkip }: RestTimerBarProps) {
+const RestTimerBar = React.memo(function RestTimerBar({ seconds, running, nextExercise, nextSetIdx, onAdd, onPause, onSkip, onAutoNext }: RestTimerBarProps) {
   const t = useT();
   const [nextImgError, setNextImgError] = useState(false);
 
@@ -1088,7 +1127,7 @@ const RestTimerBar = React.memo(function RestTimerBar({ seconds, running, nextEx
           onClick={onSkip}
           className="flex flex-1 items-center justify-center py-2.5 text-sm font-semibold text-[var(--accent)] active:bg-[var(--card2)]"
         >
-          {t.workout.skip}
+          {t.workout.next}
         </button>
       </div>
 
@@ -1110,12 +1149,12 @@ const RestTimerBar = React.memo(function RestTimerBar({ seconds, running, nextEx
           )}
           <p className="flex-1 truncate text-sm font-medium text-[var(--text2)]">
             {t.workout.next}: {nextExercise.exerciseName}
-            {nextSetIdx !== null && ` - Set ${nextSetIdx + 1}`}
+            {nextSetIdx !== null && ` – sett ${nextSetIdx + 1}`}
           </p>
           <button
-            onClick={onSkip}
-            disabled={nextSetIdx !== null}
-            className="flex items-center gap-0.5 rounded-full bg-[var(--card2)] px-3 py-1.5 text-xs font-semibold text-[var(--text2)] active:bg-[var(--border)] disabled:opacity-40"
+            onClick={onAutoNext}
+            className="flex items-center gap-0.5 rounded-full bg-[var(--accent)]/20 px-3 py-1.5 text-xs font-semibold text-[var(--accent)] active:bg-[var(--accent)]/30"
+            title="Auto-fullfør neste sett"
           >
             <Play className="h-3 w-3 fill-current" />
             <Play className="-ml-1 h-3 w-3 fill-current" />
