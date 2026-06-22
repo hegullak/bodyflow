@@ -775,16 +775,14 @@ const ExerciseCard = React.memo(function ExerciseCard({ ex, setRows, lastSets, n
         </div>
       </div>
 
-      {/* Column headers — aligned with set rows */}
-      {setRows.length > 0 && (
-        <div className="grid grid-cols-[2rem_1fr_5rem_4.5rem_3rem] gap-1 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-[var(--text3)]/70">
-          <span className="text-center">Set</span>
-          <span />
-          <span className="text-right">{ex.isBodyweight ? "BW" : "kg"}</span>
-          <span className="text-right">reps</span>
-          <span />
-        </div>
-      )}
+      {/* Column headers */}
+      <div className="grid grid-cols-[2rem_1fr_5rem_4.5rem_3rem] gap-1 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-[var(--text3)]/70">
+        <div className="text-center">Set</div>
+        <div />
+        <div className="text-right">{ex.isBodyweight ? "BW" : "kg"}</div>
+        <div className="text-right">reps</div>
+        <div />
+      </div>
 
       {/* Set rows */}
       {setRows.map((row, idx) => (
