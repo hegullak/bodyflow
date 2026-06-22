@@ -775,14 +775,16 @@ const ExerciseCard = React.memo(function ExerciseCard({ ex, setRows, lastSets, n
         </div>
       </div>
 
-      {/* Column headers */}
-      <div className="grid grid-cols-[2rem_1fr_5rem_4.5rem_3rem] items-center px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--text3)]">
-        <span className="text-center">Set</span>
-        <span />
-        <span className="text-right">{ex.isBodyweight ? "Type" : "kg"}</span>
-        <span className="text-right">Reps</span>
-        <span />
-      </div>
+      {/* Column headers — only show once per exercise */}
+      {setRows.length > 0 && (
+        <div className="grid grid-cols-[2rem_1fr_5rem_4.5rem_3rem] items-center px-3 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-[var(--text3)]/70">
+          <span className="text-center">Set</span>
+          <span />
+          <span className="text-right">{ex.isBodyweight ? "BW" : "kg"}</span>
+          <span className="text-right">reps</span>
+          <span />
+        </div>
+      )}
 
       {/* Set rows */}
       {setRows.map((row, idx) => (
@@ -866,7 +868,7 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
 
   return (
     <div
-      className={`grid grid-cols-[2rem_1fr_5rem_4.5rem_3rem] items-center px-3 py-2 border-l-2 transition-colors ${
+      className={`grid grid-cols-[2rem_1fr_5rem_4.5rem_3rem] items-center gap-1 px-2 py-1.5 border-l-2 transition-colors ${
         isActive
           ? "bg-[var(--accent)]/20 border-l-[var(--accent)]"
           : isResting
@@ -905,52 +907,52 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
       ) : (
         <div
           onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onFocusWeight(); }}
-          className={`flex h-7 items-center justify-end rounded px-1.5 text-sm font-medium cursor-pointer transition-colors ${
+          className={`flex h-6 items-center justify-end rounded px-1 text-xs font-medium cursor-pointer transition-colors ${
             isActiveWeight
               ? "bg-[var(--accent)] text-white"
               : row.completed
               ? "text-[var(--green)]/70"
-              : "text-[var(--text1)] hover:bg-[var(--accent)]/10"
+              : "text-[var(--text1)]"
           }`}
         >
-          {weightDisplay || <span className="opacity-40">—</span>}
+          {weightDisplay || <span className="opacity-30">—</span>}
         </div>
       )}
 
       {/* Reps */}
       <div
         onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onFocusReps(); }}
-        className={`flex h-7 items-center justify-end rounded px-1.5 text-sm font-medium cursor-pointer transition-colors ${
+        className={`flex h-6 items-center justify-end rounded px-1 text-xs font-medium cursor-pointer transition-colors ${
           isActiveReps
             ? "bg-[var(--accent)] text-white"
             : row.completed
             ? "text-[var(--green)]/70"
-            : "text-[var(--text1)] hover:bg-[var(--accent)]/10"
+            : "text-[var(--text1)]"
         }`}
       >
-        {repsDisplay || <span className="opacity-40">—</span>}
+        {repsDisplay || <span className="opacity-30">—</span>}
       </div>
 
       {/* Complete and delete buttons */}
-      <div className="flex justify-end gap-1">
+      <div className="flex justify-end gap-0.5">
         <button
           onClick={(e) => { e.stopPropagation(); onToggle(); }}
-          className={`flex h-6 w-6 items-center justify-center rounded-full border transition-colors ${
+          className={`flex h-5 w-5 items-center justify-center rounded-full border transition-colors ${
             row.completed
               ? "border-[var(--green)] bg-[var(--green)] text-white"
               : isNextSet
               ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]"
-              : "border-[var(--text3)] text-[var(--text3)] hover:bg-[var(--accent)]/10"
+              : "border-[var(--text3)] text-[var(--text3)]"
           }`}
         >
-          <Check className="h-3 w-3" />
+          <Check className="h-2.5 w-2.5" />
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); onRemoveSet(); }}
-          className="flex h-6 w-6 items-center justify-center rounded-full text-[var(--red)] hover:bg-[var(--red)]/10 transition-colors"
+          className="flex h-5 w-5 items-center justify-center rounded-full text-[var(--red)] transition-colors hover:bg-[var(--red)]/20"
           title="Slett sett"
         >
-          <Trash2 className="h-3 w-3" />
+          <Trash2 className="h-2.5 w-2.5" />
         </button>
       </div>
     </div>
