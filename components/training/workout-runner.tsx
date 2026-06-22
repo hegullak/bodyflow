@@ -471,21 +471,26 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
       if (found) {
         const row = rows(exId)[setIdx];
         if (row && !row.completed) {
+          // Blur native input to dismiss keyboard before timer bar appears
+          if (typeof document !== "undefined") {
+            (document.activeElement as HTMLElement)?.blur();
+          }
           setActiveInput(null);
           toggleSet(found.ex, setIdx, found.block);
-          // Auto-focus next set after completing this one
-          setTimeout(() => {
-            const exRows = rows(exId);
-            const nextSetIdx = exRows.findIndex((r, i) => i > setIdx && !r.completed);
-            if (nextSetIdx !== -1) {
-              focusInput(exId, nextSetIdx, "weight");
-            } else {
-              const nextEx = findNextExercise(exId);
-              if (nextEx) {
-                focusInput(nextEx.id, 0, "weight");
+          // Only auto-focus next set immediately when there's no rest timer.
+          // With a rest timer, the timer-expiry effect handles focus after rest.
+          if (found.ex.restSeconds === 0) {
+            setTimeout(() => {
+              const exRows = rows(exId);
+              const nextSetIdx = exRows.findIndex((r, i) => i > setIdx && !r.completed);
+              if (nextSetIdx !== -1) {
+                focusInput(exId, nextSetIdx, "weight");
+              } else {
+                const nextEx = findNextExercise(exId);
+                if (nextEx) focusInput(nextEx.id, 0, "weight");
               }
-            }
-          }, 100);
+            }, 100);
+          }
         }
       }
     }
