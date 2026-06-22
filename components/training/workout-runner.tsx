@@ -924,7 +924,7 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
         ) : isNextSet ? (
           <span className="text-xs font-bold text-[var(--accent)]">{t.workout.go}</span>
         ) : (
-          <span className={`text-sm font-semibold ${row.completed ? "text-[var(--green)]" : "text-[var(--text3)]"}`}>
+          <span className="text-sm font-semibold text-[var(--text3)]">
             {idx + 1}
           </span>
         )}
@@ -932,7 +932,7 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
 
       {/* KG / bodyweight */}
       {isBodyweight ? (
-        <p className={`text-sm font-medium ${row.completed ? "text-[var(--green)]/70" : "text-[var(--text2)]"}`}>
+        <p className="text-sm font-medium text-[var(--text2)]">
           BW
         </p>
       ) : (
@@ -941,8 +941,6 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
           className={`flex h-8 items-center justify-end rounded px-1 text-sm font-medium cursor-pointer ${
             isActiveWeight
               ? "bg-[var(--accent)] text-white"
-              : row.completed
-              ? "text-[var(--green)]/70"
               : "text-[var(--text1)]"
           }`}
         >
@@ -956,8 +954,6 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
         className={`flex h-8 items-center justify-end rounded px-1 text-sm font-medium cursor-pointer ${
           isActiveReps
             ? "bg-[var(--accent)] text-white"
-            : row.completed
-            ? "text-[var(--green)]/70"
             : "text-[var(--text1)]"
         }`}
       >
