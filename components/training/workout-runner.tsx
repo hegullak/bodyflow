@@ -397,40 +397,39 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
     );
   }
 
-  // Skip timer and immediately focus next set for input
+  // Derive next incomplete set from restingSet (always fresh, not stale timerNextEx)
+  function nextFromResting(): { exId: string; setIdx: number } | null {
+    if (!restingSet) return null;
+    const { exId, setIdx } = restingSet;
+    const nextInEx = rows(exId).findIndex((r, i) => i > setIdx && !r.completed);
+    if (nextInEx !== -1) return { exId, setIdx: nextInEx };
+    const nextEx = findNextExercise(exId);
+    if (!nextEx) return null;
+    const firstIncomplete = rows(nextEx.id).findIndex((r) => !r.completed);
+    return { exId: nextEx.id, setIdx: firstIncomplete !== -1 ? firstIncomplete : 0 };
+  }
+
+  // Skip timer — stay on current position, open keyboard for next set
   function handleSkipToNext() {
     timer.skip();
-    if (timerNextEx) {
-      const nextIdx = timerNextSetIdx ?? 0;
-      setTimeout(() => focusInput(timerNextEx.id, nextIdx, "weight"), 50);
-    } else if (restingSet) {
-      const { exId, setIdx } = restingSet;
-      const exRows = rows(exId);
-      const nextInEx = exRows.findIndex((r, i) => i > setIdx && !r.completed);
-      if (nextInEx !== -1) {
-        setTimeout(() => focusInput(exId, nextInEx, "weight"), 50);
-      } else {
-        const nextEx = findNextExercise(exId);
-        if (nextEx) setTimeout(() => focusInput(nextEx.id, 0, "weight"), 50);
-      }
-    }
+    const next = nextFromResting();
+    if (next) setTimeout(() => focusInput(next.exId, next.setIdx, "weight"), 50);
   }
 
   // Auto-complete next set with suggested values (copies prev set's weight/reps)
   function handleAutoNext() {
-    if (!timerNextEx) return;
-    const nextIdx = timerNextSetIdx ?? 0;
-    const found = findExAndBlock(timerNextEx.id);
+    const next = nextFromResting();
+    if (!next) return;
+    const found = findExAndBlock(next.exId);
     if (!found) return;
-    const nextRows = rows(timerNextEx.id);
-    const thisRow = nextRows[nextIdx];
+    const nextRows = rows(next.exId);
+    const thisRow = nextRows[next.setIdx];
     if (!thisRow || thisRow.completed) return;
-    // Suggest values: same set's existing values, or copy from previous set
-    const prev = nextRows[nextIdx - 1];
+    const prev = nextRows[next.setIdx - 1];
     const suggestKg = thisRow.weightKg || prev?.weightKg || 0;
     const suggestReps = thisRow.reps || prev?.reps || 0;
-    patchRow(timerNextEx.id, nextIdx, { weightKg: suggestKg, reps: suggestReps });
-    setTimeout(() => toggleSet(found.ex, nextIdx, found.block), 50);
+    patchRow(next.exId, next.setIdx, { weightKg: suggestKg, reps: suggestReps });
+    setTimeout(() => toggleSet(found.ex, next.setIdx, found.block), 50);
   }
 
   function toggleSupersetMode(exId: string) {
@@ -974,7 +973,7 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
 
       {/* Complete button */}
       <button
-        onClick={(e) => { e.stopPropagation(); onToggle(); }}
+        onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onToggle(); }}
         className={`flex h-7 w-7 items-center justify-center rounded-full border transition-colors ${
           row.completed
             ? "border-[var(--green)] bg-[var(--green)] text-white"
@@ -988,7 +987,7 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
 
       {/* Delete button — far right */}
       <button
-        onClick={(e) => { e.stopPropagation(); onRemoveSet(); }}
+        onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onRemoveSet(); }}
         className="flex h-7 w-7 items-center justify-center rounded-full text-[var(--red)]/50 transition-colors active:text-[var(--red)]"
         title="Slett sett"
       >
@@ -1127,7 +1126,7 @@ const RestTimerBar = React.memo(function RestTimerBar({ seconds, running, nextEx
           onClick={onSkip}
           className="flex flex-1 items-center justify-center py-2.5 text-sm font-semibold text-[var(--accent)] active:bg-[var(--card2)]"
         >
-          {t.workout.next}
+          {t.workout.skip}
         </button>
       </div>
 
