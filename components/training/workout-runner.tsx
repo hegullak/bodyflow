@@ -329,12 +329,17 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
       setTimerNextSetIdx(isSupersetMode && nextEx ? idx : null);
     }
 
-    // restingSet points to the NEXT set (the one HVILE shows on, ready to do after rest)
+    // restingSet points to the next INCOMPLETE set (where HVILE is shown)
     const nextRestTarget = (() => {
-      if (idx + 1 < exRows.length) return { exId: ex.id, setIdx: idx + 1 };
+      const nextInEx = exRows.findIndex((r, i) => i > idx && !r.completed);
+      if (nextInEx !== -1) return { exId: ex.id, setIdx: nextInEx };
       const nextEx = findNextExercise(ex.id);
-      if (nextEx) return { exId: nextEx.id, setIdx: 0 };
-      return { exId: ex.id, setIdx: idx }; // last set of last exercise — fallback
+      if (nextEx) {
+        const nextExRows = rows(nextEx.id);
+        const firstIncomplete = nextExRows.findIndex((r) => !r.completed);
+        return { exId: nextEx.id, setIdx: firstIncomplete !== -1 ? firstIncomplete : 0 };
+      }
+      return null; // no next set — don't show HVILE
     })();
 
     if (block.type === "superset") {
@@ -632,7 +637,11 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
                           lastSets={session.lastSets[ex.id] ?? []}
                           nextSetIdx={ex.id === nextExId ? nextExIdx : -1}
                           timerActive={timer.active}
-                          restingSetIdx={restingSet?.exId === ex.id ? restingSet.setIdx : -1}
+                          restingSetIdx={(() => {
+                            if (!restingSet || restingSet.exId !== ex.id) return -1;
+                            const si = restingSet.setIdx;
+                            return rows(ex.id)[si]?.completed ? -1 : si;
+                          })()}
                           timerSeconds={timer.seconds}
                           activeInput={activeInput?.exId === ex.id ? activeInput : null}
                           isSuperset={supersetMap.get(ex.id) ?? false}
