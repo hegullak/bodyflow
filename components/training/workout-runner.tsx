@@ -778,8 +778,8 @@ const ExerciseCard = React.memo(function ExerciseCard({ ex, setRows, lastSets, n
       {/* Column headers: [set-nr | kg | reps | spacer | actions] */}
       <div className="grid grid-cols-[3rem_5rem_4.5rem_1fr_5rem] items-center px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--text3)]">
         <span className="text-center">Set</span>
-        <span className="text-right">{ex.isBodyweight ? "BW" : "kg"}</span>
-        <span className="text-right">Reps</span>
+        <span>{ex.isBodyweight ? "BW" : "kg"}</span>
+        <span>Reps</span>
         <span />
         <span />
       </div>
@@ -880,7 +880,7 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
     >
       {/* Set number — always clickable, full-height tap target */}
       <div
-        onPointerDown={(e) => { e.preventDefault(); onActivateSet(); }}
+        onPointerDown={() => onActivateSet()}
         className="flex min-h-[2.75rem] cursor-pointer flex-col items-center justify-center"
       >
         {isResting ? (
@@ -899,13 +899,13 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
 
       {/* KG / bodyweight */}
       {isBodyweight ? (
-        <p className={`text-right text-sm font-medium ${row.completed ? "text-[var(--green)]/70" : "text-[var(--text2)]"}`}>
+        <p className={`text-sm font-medium ${row.completed ? "text-[var(--green)]/70" : "text-[var(--text2)]"}`}>
           BW
         </p>
       ) : (
         <div
           onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onFocusWeight(); }}
-          className={`flex h-8 items-center justify-end rounded px-2 text-sm font-medium cursor-pointer ${
+          className={`flex h-8 items-center rounded px-1 text-sm font-medium cursor-pointer ${
             isActiveWeight
               ? "bg-[var(--accent)] text-white"
               : row.completed
@@ -920,7 +920,7 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
       {/* Reps */}
       <div
         onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); onFocusReps(); }}
-        className={`flex h-8 items-center justify-end rounded px-2 text-sm font-medium cursor-pointer ${
+        className={`flex h-8 items-center rounded px-1 text-sm font-medium cursor-pointer ${
           isActiveReps
             ? "bg-[var(--accent)] text-white"
             : row.completed
