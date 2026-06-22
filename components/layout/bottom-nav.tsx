@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardPen, Dumbbell, LayoutDashboard, Utensils } from "lucide-react";
+import { ClipboardPen, Dumbbell, Utensils } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const tabs = [

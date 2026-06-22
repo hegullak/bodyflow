@@ -217,6 +217,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
     if (timer.seconds === 0 && !timer.running && restingSet) {
       focusInput(restingSet.exId, restingSet.setIdx, "weight");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timer.seconds, timer.running]);
 
   const sensors = useSensors(
@@ -772,7 +773,7 @@ interface ExerciseCardProps {
   onThumbClick?: () => void;
 }
 
-const ExerciseCard = React.memo(function ExerciseCard({ ex, setRows, lastSets, nextSetIdx, timerActive, restingSetIdx, timerSeconds, activeInput, isSuperset, onToggle, onActivateSet, onWeight: _onWeight, onReps: _onReps, onFocusInput, onAddSet, onRemoveSet, onRemoveExercise, onToggleSupersetMode, onThumbClick }: ExerciseCardProps) {
+const ExerciseCard = React.memo(function ExerciseCard({ ex, setRows, lastSets, nextSetIdx, timerActive, restingSetIdx, timerSeconds, activeInput, isSuperset, onToggle, onActivateSet, onWeight: _onWeight, onReps: _onReps, onFocusInput, onAddSet, onRemoveSet, onRemoveExercise: _onRemoveExercise, onToggleSupersetMode, onThumbClick }: ExerciseCardProps) {
   const [imgError, setImgError] = useState(false);
   const name = ex.exerciseName;
   const meta = [ex.categoryName, ex.targetMuscleName].filter(Boolean).join(" · ");
@@ -891,7 +892,7 @@ interface SetRowItemProps {
   onFocusReps: () => void;
 }
 
-const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight, isNextSet, isResting, timerSeconds, isActiveWeight, isActiveReps, activeValue, activeSelected, onActivateSet, onToggle, onRemoveSet, onFocusWeight, onFocusReps }: SetRowItemProps) {
+const SetRowItem = React.memo(function SetRowItem({ idx, row, last: _last, isBodyweight, isNextSet, isResting, timerSeconds, isActiveWeight, isActiveReps, activeValue, activeSelected: _activeSelected, onActivateSet, onToggle, onRemoveSet, onFocusWeight, onFocusReps }: SetRowItemProps) {
   const t = useT();
   const weightDisplay = isActiveWeight ? activeValue : (row.weightKg ? String(row.weightKg) : "");
   const repsDisplay = isActiveReps ? activeValue : (row.reps ? String(row.reps) : "");
@@ -1172,6 +1173,3 @@ function fmtElapsed(s: number) {
   return `${Math.floor(m / 60)}h ${m % 60}m`;
 }
 
-function fmtDate(d: Date) {
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(d));
-}
