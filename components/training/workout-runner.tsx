@@ -775,11 +775,12 @@ const ExerciseCard = React.memo(function ExerciseCard({ ex, setRows, lastSets, n
         </div>
       </div>
 
-      {/* Column headers: [set-nr | kg | reps | actions] */}
-      <div className="grid grid-cols-[3rem_1fr_4.5rem_5rem] items-center px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--text3)]">
+      {/* Column headers: [set-nr | kg | reps | spacer | actions] */}
+      <div className="grid grid-cols-[3rem_5rem_4.5rem_1fr_5rem] items-center px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--text3)]">
         <span className="text-center">Set</span>
         <span className="text-right">{ex.isBodyweight ? "BW" : "kg"}</span>
         <span className="text-right">Reps</span>
+        <span />
         <span />
       </div>
 
@@ -865,7 +866,7 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
 
   return (
     <div
-      className={`grid grid-cols-[3rem_1fr_4.5rem_5rem] items-center px-3 border-l-2 transition-colors ${
+      className={`grid grid-cols-[3rem_5rem_4.5rem_1fr_5rem] items-center px-3 border-l-2 transition-colors ${
         isActive
           ? "bg-[var(--accent)]/20 border-l-[var(--accent)]"
           : isResting
@@ -879,7 +880,7 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
     >
       {/* Set number — always clickable, full-height tap target */}
       <div
-        onClick={() => onActivateSet()}
+        onPointerDown={(e) => { e.preventDefault(); onActivateSet(); }}
         className="flex min-h-[2.75rem] cursor-pointer flex-col items-center justify-center"
       >
         {isResting ? (
@@ -929,6 +930,9 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
       >
         {repsDisplay || <span className="opacity-30">—</span>}
       </div>
+
+      {/* Spacer */}
+      <div />
 
       {/* Complete and delete buttons */}
       <div className="flex items-center justify-end gap-2">
