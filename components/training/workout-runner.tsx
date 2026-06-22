@@ -397,16 +397,15 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
     );
   }
 
-  // Derive next incomplete set from restingSet (always fresh, not stale timerNextEx)
+  // Derive next set sequentially from restingSet — always index+1, regardless of completion
   function nextFromResting(): { exId: string; setIdx: number } | null {
     if (!restingSet) return null;
     const { exId, setIdx } = restingSet;
-    const nextInEx = rows(exId).findIndex((r, i) => i > setIdx && !r.completed);
-    if (nextInEx !== -1) return { exId, setIdx: nextInEx };
+    const exRows = rows(exId);
+    if (setIdx + 1 < exRows.length) return { exId, setIdx: setIdx + 1 };
     const nextEx = findNextExercise(exId);
     if (!nextEx) return null;
-    const firstIncomplete = rows(nextEx.id).findIndex((r) => !r.completed);
-    return { exId: nextEx.id, setIdx: firstIncomplete !== -1 ? firstIncomplete : 0 };
+    return { exId: nextEx.id, setIdx: 0 };
   }
 
   // Skip timer — stay on current position, open keyboard for next set
