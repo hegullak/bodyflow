@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, ChevronLeft, Dumbbell, Minus, Play, Plus, Trash2, X } from "lucide-react";
+import { Check, ChevronLeft, Dumbbell, Link2, Minus, Play, Plus, Trash2, X } from "lucide-react";
 import {
   DndContext,
   DragEndEvent,
@@ -196,6 +196,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
   const [timerNextEx, setTimerNextEx] = useState<ProgramExerciseRow | null>(null);
   const [timerNextSetIdx, setTimerNextSetIdx] = useState<number | null>(null);
   const [restingSet, setRestingSet] = useState<{ exId: string; setIdx: number } | null>(null);
+  const [supersetMap, setSupersetMap] = useState<Map<string, boolean>>(new Map());
   const [fullscreenImage, setFullscreenImage] = useState<{ url: string; name: string } | null>(null);
   const [activeInput, setActiveInput] = useState<ActiveInput | null>(null);
   const firstExRef = useRef<HTMLDivElement>(null);
@@ -325,16 +326,19 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
     // Set timer to show next incomplete set in this exercise, or next exercise if all sets are done
     const updatedExRows = rows(ex.id);
     const nextSetInEx = updatedExRows.findIndex((r, i) => i > idx && !r.completed);
-    if (nextSetInEx !== -1) {
-      // More sets in this exercise
+    const isSupersetMode = supersetMap.get(ex.id) ?? false;
+
+    if (nextSetInEx !== -1 && !isSupersetMode) {
+      // More sets in this exercise, and not in superset mode
       setTimerNextEx(ex);
       setTimerNextSetIdx(nextSetInEx);
-    } else {
-      // All sets done in this exercise, show next exercise
-      const blockIdx = blocks.findIndex((b) => b.exercises.some((e) => e.id === ex.id));
-      const nextBlock = blocks[blockIdx + 1];
-      setTimerNextEx(nextBlock?.exercises[0] ?? null);
-      setTimerNextSetIdx(null);
+    } else if (isSupersetMode || nextSetInEx === -1) {
+      // All sets done in this exercise, or superset mode — show next exercise at same set idx
+      const all = blocks.flatMap((b) => b.exercises);
+      const exIdx = all.findIndex((e) => e.id === ex.id);
+      const nextEx = exIdx !== -1 && exIdx < all.length - 1 ? all[exIdx + 1] : null;
+      setTimerNextEx(nextEx ?? null);
+      setTimerNextSetIdx(isSupersetMode && nextEx ? idx : null);
     }
 
     if (block.type === "superset") {
@@ -391,6 +395,14 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
         .map((b) => ({ ...b, exercises: b.exercises.filter((e) => e.id !== exId) }))
         .filter((b) => b.exercises.length > 0)
     );
+  }
+
+  function toggleSupersetMode(exId: string) {
+    setSupersetMap((prev) => {
+      const next = new Map(prev);
+      next.set(exId, !next.get(exId));
+      return next;
+    });
   }
 
   // Custom keyboard handlers
@@ -606,6 +618,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
                           restingSetIdx={restingSet?.exId === ex.id ? restingSet.setIdx : -1}
                           timerSeconds={timer.seconds}
                           activeInput={activeInput?.exId === ex.id ? activeInput : null}
+                          isSuperset={supersetMap.get(ex.id) ?? false}
                           onToggle={(idx) => toggleSet(ex, idx, block)}
                           onActivateSet={(idx) => { const r = rows(ex.id)[idx]; if (r && !r.completed) { setRestingSet({ exId: ex.id, setIdx: idx }); timer.start(ex.restSeconds); } }}
                           onWeight={(idx, v) => patchRow(ex.id, idx, { weightKg: v })}
@@ -614,6 +627,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
                           onAddSet={() => addRow(ex.id)}
                           onRemoveSet={(idx) => removeRow(ex.id, idx)}
                           onRemoveExercise={() => removeExercise(ex.id)}
+                          onToggleSupersetMode={() => toggleSupersetMode(ex.id)}
                           onThumbClick={ex.imageUrl ? () => setFullscreenImage({ url: ex.imageUrl!, name: ex.exerciseName }) : undefined}
                         />
                       </div>
@@ -713,6 +727,7 @@ interface ExerciseCardProps {
   restingSetIdx: number;
   timerSeconds: number;
   activeInput: ActiveInput | null;
+  isSuperset: boolean;
   onToggle: (idx: number) => void;
   onActivateSet: (idx: number) => void;
   onWeight: (idx: number, v: number) => void;
@@ -721,10 +736,11 @@ interface ExerciseCardProps {
   onAddSet: () => void;
   onRemoveSet: (idx: number) => void;
   onRemoveExercise: () => void;
+  onToggleSupersetMode: () => void;
   onThumbClick?: () => void;
 }
 
-const ExerciseCard = React.memo(function ExerciseCard({ ex, setRows, lastSets, nextSetIdx, timerActive, restingSetIdx, timerSeconds, activeInput, onToggle, onActivateSet, onWeight: _onWeight, onReps: _onReps, onFocusInput, onAddSet, onRemoveSet, onRemoveExercise, onThumbClick }: ExerciseCardProps) {
+const ExerciseCard = React.memo(function ExerciseCard({ ex, setRows, lastSets, nextSetIdx, timerActive, restingSetIdx, timerSeconds, activeInput, isSuperset, onToggle, onActivateSet, onWeight: _onWeight, onReps: _onReps, onFocusInput, onAddSet, onRemoveSet, onRemoveExercise, onToggleSupersetMode, onThumbClick }: ExerciseCardProps) {
   const [imgError, setImgError] = useState(false);
   const name = ex.exerciseName;
   const meta = [ex.categoryName, ex.targetMuscleName].filter(Boolean).join(" · ");
@@ -795,16 +811,22 @@ const ExerciseCard = React.memo(function ExerciseCard({ ex, setRows, lastSets, n
       <div className="flex items-center justify-between gap-3 border-t border-[var(--border)] px-0 py-2 mt-2">
         <button
           onClick={onAddSet}
-          className="flex items-center gap-2 text-sm font-medium text-[var(--text2)] hover:text-[var(--text1)]"
+          className="flex items-center gap-2 text-sm font-medium text-[var(--text2)] hover:text-[var(--text1)] transition-colors"
         >
           <Plus className="h-4 w-4" />
           Legg til sett
         </button>
         <button
-          className="flex items-center gap-2 text-sm font-medium text-[var(--text2)] hover:text-[var(--text1)]"
-          title="Superset"
+          onClick={onToggleSupersetMode}
+          className={`flex items-center gap-1 text-sm font-medium transition-colors ${
+            isSuperset
+              ? "text-[var(--accent)]"
+              : "text-[var(--text2)] hover:text-[var(--text1)]"
+          }`}
+          title={isSuperset ? "Superset aktivt" : "Aktiver superset"}
         >
-          ⚡
+          <Link2 className="h-4 w-4" />
+          Superset
         </button>
       </div>
 
@@ -935,7 +957,6 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
           ? "bg-[var(--accent)]/10 border-l-[var(--accent)]"
           : "border-l-transparent"
       }`}
-      onClick={() => { if (!row.completed) onActivateSet(); }}
     >
       {/* Set number / GO / REST */}
       {isResting ? (
@@ -946,9 +967,12 @@ const SetRowItem = React.memo(function SetRowItem({ idx, row, last, isBodyweight
       ) : isNextSet ? (
         <span className="text-xs font-bold text-[var(--accent)]">{t.workout.go}</span>
       ) : (
-        <span className={`text-sm font-semibold ${row.completed ? "text-[var(--green)]" : "text-[var(--text3)]"}`}>
+        <button
+          onClick={() => { if (!row.completed) onActivateSet(); }}
+          className={`text-sm font-semibold cursor-pointer hover:opacity-80 transition-opacity ${row.completed ? "text-[var(--green)]" : "text-[var(--text3)]"}`}
+        >
           {idx + 1}
-        </span>
+        </button>
       )}
 
       {/* Last */}
