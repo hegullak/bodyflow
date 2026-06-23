@@ -86,22 +86,22 @@ describe("bodyflowBrand", () => {
   describe("validatePrincipleAlignment", () => {
     it("accepts messages not in avoid list", () => {
       const msg = "Start with one small thing";
-      expect(validatePrincipleAlignment(msg, "Warm and honest")).toBe(true);
+      expect(validatePrincipleAlignment(msg)).toBe(true);
     });
 
     it("rejects messages in avoid list", () => {
       const msg = "You failed.";
-      expect(validatePrincipleAlignment(msg, "Non-shaming and supportive")).toBe(false);
+      expect(validatePrincipleAlignment(msg)).toBe(false);
     });
 
     it("rejects bad messages", () => {
       const badMsg = "You failed.";
-      expect(validatePrincipleAlignment(badMsg, "Warm and honest")).toBe(false);
+      expect(validatePrincipleAlignment(badMsg)).toBe(false);
     });
 
     it("accepts good messages", () => {
       const goodMsg = "Start with one small thing.";
-      expect(validatePrincipleAlignment(goodMsg, "Practical and direct")).toBe(true);
+      expect(validatePrincipleAlignment(goodMsg)).toBe(true);
     });
   });
 });
