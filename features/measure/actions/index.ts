@@ -7,7 +7,7 @@ import { bodyMeasurements } from "@/db/schema";
 import { requireUserId } from "@/lib/auth/current-user";
 import { scopeBy } from "@/lib/auth/scope";
 import { measurementFormSchema } from "@/lib/validation/measurement";
-import { type ActionResult, flattenZodErrors } from "./types";
+import { type ActionResult, flattenZodErrors } from "@/shared/actions/types";
 
 export async function upsertMeasurementAction(
   _prev: ActionResult | null,

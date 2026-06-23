@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, Trash2, X, ChefHat } from "lucide-react";
 import type { RecipeDetail, RecipeIngredientRow } from "@/lib/recipes";
 import type { FoodProductSummary } from "@/lib/foods/types";
-import { FoodSearchInput } from "@/components/meals/food-search-input";
+import { FoodSearchInput } from "../components/food-search-input";
 import { ConfirmSheet } from "@/components/ui/confirm-sheet";
 
 interface Props {

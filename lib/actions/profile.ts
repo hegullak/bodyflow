@@ -7,7 +7,7 @@ import { userProfiles } from "@/db/schema";
 import { requireUserId } from "@/lib/auth/current-user";
 import { writeAuditLog } from "@/lib/audit/log";
 import { profileFormSchema } from "@/lib/validation/profile";
-import { type ActionResult, flattenZodErrors } from "./types";
+import { type ActionResult, flattenZodErrors } from "@/shared/actions/types";
 
 export async function upsertProfileAction(
   _prev: ActionResult | null,

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { FoodProductSummary } from "@/lib/foods/types";
-import { getFavoriteIdsAction, getFavoriteProductsAction } from "@/lib/actions/foods";
+import { getFavoriteIdsAction, getFavoriteProductsAction } from "@/features/nutrition/actions/foods";
 
 export function useFavorites() {
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());

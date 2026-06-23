@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, UtensilsCrossed } from "lucide-react";
 import type { MealLogItem } from "@/db/schema";
-import type { MealsByType } from "@/lib/actions/meals";
+import type { MealsByType } from "../actions/meals";
 import { MEAL_TYPES } from "@/lib/meals/constants";
-import { CalorieBudgetCard } from "@/components/meals/calorie-budget-card";
-import { MealSection } from "@/components/meals/meal-section";
+import { CalorieBudgetCard } from "../components/calorie-budget-card";
+import { MealSection } from "../components/meal-section";
 import { addDaysToIsoDate, formatDate, todayIsoDate } from "@/lib/utils";
 
 export function MealsView({

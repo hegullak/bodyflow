@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { requireUserId } from "@/lib/auth/current-user";
 import { getRecipeDetail } from "@/lib/recipes";
-import { RecipeEditor } from "@/components/recipes/recipe-editor";
+import { RecipeEditor } from "@/features/nutrition/components/recipe-editor";
 
 export default async function RecipeDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

@@ -8,7 +8,7 @@ import { requireUserId } from "@/lib/auth/current-user";
 import { scopeBy } from "@/lib/auth/scope";
 import { writeAuditLog } from "@/lib/audit/log";
 import { dailyLogFormSchema } from "@/lib/validation/daily-log";
-import { type ActionResult, flattenZodErrors } from "./types";
+import { type ActionResult, flattenZodErrors } from "@/shared/actions/types";
 
 export async function upsertDailyLogAction(
   _prev: ActionResult | null,

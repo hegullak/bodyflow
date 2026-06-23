@@ -51,7 +51,7 @@ import {
   reAddMealItemAction,
   removeMealItemAction,
   type RecentMealItem,
-} from "@/lib/actions/meals";
+} from "@/features/nutrition/actions/meals";
 
 function makeFormData(fields: Record<string, string>): FormData {
   const fd = new FormData();

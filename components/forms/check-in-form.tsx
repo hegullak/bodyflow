@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import type { CheckInSnapshot } from "@/lib/queries/check-in";
-import { upsertCheckInAction } from "@/lib/actions/check-in";
+import { upsertCheckInAction } from "@/features/measure/actions/check-in";
 import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label } from "@/components/ui/field";
 import { formatWeekdayDate } from "@/lib/utils";

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { MealAddView } from "@/components/meals/meal-add-view";
+import { MealAddView } from "@/features/nutrition/components/meal-add-view";
 import { MEAL_TYPES } from "@/lib/meals/constants";
 import type { MealType } from "@/db/schema";
 import { todayIsoDate } from "@/lib/utils";

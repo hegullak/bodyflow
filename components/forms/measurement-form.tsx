@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import type { BodyMeasurement } from "@/db/schema";
-import { upsertMeasurementAction } from "@/lib/actions/measurements";
+import { upsertMeasurementAction } from "@/features/measure/actions";
 import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label, Textarea } from "@/components/ui/field";
 

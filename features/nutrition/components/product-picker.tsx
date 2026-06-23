@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import type { MealType } from "@/db/schema";
-import { addMealItemAction } from "@/lib/actions/meals";
-import { addSavedMealToLogAction, getSavedMealsAction } from "@/lib/actions/saved-meals";
+import { addMealItemAction } from "../actions/meals";
+import { addSavedMealToLogAction, getSavedMealsAction } from "../actions/saved-meals";
 import type { FoodProductSummary } from "@/lib/foods/types";
 import { type Unit, UNITS, toGrams, convertUnit } from "@/lib/foods/units";
 import { sourceLabel, groupResults } from "@/lib/foods/source";
@@ -12,12 +12,12 @@ import {
   BarcodeScanner,
   cameraErrorMessage,
   requestCameraStream,
-} from "@/components/meals/barcode-scanner";
-import { FoodScanWizard } from "@/components/meals/food-scan-wizard";
+} from "../components/barcode-scanner";
+import { FoodScanWizard } from "../components/food-scan-wizard";
 import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label } from "@/components/ui/field";
 import { BookOpen, Camera, Pencil, ScanBarcode, Search, Star, X } from "lucide-react";
-import { setPrettyNameAction, toggleFavoriteAction } from "@/lib/actions/foods";
+import { setPrettyNameAction, toggleFavoriteAction } from "../actions/foods";
 import { cn } from "@/lib/utils";
 import { useFoodSearch } from "@/hooks/use-food-search";
 import { useFavorites } from "@/hooks/use-favorites";

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { getMealItemByIdAction } from "@/lib/actions/meals";
-import { MealItemDetail } from "@/components/meals/meal-item-detail";
+import { getMealItemByIdAction } from "@/features/nutrition/actions/meals";
+import { MealItemDetail } from "@/features/nutrition/components/meal-item-detail";
 
 export default async function MealItemPage({
   params,

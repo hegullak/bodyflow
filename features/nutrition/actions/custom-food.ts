@@ -6,7 +6,7 @@ import { upsertCustomFoodProduct } from "@/lib/foods/catalog";
 import { requireUserId } from "@/lib/auth/current-user";
 import { requireFoodCustomPrefixId } from "@/lib/foods/prefix";
 import { logger } from "@/lib/logger";
-import { type ActionResult, flattenZodErrors } from "./types";
+import { type ActionResult, flattenZodErrors } from "@/shared/actions/types";
 
 const saveCustomFoodSchema = z.object({
   name: z.string().min(1).max(500),

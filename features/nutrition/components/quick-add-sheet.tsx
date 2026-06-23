@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import type { MealType } from "@/db/schema";
-import { quickAddMealItemAction } from "@/lib/actions/meals";
+import { quickAddMealItemAction } from "../actions/meals";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/field";
 import { useT } from "@/components/providers/lang-provider";

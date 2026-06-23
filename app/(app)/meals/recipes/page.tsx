@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, UtensilsCrossed } from "lucide-react";
 import { requireUserId } from "@/lib/auth/current-user";
 import { listRecipes } from "@/lib/recipes";
-import { NewRecipeButton } from "@/components/recipes/new-recipe-button";
+import { NewRecipeButton } from "@/features/nutrition/components/new-recipe-button";
 
 export default async function RecipesPage() {
   const userId = await requireUserId();

@@ -3,8 +3,8 @@
 import { useState, useEffect, useTransition } from "react";
 import { Star } from "lucide-react";
 import type { MealLogItem } from "@/db/schema";
-import { updateMealItemAction } from "@/lib/actions/meals";
-import { getFavoriteIdsAction, toggleFavoriteAction } from "@/lib/actions/foods";
+import { updateMealItemAction } from "../actions/meals";
+import { getFavoriteIdsAction, toggleFavoriteAction } from "../actions/foods";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/field";
 import { useT } from "@/components/providers/lang-provider";

@@ -11,7 +11,7 @@ import { buildMealCalories } from "@/lib/kassal/client";
 import { resolveFoodProduct } from "@/lib/foods/catalog";
 import { logger } from "@/lib/logger";
 import { addMealItemSchema, mealTypeSchema } from "@/lib/validation/meal-item";
-import { type ActionResult, flattenZodErrors } from "./types";
+import { type ActionResult, flattenZodErrors } from "@/shared/actions/types";
 import { z } from "zod";
 
 const copyMealsSchema = z.object({

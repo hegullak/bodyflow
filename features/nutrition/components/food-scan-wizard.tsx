@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import type { FoodProductSummary } from "@/lib/foods/types";
 import { detectEanFromImageFile } from "@/lib/foods/barcode-from-image";
-import { saveCustomFoodAction } from "@/lib/actions/custom-food";
+import { saveCustomFoodAction } from "../actions/custom-food";
 import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label } from "@/components/ui/field";
 

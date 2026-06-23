@@ -1,7 +1,7 @@
 import { CheckInForm } from "@/components/forms/check-in-form";
-import { CheckInHistory } from "@/components/forms/check-in-history";
+import { CheckInHistory } from "@/features/measure/components/check-in-history";
 import { Card } from "@/components/ui/card";
-import { getCheckInBundle } from "@/lib/actions/check-in";
+import { getCheckInBundle } from "@/features/measure/actions/check-in";
 import { requireUserId } from "@/lib/auth/current-user";
 import { syncWithingsForUser } from "@/lib/withings/sync";
 import { todayIsoDate } from "@/lib/utils";

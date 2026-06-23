@@ -1,6 +1,6 @@
-import { MealsView } from "@/components/meals/meals-view";
+import { MealsView } from "@/features/nutrition/components/meals-view";
 import { getProfileForUser } from "@/lib/actions/profile";
-import { getMealsGroupedByType, getMealItemsForDate } from "@/lib/actions/meals";
+import { getMealsGroupedByType, getMealItemsForDate } from "@/features/nutrition/actions/meals";
 import { requireUserId } from "@/lib/auth/current-user";
 import { isKassalConfigured } from "@/lib/kassal/config";
 import { addDaysToIsoDate, todayIsoDate } from "@/lib/utils";

@@ -8,7 +8,7 @@ import {
   upsertCheckInAction,
   getCheckInHistoryPageAction,
   deleteCheckInAction,
-} from "@/lib/actions/check-in";
+} from "../actions/check-in";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/field";
 import { formatWeekdayDate } from "@/lib/utils";

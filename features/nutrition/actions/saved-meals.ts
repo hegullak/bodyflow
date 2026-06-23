@@ -7,7 +7,7 @@ import { mealLogItems, savedMealItems, savedMeals, type MealType } from "@/db/sc
 import { requireUserId } from "@/lib/auth/current-user";
 import { scopeBy } from "@/lib/auth/scope";
 import { logger } from "@/lib/logger";
-import { type ActionResult } from "./types";
+import { type ActionResult } from "@/shared/actions/types";
 
 export async function saveMealAction(
   logDate: string,

@@ -8,7 +8,7 @@ import { requireUserId } from "@/lib/auth/current-user";
 import { scopeBy } from "@/lib/auth/scope";
 import { REMINDER_DEFINITIONS } from "@/lib/reminders/constants";
 import { upsertReminderSchema } from "@/lib/validation/reminder";
-import { type ActionResult, flattenZodErrors } from "./types";
+import { type ActionResult, flattenZodErrors } from "@/shared/actions/types";
 
 function activeReminderFilter(userId: string, reminderType?: ReminderType) {
   return scopeBy(

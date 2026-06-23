@@ -35,7 +35,7 @@ import {
   deleteSavedMealAction,
   getSavedMealsAction,
   saveMealAction,
-} from "@/lib/actions/saved-meals";
+} from "@/features/nutrition/actions/saved-meals";
 
 const mockMealItem = {
   id: "item-uuid",

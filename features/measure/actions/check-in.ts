@@ -15,7 +15,7 @@ import {
   type CheckInSnapshot,
 } from "@/lib/queries/check-in";
 import { checkInFormSchema } from "@/lib/validation/check-in";
-import { type ActionResult, flattenZodErrors } from "./types";
+import { type ActionResult, flattenZodErrors } from "@/shared/actions/types";
 
 export type CheckInActionResult = ActionResult<{ diff: CheckInDiff | null }>;
 
