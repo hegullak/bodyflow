@@ -181,10 +181,10 @@ export function ExerciseLibrary() {
               const isTogglingFav = togglingFavorite === ex.id;
               return (
                 <li key={ex.id}>
-                  <div className="flex items-center gap-2 rounded-[var(--radius-sm)] bg-[var(--card)]">
+                  <div className="flex min-w-0 items-center gap-2 rounded-[var(--radius-sm)] bg-[var(--card)]">
                     <Link
                       href={`/training/exercises/${ex.id}`}
-                      className="flex flex-1 items-center gap-3 px-3 py-2 active:bg-[var(--card2)]"
+                      className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2 active:bg-[var(--card2)]"
                     >
                       <ExerciseThumb imageUrl={ex.imageUrl} name={ex.name} />
                       <span className="flex-1 truncate text-sm font-medium text-[var(--text1)]">{ex.name}</span>
