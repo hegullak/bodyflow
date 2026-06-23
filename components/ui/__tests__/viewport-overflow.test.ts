@@ -33,7 +33,7 @@ describe("horizontal viewport overflow prevention", () => {
   });
 
   it("sticky add-page header does not use negative horizontal margin that widens the page", () => {
-    const src = read("components/meals/meal-add-view.tsx");
+    const src = read("features/nutrition/components/meal-add-view.tsx");
     expect(src).not.toContain("-mx-[");
   });
 });
