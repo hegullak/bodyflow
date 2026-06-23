@@ -44,17 +44,6 @@ export function detectWeightTrend(records: WeightRecord[]): WeightTrend {
 }
 
 /**
- * Calculate weekly average weight.
- */
-export function calculateWeeklyAverage(records: WeightRecord[]): number {
-  const oneWeekAgo = new Date();
-  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-
-  const weekRecords = records.filter(r => r.date >= oneWeekAgo);
-  return calculateAverageWeight(weekRecords);
-}
-
-/**
  * Calculate weight change from start to end.
  */
 export function calculateWeightChange(start: number, end: number): number {

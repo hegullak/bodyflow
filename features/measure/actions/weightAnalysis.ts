@@ -8,13 +8,11 @@ import { type ActionResult, flattenZodErrors } from "@/shared/actions/types";
 import {
   calculateAverageWeight,
   detectWeightTrend,
-  calculateWeeklyAverage,
   calculateWeightChange,
   calculateWeightChangePercentage,
   estimateTimeToGoal,
   calculateStabilityScore,
   calculateBMI,
-  WeightRecordSchema,
   type WeightRecord,
   type WeightTrend,
 } from "../weightTrend";
@@ -85,12 +83,15 @@ export async function analyzeWeightTrendsAction(
     }
 
     const avgWeight = calculateAverageWeight(weightRecords);
-    const weeklyAvg = calculateWeeklyAverage(weightRecords);
     const firstWeight = weightRecords[weightRecords.length - 1].weightKg;
     const latestWeight = weightRecords[0].weightKg;
-    const recentWeeklyChange = weeklyAvg - calculateAverageWeight(
+    const recentWeeklyChange = calculateAverageWeight(
       weightRecords.slice(0, 7),
+    ) - calculateAverageWeight(
+      weightRecords.slice(7, 14),
     );
+
+    const weeklyAvg = calculateAverageWeight(weightRecords.slice(0, 7));
 
     return {
       ok: true,

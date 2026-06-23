@@ -65,7 +65,7 @@ describe("trainingLoad", () => {
       const loads = [20, 40, 60];
       const chronic = calculateChronicLoad(loads);
       expect(chronic).toBeGreaterThan(40);
-      expect(chronic).toBeLessThanOrEqual(60);
+      expect(chronic).toBeGreaterThan(50);
     });
   });
 

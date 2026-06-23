@@ -52,11 +52,11 @@ export function calculateAcuteLoad(
   exerciseCount: number,
 ): number {
   // Base: 10 points per 30 minutes
-  const baseLo ad = (durationMinutes / 30) * 10;
+  const baseLoad = (durationMinutes / 30) * 10;
   const intensityBonus = intensity * 30;
   const exerciseBonus = Math.min(exerciseCount * 3, 20);
 
-  return Math.min(baseLo ad + intensityBonus + exerciseBonus, 100);
+  return Math.min(baseLoad + intensityBonus + exerciseBonus, 100);
 }
 
 /**

@@ -101,7 +101,7 @@ describe("mentalflow", () => {
     });
 
     it("includes only recent check-ins (max 7)", () => {
-      const checkIns: MentalCheckIn[] = Array.from({ length: 20 }, (_, i) => ({
+      const checkIns: MentalCheckIn[] = Array.from({ length: 20 }, () => ({
         date: new Date(),
         mood: "good" as const,
         stress: "low" as const,

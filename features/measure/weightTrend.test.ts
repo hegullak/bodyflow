@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import {
   calculateAverageWeight,
   detectWeightTrend,
-  calculateWeeklyAverage,
   calculateWeightChange,
   calculateWeightChangePercentage,
   estimateTimeToGoal,

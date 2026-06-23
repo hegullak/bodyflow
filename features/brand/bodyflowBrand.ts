@@ -68,10 +68,7 @@ export function getPhilosophyGuidance(): (typeof BODYFLOW_PHILOSOPHY)[number] {
 /**
  * Validate product principle compliance.
  */
-export function validatePrincipleAlignment(
-  message: string,
-  principle: (typeof BODYFLOW_PRODUCT_PRINCIPLES)[number],
-): boolean {
+export function validatePrincipleAlignment(message: string): boolean {
   const avoided = BODYFLOW_MESSAGES_TO_AVOID.some(m => message.includes(m));
   return !avoided;
 }
