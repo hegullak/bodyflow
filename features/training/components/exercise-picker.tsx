@@ -17,6 +17,7 @@ interface Exercise {
 interface Props {
   programId: string;
   programName: string;
+  returnTo?: string;
 }
 
 const BODY_PARTS = [
@@ -30,7 +31,7 @@ const BODY_PARTS = [
   { value: "waist", label: "Core" },
 ];
 
-export function ExercisePicker({ programId, programName }: Props) {
+export function ExercisePicker({ programId, programName, returnTo }: Props) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [bodyPart, setBodyPart] = useState("");
@@ -111,7 +112,11 @@ export function ExercisePicker({ programId, programName }: Props) {
   }
 
   function handleDone() {
-    router.back();
+    if (returnTo) {
+      router.push(returnTo);
+    } else {
+      router.back();
+    }
   }
 
   const activeFilter = bodyPart !== "";

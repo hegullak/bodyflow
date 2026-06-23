@@ -104,6 +104,8 @@ export async function updateExerciseAction(
 export async function removeExerciseAction(programId: string, exerciseId: string): Promise<void> {
   const userId = await requireUserId();
   await removeProgramExercise(exerciseId, programId, userId);
+  revalidatePath("/training/workout");
+  revalidatePath(`/training/programs/${programId}`);
 }
 
 export async function reorderExercisesAction(programId: string, orderIds: string[]): Promise<void> {

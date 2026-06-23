@@ -30,7 +30,7 @@ import { ExerciseCard } from "./exercise-card";
 import { WorkoutKeyboard } from "./workout-keyboard";
 import { RestTimerBar } from "./rest-timer-bar";
 import { ConfirmSheet } from "@/components/ui/confirm-sheet";
-import { logSetAction, unlogSetAction, endSessionAction } from "../actions";
+import { logSetAction, unlogSetAction, endSessionAction, removeExerciseAction } from "../actions";
 
 export function WorkoutRunner({ session }: { session: ActiveSession }) {
   const t = useT();
@@ -249,12 +249,14 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
 
   function confirmRemoveExercise() {
     if (!deleteConfirm) return;
+    const exId = deleteConfirm;
     setBlocks((prev) =>
       prev
-        .map((b) => ({ ...b, exercises: b.exercises.filter((e) => e.id !== deleteConfirm) }))
+        .map((b) => ({ ...b, exercises: b.exercises.filter((e) => e.id !== exId) }))
         .filter((b) => b.exercises.length > 0),
     );
     setDeleteConfirm(null);
+    if (session.programId) void removeExerciseAction(session.programId, exId);
   }
 
   function getExerciseName(exId: string): string {
@@ -587,7 +589,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
         )}
 
         <a
-          href={`/training/programs/${session.programId}/add-exercise`}
+          href={`/training/programs/${session.programId}/add-exercise?from=workout`}
           className="flex items-center justify-center gap-2 rounded-[var(--radius-md)] border border-dashed border-[var(--border)] py-4 text-[var(--text2)] active:bg-[var(--card)]"
         >
           <Plus className="h-5 w-5" />
