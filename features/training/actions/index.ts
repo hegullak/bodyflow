@@ -143,10 +143,8 @@ export async function getExerciseFavoriteIdsAction(): Promise<string[]> {
       .select({ exerciseId: exerciseFavorites.exerciseId })
       .from(exerciseFavorites)
       .where(eq(exerciseFavorites.userId, userId));
-    console.log("✅ getExerciseFavoriteIdsAction - found", results.length, "favorites");
     return results.map((r) => r.exerciseId);
-  } catch (err) {
-    console.error("❌ getExerciseFavoriteIdsAction failed:", err);
+  } catch {
     return [];
   }
 }
@@ -157,25 +155,19 @@ export async function toggleExerciseFavoriteAction(
   try {
     const userId = await requireUserId();
     const db = getDb();
-    console.log("🔍 toggleExerciseFavoriteAction - userId:", userId, "exerciseId:", exerciseId);
 
     const existing = await db.query.exerciseFavorites.findFirst({
       where: and(eq(exerciseFavorites.userId, userId), eq(exerciseFavorites.exerciseId, exerciseId)),
     });
-    console.log("🔍 existing favorite:", existing ? "YES" : "NO");
 
     if (existing) {
       await db.delete(exerciseFavorites).where(eq(exerciseFavorites.id, existing.id));
-      console.log("✅ Deleted favorite");
       return { ok: true, isFavorited: false };
     }
 
-    console.log("💾 Inserting favorite...");
     await db.insert(exerciseFavorites).values({ userId, exerciseId });
-    console.log("✅ Inserted favorite");
     return { ok: true, isFavorited: true };
   } catch (err) {
-    console.error("❌ toggleExerciseFavoriteAction error:", err);
     return { ok: false, error: err instanceof Error ? err.message : "Kunne ikke oppdatere favoritt." };
   }
 }
