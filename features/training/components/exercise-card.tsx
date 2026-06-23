@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Dumbbell, Link2, Plus } from "lucide-react";
+import { Dumbbell, Link2, Plus, Trash2 } from "lucide-react";
 import type { ProgramExerciseRow } from "../programs";
 import type { LastSetRow } from "../sessions";
 import type { SetRow, ActiveInput } from "../set-utils";
@@ -17,6 +17,7 @@ export interface ExerciseCardProps {
   timerSeconds: number;
   activeInput: ActiveInput | null;
   isSuperset: boolean;
+  isLastExercise: boolean;
   onToggle: (idx: number) => void;
   onActivateSet: (idx: number) => void;
   onWeight: (idx: number, v: number) => void;
@@ -39,6 +40,7 @@ export const ExerciseCard = React.memo(function ExerciseCard({
   timerSeconds,
   activeInput,
   isSuperset,
+  isLastExercise,
   onToggle,
   onActivateSet,
   onWeight: _onWeight,
@@ -56,7 +58,7 @@ export const ExerciseCard = React.memo(function ExerciseCard({
 
   return (
     <div className="overflow-hidden">
-      {/* Exercise name + thumbnail */}
+      {/* Exercise name + thumbnail + delete button */}
       <div className="flex items-center justify-between gap-3 px-0 py-3">
         <button
           onClick={onThumbClick}
@@ -82,6 +84,13 @@ export const ExerciseCard = React.memo(function ExerciseCard({
           <p className="font-semibold text-[var(--text1)]">{name}</p>
           {meta && <p className="text-xs text-[var(--text3)]">{meta} · {ex.equipment}</p>}
         </div>
+        <button
+          onClick={_onRemoveExercise}
+          className="shrink-0 rounded-full p-2 text-[var(--text3)] hover:bg-[var(--red-light)] hover:text-[var(--red)] transition-colors"
+          title="Slett øvelse"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
       </div>
 
       {/* Column headers: [set-nr | kg | reps | spacer | check | delete] */}
@@ -125,16 +134,18 @@ export const ExerciseCard = React.memo(function ExerciseCard({
           <Plus className="h-4 w-4" />
           Legg til sett
         </button>
-        <button
-          onClick={onToggleSupersetMode}
-          className={`flex items-center gap-1 text-sm font-medium transition-colors ${
-            isSuperset ? "text-[var(--accent)]" : "text-[var(--text2)] hover:text-[var(--text1)]"
-          }`}
-          title={isSuperset ? "Superset aktivt" : "Aktiver superset"}
-        >
-          <Link2 className="h-4 w-4" />
-          Superset
-        </button>
+        {!isLastExercise && (
+          <button
+            onClick={onToggleSupersetMode}
+            className={`flex items-center gap-1 text-sm font-medium transition-colors ${
+              isSuperset ? "text-[var(--accent)]" : "text-[var(--text2)] hover:text-[var(--text1)]"
+            }`}
+            title={isSuperset ? "Superset aktivt" : "Aktiver superset"}
+          >
+            <Link2 className="h-4 w-4" />
+            Superset
+          </button>
+        )}
       </div>
     </div>
   );

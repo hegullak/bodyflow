@@ -50,6 +50,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
   const [fullscreenImage, setFullscreenImage] = useState<{ url: string; name: string } | null>(null);
   const [activeInput, setActiveInput] = useState<ActiveInput | null>(null);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const firstExRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -243,11 +244,25 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
   }
 
   function removeExercise(exId: string) {
+    setDeleteConfirm(exId);
+  }
+
+  function confirmRemoveExercise() {
+    if (!deleteConfirm) return;
     setBlocks((prev) =>
       prev
-        .map((b) => ({ ...b, exercises: b.exercises.filter((e) => e.id !== exId) }))
+        .map((b) => ({ ...b, exercises: b.exercises.filter((e) => e.id !== deleteConfirm) }))
         .filter((b) => b.exercises.length > 0),
     );
+    setDeleteConfirm(null);
+  }
+
+  function getExerciseName(exId: string): string {
+    for (const block of blocks) {
+      const ex = block.exercises.find((e) => e.id === exId);
+      if (ex) return ex.exerciseName;
+    }
+    return "øvelsen";
   }
 
   function toggleSupersetMode(exId: string) {
@@ -507,45 +522,49 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
                         Superset
                       </p>
                     )}
-                    {block.exercises.map((ex) => (
-                      <div key={ex.id} ref={(el) => setCardRef(ex.id, el)}>
-                        <ExerciseCard
-                          ex={ex}
-                          setRows={rows(ex.id)}
-                          lastSets={session.lastSets[ex.id] ?? []}
-                          nextSetIdx={ex.id === nextExId ? nextExIdx : -1}
-                          timerActive={timer.active}
-                          restingSetIdx={(() => {
-                            if (!restingSet || restingSet.exId !== ex.id) return -1;
-                            const si = restingSet.setIdx;
-                            return rows(ex.id)[si]?.completed ? -1 : si;
-                          })()}
-                          timerSeconds={timer.seconds}
-                          activeInput={activeInput?.exId === ex.id ? activeInput : null}
-                          isSuperset={supersetMap.get(ex.id) ?? false}
-                          onToggle={(idx) => toggleSet(ex, idx, block)}
-                          onActivateSet={(idx) => {
-                            const r = rows(ex.id)[idx];
-                            if (r && !r.completed) {
-                              setRestingSet({ exId: ex.id, setIdx: idx });
-                              timer.start(ex.restSeconds);
+                    {block.exercises.map((ex, exIdx) => {
+                      const isLastEx = blockIdx === blocks.length - 1 && exIdx === block.exercises.length - 1;
+                      return (
+                        <div key={ex.id} ref={(el) => setCardRef(ex.id, el)}>
+                          <ExerciseCard
+                            ex={ex}
+                            setRows={rows(ex.id)}
+                            lastSets={session.lastSets[ex.id] ?? []}
+                            nextSetIdx={ex.id === nextExId ? nextExIdx : -1}
+                            timerActive={timer.active}
+                            restingSetIdx={(() => {
+                              if (!restingSet || restingSet.exId !== ex.id) return -1;
+                              const si = restingSet.setIdx;
+                              return rows(ex.id)[si]?.completed ? -1 : si;
+                            })()}
+                            timerSeconds={timer.seconds}
+                            activeInput={activeInput?.exId === ex.id ? activeInput : null}
+                            isSuperset={supersetMap.get(ex.id) ?? false}
+                            isLastExercise={isLastEx}
+                            onToggle={(idx) => toggleSet(ex, idx, block)}
+                            onActivateSet={(idx) => {
+                              const r = rows(ex.id)[idx];
+                              if (r && !r.completed) {
+                                setRestingSet({ exId: ex.id, setIdx: idx });
+                                timer.start(ex.restSeconds);
+                              }
+                            }}
+                            onWeight={(idx, v) => patchRow(ex.id, idx, { weightKg: v })}
+                            onReps={(idx, v) => patchRow(ex.id, idx, { reps: v })}
+                            onFocusInput={(setIdx, field) => focusInput(ex.id, setIdx, field)}
+                            onAddSet={() => addRow(ex.id)}
+                            onRemoveSet={(idx) => removeRow(ex.id, idx)}
+                            onRemoveExercise={() => removeExercise(ex.id)}
+                            onToggleSupersetMode={() => toggleSupersetMode(ex.id)}
+                            onThumbClick={
+                              ex.imageUrl
+                                ? () => setFullscreenImage({ url: ex.imageUrl!, name: ex.exerciseName })
+                                : undefined
                             }
-                          }}
-                          onWeight={(idx, v) => patchRow(ex.id, idx, { weightKg: v })}
-                          onReps={(idx, v) => patchRow(ex.id, idx, { reps: v })}
-                          onFocusInput={(setIdx, field) => focusInput(ex.id, setIdx, field)}
-                          onAddSet={() => addRow(ex.id)}
-                          onRemoveSet={(idx) => removeRow(ex.id, idx)}
-                          onRemoveExercise={() => removeExercise(ex.id)}
-                          onToggleSupersetMode={() => toggleSupersetMode(ex.id)}
-                          onThumbClick={
-                            ex.imageUrl
-                              ? () => setFullscreenImage({ url: ex.imageUrl!, name: ex.exerciseName })
-                              : undefined
-                          }
-                        />
-                      </div>
-                    ))}
+                          />
+                        </div>
+                      );
+                    })}
                   </div>
                 </SortableWorkoutBlock>
               ))}
@@ -601,6 +620,14 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
         confirmLabel={t.workout.endSession}
         onConfirm={() => { setShowEndConfirm(false); void doEnd(); }}
         onCancel={() => setShowEndConfirm(false)}
+      />
+
+      <ConfirmSheet
+        open={deleteConfirm !== null}
+        message={`Slett ${getExerciseName(deleteConfirm ?? "")}?`}
+        confirmLabel="Slett"
+        onConfirm={() => confirmRemoveExercise()}
+        onCancel={() => setDeleteConfirm(null)}
       />
 
       <style>{`@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }`}</style>
