@@ -42,6 +42,7 @@ export async function getTrainingHistoryAction(): Promise<TrainingSession[]> {
 export async function deleteTrainingSessionAction(sessionId: string): Promise<void> {
   const userId = await requireUserId();
   await deleteSession(sessionId, userId);
+  revalidatePath("/training/history");
 }
 
 export async function logSetAction(

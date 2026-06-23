@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { deleteTrainingSessionAction, type TrainingSession } from "@/features/training/actions";
 import { ConfirmSheet } from "@/components/ui/confirm-sheet";
@@ -12,12 +13,14 @@ interface HistorySessionRowProps {
 }
 
 export function HistorySessionRow({ session, deleteLabel, deleteConfirm }: HistorySessionRowProps) {
+  const router = useRouter();
   const [deleting, startDelete] = useTransition();
   const [showConfirm, setShowConfirm] = useState(false);
 
   function handleDelete() {
     startDelete(async () => {
       await deleteTrainingSessionAction(session.id);
+      router.refresh();
     });
   }
 
