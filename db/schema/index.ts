@@ -820,6 +820,24 @@ export const foodFavorites = pgTable(
   ],
 );
 
+export const exerciseFavorites = pgTable(
+  "exercise_favorite",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    exerciseId: uuid("exercise_id")
+      .notNull()
+      .references(() => exercises.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("exercise_favorite_user_exercise_unique").on(t.userId, t.exerciseId),
+    index("exercise_favorite_user_idx").on(t.userId),
+  ],
+);
+
 export const scheduledSessions = pgTable(
   "scheduled_session",
   {

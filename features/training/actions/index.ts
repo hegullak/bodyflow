@@ -1,5 +1,8 @@
 "use server";
 
+import { and, eq } from "drizzle-orm";
+import { getDb } from "@/db/client";
+import { exerciseFavorites } from "@/db/schema";
 import { requireUserId } from "@/lib/auth/current-user";
 import {
   getSessionHistory,
@@ -123,4 +126,50 @@ export async function addExerciseAction(
 ): Promise<void> {
   const userId = await requireUserId();
   await addExerciseToProgram(programId, userId, exerciseId);
+}
+
+// Favorites
+export async function getExerciseFavoriteIdsAction(): Promise<string[]> {
+  try {
+    const userId = await requireUserId();
+    const db = getDb();
+    const results = await db
+      .select({ exerciseId: exerciseFavorites.exerciseId })
+      .from(exerciseFavorites)
+      .where(eq(exerciseFavorites.userId, userId));
+    console.log("✅ getExerciseFavoriteIdsAction - found", results.length, "favorites");
+    return results.map((r) => r.exerciseId);
+  } catch (err) {
+    console.error("❌ getExerciseFavoriteIdsAction failed:", err);
+    return [];
+  }
+}
+
+export async function toggleExerciseFavoriteAction(
+  exerciseId: string,
+): Promise<{ ok: true; isFavorited: boolean } | { ok: false; error: string }> {
+  try {
+    const userId = await requireUserId();
+    const db = getDb();
+    console.log("🔍 toggleExerciseFavoriteAction - userId:", userId, "exerciseId:", exerciseId);
+
+    const existing = await db.query.exerciseFavorites.findFirst({
+      where: and(eq(exerciseFavorites.userId, userId), eq(exerciseFavorites.exerciseId, exerciseId)),
+    });
+    console.log("🔍 existing favorite:", existing ? "YES" : "NO");
+
+    if (existing) {
+      await db.delete(exerciseFavorites).where(eq(exerciseFavorites.id, existing.id));
+      console.log("✅ Deleted favorite");
+      return { ok: true, isFavorited: false };
+    }
+
+    console.log("💾 Inserting favorite...");
+    await db.insert(exerciseFavorites).values({ userId, exerciseId });
+    console.log("✅ Inserted favorite");
+    return { ok: true, isFavorited: true };
+  } catch (err) {
+    console.error("❌ toggleExerciseFavoriteAction error:", err);
+    return { ok: false, error: err instanceof Error ? err.message : "Kunne ikke oppdatere favoritt." };
+  }
 }

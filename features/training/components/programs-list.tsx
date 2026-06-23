@@ -96,12 +96,12 @@ export function ProgramsList({ programs, startMode, activeSessionProgramId }: Pr
           {programList.map((p) => {
             const isActive = p.id === activeSessionProgramId;
             return (
-              <li key={p.id} className="flex items-center gap-2">
+              <li key={p.id} className="relative">
                 {startMode ? (
                   <button
                     onClick={() => handleStart(p.id, isActive)}
                     disabled={starting === p.id}
-                    className="flex flex-1 items-center overflow-hidden rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] text-left active:bg-[var(--card2)] disabled:opacity-60"
+                    className="flex w-full items-center overflow-hidden rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] text-left active:bg-[var(--card2)] disabled:opacity-60"
                   >
                     <div className={`flex w-12 shrink-0 items-center justify-center self-stretch ${isActive ? "bg-[var(--green)]" : "bg-[var(--accent)]"}`}>
                       {isActive ? (
@@ -126,26 +126,20 @@ export function ProgramsList({ programs, startMode, activeSessionProgramId }: Pr
                 ) : (
                   <Link
                     href={`/training/programs/${p.id}`}
-                    className="flex flex-1 items-center overflow-hidden rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] active:bg-[var(--card2)]"
+                    className="flex w-full items-center justify-between px-4 py-4 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] active:bg-[var(--card2)]"
                   >
-                    <div className="flex w-12 shrink-0 items-center justify-center self-stretch bg-[var(--accent)]">
-                      <ChevronRight className="h-5 w-5 text-white" />
-                    </div>
-                    <div className="flex flex-1 items-center justify-between px-4 py-4">
-                      <div>
-                        <p className="font-medium text-[var(--text1)]">{p.name}</p>
-                        {isActive && (
-                          <p className="text-xs text-[var(--green)]">{tr.activeSession}</p>
-                        )}
-                      </div>
-                      <ChevronRight className="h-4 w-4 text-[var(--text3)]" />
+                    <div>
+                      <p className="font-medium text-[var(--text1)]">{p.name}</p>
+                      {isActive && (
+                        <p className="text-xs text-[var(--green)]">{tr.activeSession}</p>
+                      )}
                     </div>
                   </Link>
                 )}
                 <button
                   onClick={() => setDeleteConfirm({ id: p.id, name: p.name })}
                   disabled={deleting === p.id}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[var(--text3)] hover:text-[var(--red)] disabled:opacity-40"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full text-[var(--text3)] hover:bg-[var(--red-light)] hover:text-[var(--red)] transition-colors disabled:opacity-40"
                   title="Slett program"
                 >
                   <Trash2 className="h-4 w-4" />

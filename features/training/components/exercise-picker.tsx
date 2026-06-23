@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Dumbbell, Loader2, Search, SlidersHorizontal, X } from "lucide-react";
-import { addExerciseAction } from "../actions";
+import { Check, Dumbbell, Loader2, Search, SlidersHorizontal, Star, X } from "lucide-react";
+import { addExerciseAction, getExerciseFavoriteIdsAction, toggleExerciseFavoriteAction } from "../actions";
 
 interface Exercise {
   id: string;
@@ -40,7 +40,13 @@ export function ExercisePicker({ programId, programName }: Props) {
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
   const [addedCount, setAddedCount] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const [togglingFavorite, setTogglingFavorite] = useState<string | null>(null);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    getExerciseFavoriteIdsAction().then((ids) => setFavoriteIds(new Set(ids)));
+  }, []);
 
   async function search() {
     setLoading(true);
@@ -83,6 +89,24 @@ export function ExercisePicker({ programId, programName }: Props) {
       }, 2000);
     } finally {
       setAdding(null);
+    }
+  }
+
+  async function handleToggleFavorite(exerciseId: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    setTogglingFavorite(exerciseId);
+    try {
+      const result = await toggleExerciseFavoriteAction(exerciseId);
+      if (result.ok) {
+        setFavoriteIds((prev) => {
+          const next = new Set(prev);
+          if (result.isFavorited) next.add(exerciseId);
+          else next.delete(exerciseId);
+          return next;
+        });
+      }
+    } finally {
+      setTogglingFavorite(null);
     }
   }
 
@@ -206,29 +230,45 @@ export function ExercisePicker({ programId, programName }: Props) {
           {results.map((ex) => {
             const isAdded = addedIds.has(ex.id);
             const isAdding = adding === ex.id;
+            const isFavorited = favoriteIds.has(ex.id);
+            const isTogglingFav = togglingFavorite === ex.id;
             return (
               <li key={ex.id}>
-                <button
-                  onClick={() => handleAdd(ex)}
-                  disabled={isAdding}
-                  className={`flex w-full items-center gap-3 rounded-[var(--radius-sm)] border px-3 py-2 text-left transition-colors disabled:opacity-60 ${
-                    isAdded
-                      ? "border-[var(--green)]/40 bg-[var(--green-light)]"
-                      : "border-[var(--border)] bg-[var(--card)] active:bg-[var(--card2)]"
-                  }`}
-                >
-                  <ExerciseThumb imageUrl={ex.imageUrl} name={ex.name} />
-                  <span className={`flex-1 truncate text-sm font-medium ${isAdded ? "text-[var(--green)]" : "text-[var(--text1)]"}`}>
-                    {ex.name}
-                  </span>
-                  {isAdding ? (
-                    <Loader2 className="ml-2 h-4 w-4 shrink-0 animate-spin text-[var(--accent)]" />
-                  ) : isAdded ? (
-                    <Check className="ml-2 h-4 w-4 shrink-0 text-[var(--green)]" />
-                  ) : (
-                    <span className="ml-2 shrink-0 text-xs text-[var(--accent)]">+ Add</span>
-                  )}
-                </button>
+                <div className="flex items-center gap-2 rounded-[var(--radius-sm)] border transition-colors">
+                  <button
+                    onClick={() => handleAdd(ex)}
+                    disabled={isAdding}
+                    className={`flex flex-1 items-center gap-3 px-3 py-2 text-left transition-colors disabled:opacity-60 ${
+                      isAdded
+                        ? "border-r border-[var(--green)]/40 bg-[var(--green-light)]"
+                        : "bg-[var(--card)] active:bg-[var(--card2)]"
+                    }`}
+                  >
+                    <ExerciseThumb imageUrl={ex.imageUrl} name={ex.name} />
+                    <span className={`flex-1 truncate text-sm font-medium ${isAdded ? "text-[var(--green)]" : "text-[var(--text1)]"}`}>
+                      {ex.name}
+                    </span>
+                    {isAdding ? (
+                      <Loader2 className="ml-2 h-4 w-4 shrink-0 animate-spin text-[var(--accent)]" />
+                    ) : isAdded ? (
+                      <Check className="ml-2 h-4 w-4 shrink-0 text-[var(--green)]" />
+                    ) : (
+                      <span className="ml-2 shrink-0 text-xs text-[var(--accent)]">+ Add</span>
+                    )}
+                  </button>
+                  <button
+                    onClick={(e) => handleToggleFavorite(ex.id, e)}
+                    disabled={isTogglingFav}
+                    className="shrink-0 rounded-full p-1 mr-1 text-[var(--text3)] hover:bg-[var(--accent-light)] hover:text-[var(--accent)] transition-colors disabled:opacity-60"
+                    title={isFavorited ? "Fjern fra favoritter" : "Legg til favoritter"}
+                  >
+                    {isTogglingFav ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Star className={`h-4 w-4 ${isFavorited ? "fill-[var(--accent)] text-[var(--accent)]" : ""}`} />
+                    )}
+                  </button>
+                </div>
               </li>
             );
           })}
