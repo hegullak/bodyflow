@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { Dumbbell, BookOpen, Library, History, CalendarDays } from "lucide-react";
 import { requireUserId } from "@/lib/auth/current-user";
-import { getActiveSession } from "@/lib/training/sessions";
-import { ActiveWorkoutBanner } from "@/components/training/active-workout-banner";
+import { getActiveSession } from "@/features/training/sessions";
+import { ActiveWorkoutBanner } from "@/features/training/components/active-workout-banner";
 import { RecoveryCard } from "@/components/dashboard/recovery-card";
 import { getT } from "@/lib/i18n/server";
 import { getDashboardData } from "@/lib/queries/dashboard";

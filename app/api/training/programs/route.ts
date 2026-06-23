@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUserId } from "@/lib/auth/current-user";
-import { createProgram, listPrograms } from "@/lib/training/programs";
+import { createProgram, listPrograms } from "@/features/training/programs";
 
 export async function GET() {
   const userId = await requireUserId();

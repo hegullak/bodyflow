@@ -1,5 +1,5 @@
-import type { ProgramBlock } from "@/lib/training/programs";
-import type { CompletedSet, LastSetRow } from "@/lib/training/sessions";
+import type { ProgramBlock } from "./programs";
+import type { CompletedSet, LastSetRow } from "./sessions";
 
 // ---------------------------------------------------------------------------
 // Shared types

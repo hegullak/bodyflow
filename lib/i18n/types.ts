@@ -149,10 +149,15 @@ export type Translations = {
     selectProgram: string;
     noCompletedSessions: string;
     active: string;
+    activeSession: string;
+    continueActiveSession: string;
     deleteSessionConfirm: string;
     deleteSessionAria: string;
     continueSession: string;
     startingSession: string;
+    createProgram: string;
+    creatingProgram: string;
+    newProgram: string;
     noExercisesYet: string;
     addExercise: string;
     addSet: string;

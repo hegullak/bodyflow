@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronRight, Play, Plus, Dumbbell, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmSheet } from "@/components/ui/confirm-sheet";
+import { useT } from "@/components/providers/lang-provider";
+import { deleteProgramAction } from "../actions";
 
 interface Program {
   id: string;
@@ -20,10 +23,13 @@ interface Props {
 }
 
 export function ProgramsList({ programs, startMode, activeSessionProgramId }: Props) {
+  const t = useT();
+  const tr = t.training;
   const router = useRouter();
   const [creating, setCreating] = useState(false);
   const [starting, setStarting] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
   const [programList, setProgramList] = useState(programs);
   const [newName, setNewName] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -47,11 +53,10 @@ export function ProgramsList({ programs, startMode, activeSessionProgramId }: Pr
     }
   }
 
-  async function handleDelete(programId: string, name: string) {
-    if (!confirm(`Slett "${name}"?`)) return;
+  async function doDelete(programId: string) {
     setDeleting(programId);
     try {
-      await fetch(`/api/training/programs/${programId}`, { method: "DELETE" });
+      await deleteProgramAction(programId);
       setProgramList((prev) => prev.filter((p) => p.id !== programId));
     } finally {
       setDeleting(null);
@@ -112,7 +117,7 @@ export function ProgramsList({ programs, startMode, activeSessionProgramId }: Pr
                       <div>
                         <p className="font-medium text-[var(--text1)]">{p.name}</p>
                         {isActive && (
-                          <p className="text-xs font-medium text-[var(--green)]">Pågående økt · trykk for å fortsette</p>
+                          <p className="text-xs font-medium text-[var(--green)]">{tr.continueActiveSession}</p>
                         )}
                       </div>
                       <ChevronRight className="h-4 w-4 text-[var(--text3)]" />
@@ -130,7 +135,7 @@ export function ProgramsList({ programs, startMode, activeSessionProgramId }: Pr
                       <div>
                         <p className="font-medium text-[var(--text1)]">{p.name}</p>
                         {isActive && (
-                          <p className="text-xs text-[var(--green)]">Pågående økt</p>
+                          <p className="text-xs text-[var(--green)]">{tr.activeSession}</p>
                         )}
                       </div>
                       <ChevronRight className="h-4 w-4 text-[var(--text3)]" />
@@ -138,7 +143,7 @@ export function ProgramsList({ programs, startMode, activeSessionProgramId }: Pr
                   </Link>
                 )}
                 <button
-                  onClick={() => handleDelete(p.id, p.name)}
+                  onClick={() => setDeleteConfirm({ id: p.id, name: p.name })}
                   disabled={deleting === p.id}
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[var(--text3)] hover:text-[var(--red)] disabled:opacity-40"
                   title="Slett program"
@@ -163,10 +168,10 @@ export function ProgramsList({ programs, startMode, activeSessionProgramId }: Pr
           />
           <div className="flex gap-2">
             <Button onClick={handleCreate} disabled={creating || !newName.trim()} className="flex-1">
-              {creating ? "Oppretter…" : "Opprett"}
+              {creating ? tr.creatingProgram : tr.createProgram}
             </Button>
             <Button variant="outline" onClick={() => { setShowForm(false); setNewName(""); }}>
-              Avbryt
+              {t.common.cancel}
             </Button>
           </div>
         </div>
@@ -176,9 +181,16 @@ export function ProgramsList({ programs, startMode, activeSessionProgramId }: Pr
           className="flex items-center justify-center gap-2 rounded-[var(--radius-md)] border border-dashed border-[var(--border)] py-4 text-[var(--text2)] active:bg-[var(--card)]"
         >
           <Plus className="h-5 w-5" />
-          Nytt program
+          {tr.newProgram}
         </button>
       )}
+
+      <ConfirmSheet
+        open={!!deleteConfirm}
+        message={`Slett "${deleteConfirm?.name}"?`}
+        onConfirm={() => { const id = deleteConfirm!.id; setDeleteConfirm(null); void doDelete(id); }}
+        onCancel={() => setDeleteConfirm(null)}
+      />
     </div>
   );
 }

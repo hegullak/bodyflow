@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Dumbbell, Loader2, Search, SlidersHorizontal, X } from "lucide-react";
+import { addExerciseAction } from "../actions";
 
 interface Exercise {
   id: string;
@@ -70,11 +71,7 @@ export function ExercisePicker({ programId, programName }: Props) {
     if (adding || addedIds.has(exercise.id)) return;
     setAdding(exercise.id);
     try {
-      await fetch(`/api/training/programs/${programId}/exercises`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ exerciseId: exercise.id }),
-      });
+      await addExerciseAction(programId, exercise.id);
       setAddedIds((prev) => new Set([...prev, exercise.id]));
       setAddedCount((n) => n + 1);
       setTimeout(() => {

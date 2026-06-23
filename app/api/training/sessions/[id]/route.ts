@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUserId } from "@/lib/auth/current-user";
-import { deleteSession, endSession, getSessionDetail } from "@/lib/training/sessions";
+import { deleteSession, endSession, getSessionDetail } from "@/features/training/sessions";
 
 type Params = { params: Promise<{ id: string }> };
 

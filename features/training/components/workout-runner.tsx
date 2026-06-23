@@ -13,8 +13,8 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import type { ActiveSession } from "@/lib/training/sessions";
-import type { ProgramBlock, ProgramExerciseRow } from "@/lib/training/programs";
+import type { ActiveSession } from "../sessions";
+import type { ProgramBlock, ProgramExerciseRow } from "../programs";
 import { useT } from "@/components/providers/lang-provider";
 import { useRestTimer } from "@/hooks/use-rest-timer";
 import {
@@ -24,11 +24,13 @@ import {
   blockDragId,
   fmtElapsed,
   initSets,
-} from "@/lib/training/set-utils";
+} from "../set-utils";
 import { SortableWorkoutBlock } from "./sortable-workout-block";
 import { ExerciseCard } from "./exercise-card";
 import { WorkoutKeyboard } from "./workout-keyboard";
 import { RestTimerBar } from "./rest-timer-bar";
+import { ConfirmSheet } from "@/components/ui/confirm-sheet";
+import { logSetAction, unlogSetAction, endSessionAction } from "../actions";
 
 export function WorkoutRunner({ session }: { session: ActiveSession }) {
   const t = useT();
@@ -47,6 +49,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
   const [supersetMap, setSupersetMap] = useState<Map<string, boolean>>(new Map());
   const [fullscreenImage, setFullscreenImage] = useState<{ url: string; name: string } | null>(null);
   const [activeInput, setActiveInput] = useState<ActiveInput | null>(null);
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
 
   const firstExRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -132,11 +135,11 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
   async function removeRow(exId: string, idx: number) {
     const r = rows(exId)[idx];
     if (r?.completed) {
-      await fetch(`/api/training/sessions/${session.id}/sets`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ programExerciseId: exId, setNumber: idx + 1 }),
-      });
+      try {
+        await unlogSetAction(session.id, exId, idx + 1);
+      } catch (err) {
+        console.error("Failed to remove set:", err);
+      }
     }
     setSetsMap((prev) => {
       const next = new Map(prev);
@@ -165,11 +168,11 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
 
     if (r.completed) {
       patchRow(ex.id, idx, { completed: false });
-      await fetch(`/api/training/sessions/${session.id}/sets`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ programExerciseId: ex.id, setNumber }),
-      });
+      try {
+        await unlogSetAction(session.id, ex.id, setNumber);
+      } catch (err) {
+        console.error("Failed to log set removal:", err);
+      }
       return;
     }
 
@@ -179,20 +182,14 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
     patchRow(ex.id, idx, { completed: true });
     cardRefs.current.get(ex.id)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
 
-    await fetch(`/api/training/sessions/${session.id}/sets`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        programExerciseId: ex.id,
-        setNumber,
-        weightKg: ex.isBodyweight ? null : r.weightKg,
-        reps: r.reps,
-      }),
-    });
+    try {
+      await logSetAction(session.id, ex.id, setNumber, ex.isBodyweight ? null : r.weightKg, r.reps);
+    } catch (err) {
+      console.error("Failed to log set completion:", err);
+    }
 
     // Update timer hints for RestTimerBar
-    const updatedExRows = rows(ex.id);
-    const nextSetInEx = updatedExRows.findIndex((r, i) => i > idx && !r.completed);
+    const nextSetInEx = exRows.findIndex((r, i) => i > idx && !r.completed);
     const isSupersetMode = supersetMap.get(ex.id) ?? false;
 
     if (nextSetInEx !== -1 && !isSupersetMode) {
@@ -220,12 +217,10 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
     })();
 
     if (block.type === "superset") {
-      // Only start timer when all exercises in the superset have completed this set index
-      const updatedMap = new Map(setsMap);
-      const updatedRows = [...(updatedMap.get(ex.id) ?? [])];
-      updatedRows[idx] = { ...updatedRows[idx], completed: true };
-      updatedMap.set(ex.id, updatedRows);
-      const allDone = block.exercises.every((bex) => updatedMap.get(bex.id)?.[idx]?.completed);
+      // Start timer only when every exercise in the superset has completed this set index
+      const allDone = block.exercises.every((bex) =>
+        bex.id === ex.id ? true : rows(bex.id)[idx]?.completed === true
+      );
       if (allDone) {
         setRestingSet(nextRestTarget);
         timer.start(ex.restSeconds);
@@ -408,11 +403,10 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
   // Session end
   // ---------------------------------------------------------------------------
 
-  async function handleEnd() {
-    if (!confirm(t.workout.endWorkout)) return;
+  async function doEnd() {
     setEnding(true);
     try {
-      await fetch(`/api/training/sessions/${session.id}`, { method: "PUT" });
+      await endSessionAction(session.id);
       router.push("/training/history");
     } catch {
       setEnding(false);
@@ -491,7 +485,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
             </div>
           </div>
           <button
-            onClick={handleEnd}
+            onClick={() => setShowEndConfirm(true)}
             disabled={ending}
             className="shrink-0 rounded-full border border-[var(--border)] px-4 py-1.5 text-sm text-[var(--text2)] hover:bg-[var(--card2)] disabled:opacity-50"
           >
@@ -582,7 +576,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
         </a>
 
         <button
-          onClick={handleEnd}
+          onClick={() => setShowEndConfirm(true)}
           disabled={ending}
           className="mt-2 w-full rounded-[var(--radius-md)] border border-[var(--border)] py-4 text-sm font-medium text-[var(--text2)] active:bg-[var(--card)] disabled:opacity-50"
         >
@@ -600,6 +594,14 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
           onDismiss={() => setActiveInput(null)}
         />
       )}
+
+      <ConfirmSheet
+        open={showEndConfirm}
+        message={t.workout.endWorkout}
+        confirmLabel={t.workout.endSession}
+        onConfirm={() => { setShowEndConfirm(false); void doEnd(); }}
+        onCancel={() => setShowEndConfirm(false)}
+      />
 
       <style>{`@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }`}</style>
     </>

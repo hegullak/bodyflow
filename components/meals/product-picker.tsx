@@ -5,6 +5,8 @@ import type { MealType } from "@/db/schema";
 import { addMealItemAction } from "@/lib/actions/meals";
 import { addSavedMealToLogAction, getSavedMealsAction } from "@/lib/actions/saved-meals";
 import type { FoodProductSummary } from "@/lib/foods/types";
+import { type Unit, UNITS, toGrams, convertUnit } from "@/lib/foods/units";
+import { sourceLabel, groupResults } from "@/lib/foods/source";
 import { calculateCaloriesFromGrams } from "@/lib/kassal/nutrition";
 import {
   BarcodeScanner,
@@ -15,55 +17,12 @@ import { FoodScanWizard } from "@/components/meals/food-scan-wizard";
 import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label } from "@/components/ui/field";
 import { BookOpen, Camera, Pencil, ScanBarcode, Search, Star, X } from "lucide-react";
-import { getFavoriteIdsAction, getFavoriteProductsAction, setPrettyNameAction, toggleFavoriteAction } from "@/lib/actions/foods";
+import { setPrettyNameAction, toggleFavoriteAction } from "@/lib/actions/foods";
 import { cn } from "@/lib/utils";
+import { useFoodSearch } from "@/hooks/use-food-search";
+import { useFavorites } from "@/hooks/use-favorites";
 
 type Mode = "search" | "favorites" | "scan" | "photo" | "saved";
-type Unit = "g" | "dl" | "flaske" | "boks";
-
-const UNIT_FACTOR: Record<Unit, number> = { g: 1, dl: 100, flaske: 333, boks: 500 };
-const UNITS: Unit[] = ["g", "dl", "flaske", "boks"];
-
-function toGrams(qty: number, unit: Unit): number {
-  return Math.round(qty * UNIT_FACTOR[unit]);
-}
-
-function sourceLabel(product: FoodProductSummary): string {
-  if (product.source === "matvaretabellen") return "Matvaretabellen";
-  if (product.source === "custom") return product.name.split(":")[0]?.trim() ?? "Egendefinert";
-  if (product.source === "kassal") {
-    return product.brand ? `Kassal.app · ${product.brand}` : "Kassal.app";
-  }
-  return "Ukjent kilde";
-}
-
-const SOURCE_ORDER = { matvaretabellen: 0, kassal: 1, custom: 2 } as const;
-
-function sortBySource(products: FoodProductSummary[]): FoodProductSummary[] {
-  return [...products].sort(
-    (a, b) => (SOURCE_ORDER[a.source] ?? 9) - (SOURCE_ORDER[b.source] ?? 9),
-  );
-}
-
-function groupTitle(source: FoodProductSummary["source"]): string {
-  if (source === "kassal") return "Kassal.app";
-  if (source === "matvaretabellen") return "Matvaretabellen";
-  return "Egne produkter";
-}
-
-function groupResults(products: FoodProductSummary[]): Array<{ title: string; items: FoodProductSummary[] }> {
-  const groups: Array<{ title: string; items: FoodProductSummary[] }> = [];
-  for (const product of sortBySource(products)) {
-    const title = groupTitle(product.source);
-    const last = groups[groups.length - 1];
-    if (last?.title === title) {
-      last.items.push(product);
-    } else {
-      groups.push({ title, items: [product] });
-    }
-  }
-  return groups;
-}
 
 export function ProductPicker({
   logDate,
@@ -86,7 +45,8 @@ export function ProductPicker({
       document.body.style.overflow = prev;
     };
   }, []);
-  const [results, setResults] = useState<FoodProductSummary[]>([]);
+  const { results, setResults, searchError, setSearchError } = useFoodSearch(query);
+  const { favoriteIds, favoriteProducts, favoritesLoaded, loadFavoriteIds, loadFavorites, applyToggleResult } = useFavorites();
   const [selected, setSelected] = useState<FoodProductSummary | null>(null);
   const [quantityInput, setQuantityInput] = useState("");
   const [unit, setUnit] = useState<Unit>("g");
@@ -95,9 +55,15 @@ export function ProductPicker({
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [eanNotFound, setEanNotFound] = useState(false);
   const [photoInitialEan, setPhotoInitialEan] = useState<string | undefined>();
-  const [searchError, setSearchError] = useState<string | null>(null);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [pending, startTransition] = useTransition();
+  const [savedMeals, setSavedMeals] = useState<
+    Array<{ id: string; name: string; totalKcal: number; totalGrams: number }>
+  >([]);
+  const [savedMealsLoaded, setSavedMealsLoaded] = useState(false);
+  const [addingSavedId, setAddingSavedId] = useState<string | null>(null);
+
+  useEffect(() => { void loadFavoriteIds(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const stopCameraStream = useCallback(() => {
     setCameraStream((current) => {
@@ -119,47 +85,13 @@ export function ProductPicker({
     }
   }, [stopCameraStream]);
 
-  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
-  const [favoriteProducts, setFavoriteProducts] = useState<FoodProductSummary[]>([]);
-  const [favoritesLoaded, setFavoritesLoaded] = useState(false);
-
-  const [savedMeals, setSavedMeals] = useState<
-    Array<{ id: string; name: string; totalKcal: number; totalGrams: number }>
-  >([]);
-  const [savedMealsLoaded, setSavedMealsLoaded] = useState(false);
-  const [addingSavedId, setAddingSavedId] = useState<string | null>(null);
-
-  // Load favorite IDs once on mount so stars render correctly in search results
-  useEffect(() => {
-    getFavoriteIdsAction().then((ids) => setFavoriteIds(new Set(ids)));
-  }, []);
-
-  async function loadFavorites() {
-    const products = await getFavoriteProductsAction();
-    setFavoriteProducts(products);
-    setFavoritesLoaded(true);
-  }
-
   async function handleToggleFavorite(product: FoodProductSummary, e: React.MouseEvent) {
     e.stopPropagation();
     // Uncached kassal products (id = null) have no local row yet — skip silently.
-    // Once the user logs the product it gets a local ID and the star becomes active.
     if (!product.id) return;
     const result = await toggleFavoriteAction(product.id);
     if (!result.ok) return;
-    setFavoriteIds((prev) => {
-      const next = new Set(prev);
-      if (result.isFavorited) next.add(product.id!);
-      else next.delete(product.id!);
-      return next;
-    });
-    if (favoritesLoaded) {
-      if (result.isFavorited) {
-        setFavoriteProducts((prev) => [...prev, product]);
-      } else {
-        setFavoriteProducts((prev) => prev.filter((p) => p.id !== product.id));
-      }
-    }
+    applyToggleResult(product.id, result.isFavorited, product);
   }
 
   async function loadSavedMeals() {
@@ -171,10 +103,7 @@ export function ProductPicker({
 
   const switchMode = useCallback(
     (id: Mode) => {
-      if (id === "scan") {
-        void activateScanMode();
-        return;
-      }
+      if (id === "scan") { void activateScanMode(); return; }
       stopCameraStream();
       setMode(id);
       if (id === "saved") void loadSavedMeals();
@@ -200,29 +129,6 @@ export function ProductPicker({
     return calculateCaloriesFromGrams(selected.kcalPer100g, toGrams(qty, unit));
   }, [selected, quantityInput, unit]);
 
-  useEffect(() => {
-    const trimmed = query.trim();
-    if (trimmed.length < 2) return;
-
-    const timer = setTimeout(async () => {
-      setSearchError(null);
-      try {
-        const res = await fetch(`/api/foods/search?search=${encodeURIComponent(trimmed)}`);
-        if (!res.ok) {
-          setResults([]);
-          setSearchError(res.status === 503 ? "Matvare-API er ikke konfigurert." : "Søk feilet.");
-          return;
-        }
-        const json = (await res.json()) as { data: FoodProductSummary[] };
-        setResults(json.data ?? []);
-      } catch {
-        setSearchError("Søk feilet.");
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [query]);
-
   function handleQueryChange(value: string) {
     setQuery(value);
     if (value.trim().length < 2) {
@@ -247,8 +153,7 @@ export function ProductPicker({
   function changeUnit(next: Unit) {
     const current = Number(quantityInput);
     if (Number.isFinite(current) && current > 0) {
-      const converted = (current * UNIT_FACTOR[unit]) / UNIT_FACTOR[next];
-      setQuantityInput(String(parseFloat(converted.toFixed(2))));
+      setQuantityInput(String(convertUnit(current, unit, next)));
     }
     setUnit(next);
   }

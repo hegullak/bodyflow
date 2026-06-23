@@ -1,34 +1,19 @@
 import {
-
   boolean,
-
   date,
-
   index,
-
   integer,
-
   jsonb,
-
   pgSchema,
-
   primaryKey,
-
   real,
-
   text,
-
   timestamp,
-
   uniqueIndex,
-
   uuid,
-
 } from "drizzle-orm/pg-core";
 
 import { relations } from "drizzle-orm";
-
-
 
 /**
 
@@ -50,10 +35,7 @@ const pgTable = bodyflowSchema.table.bind(bodyflowSchema);
 
 const pgEnum = bodyflowSchema.enum.bind(bodyflowSchema);
 
-
-
 export const sexEnum = pgEnum("sex", [
-
   "male",
 
   "female",
@@ -61,13 +43,9 @@ export const sexEnum = pgEnum("sex", [
   "other",
 
   "prefer_not_to_say",
-
 ]);
 
-
-
 export const activityLevelEnum = pgEnum("activity_level", [
-
   "sedentary",
 
   "light",
@@ -77,25 +55,22 @@ export const activityLevelEnum = pgEnum("activity_level", [
   "active",
 
   "very_active",
-
 ]);
 
+export const goalEnum = pgEnum("goal", [
+  "fat_loss",
+  "maintenance",
+  "muscle_gain",
+]);
 
-
-export const goalEnum = pgEnum("goal", ["fat_loss", "maintenance", "muscle_gain"]);
-
-
-
-export const preferredUnitsEnum = pgEnum("preferred_units", ["metric", "imperial"]);
-
-
+export const preferredUnitsEnum = pgEnum("preferred_units", [
+  "metric",
+  "imperial",
+]);
 
 export const weightSourceEnum = pgEnum("weight_source", ["manual", "withings"]);
 
-
-
 export const mealTypeEnum = pgEnum("meal_type", [
-
   "breakfast",
 
   "lunch",
@@ -107,29 +82,22 @@ export const mealTypeEnum = pgEnum("meal_type", [
   "evening",
 
   "smoke",
-
 ]);
 
-
-
 export const foodSourceEnum = pgEnum("food_source", [
-
   "kassal",
 
   "matvaretabellen",
 
   "custom",
-
 ]);
 
 export const reminderTypeEnum = pgEnum("reminder_type", ["weigh_in"]);
 
 export const userProfiles = pgTable(
-
   "user_profile",
 
   {
-
     id: uuid("id").primaryKey().defaultRandom(),
 
     userId: text("user_id").notNull().unique(),
@@ -144,7 +112,9 @@ export const userProfiles = pgTable(
 
     weightKg: real("weight_kg"),
 
-    activityLevel: activityLevelEnum("activity_level").notNull().default("moderate"),
+    activityLevel: activityLevelEnum("activity_level")
+      .notNull()
+      .default("moderate"),
 
     goal: goalEnum("goal").notNull().default("maintenance"),
 
@@ -152,7 +122,9 @@ export const userProfiles = pgTable(
 
     dailyCalorieTarget: integer("daily_calorie_target"),
 
-    preferredUnits: preferredUnitsEnum("preferred_units").notNull().default("metric"),
+    preferredUnits: preferredUnitsEnum("preferred_units")
+      .notNull()
+      .default("metric"),
 
     notes: text("notes"),
 
@@ -164,24 +136,22 @@ export const userProfiles = pgTable(
 
     defaultFlow: text("default_flow").notNull().default("meals"),
 
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
 
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
 
   (t) => [index("user_profile_user_idx").on(t.userId)],
-
 );
 
-
-
 export const dailyBodyLogs = pgTable(
-
   "daily_body_log",
 
   {
-
     id: uuid("id").primaryKey().defaultRandom(),
 
     userId: text("user_id").notNull(),
@@ -198,30 +168,26 @@ export const dailyBodyLogs = pgTable(
 
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
 
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
 
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
 
   (t) => [
-
     uniqueIndex("daily_body_log_user_date_unique").on(t.userId, t.logDate),
 
     index("daily_body_log_user_date_idx").on(t.userId, t.logDate),
-
   ],
-
 );
 
-
-
 export const bodyMeasurements = pgTable(
-
   "body_measurement",
 
   {
-
     id: uuid("id").primaryKey().defaultRandom(),
 
     userId: text("user_id").notNull(),
@@ -238,30 +204,26 @@ export const bodyMeasurements = pgTable(
 
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
 
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
 
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
 
   (t) => [
-
     uniqueIndex("body_measurement_user_date_unique").on(t.userId, t.measuredOn),
 
     index("body_measurement_user_date_idx").on(t.userId, t.measuredOn),
-
   ],
-
 );
 
-
-
 export const foodProducts = pgTable(
-
   "food_product",
 
   {
-
     id: uuid("id").primaryKey().defaultRandom(),
 
     source: foodSourceEnum("source").notNull(),
@@ -284,34 +246,35 @@ export const foodProducts = pgTable(
 
     searchText: text("search_text"),
 
-    fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull().defaultNow(),
+    fetchedAt: timestamp("fetched_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
 
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
 
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
 
   (t) => [
-
-    uniqueIndex("food_product_source_external_unique").on(t.source, t.externalId),
+    uniqueIndex("food_product_source_external_unique").on(
+      t.source,
+      t.externalId,
+    ),
 
     uniqueIndex("food_product_ean_unique").on(t.ean),
 
     index("food_product_name_idx").on(t.name),
-
   ],
-
 );
 
-
-
 export const mealLogItems = pgTable(
-
   "meal_log_item",
 
   {
-
     id: uuid("id").primaryKey().defaultRandom(),
 
     userId: text("user_id").notNull(),
@@ -321,9 +284,7 @@ export const mealLogItems = pgTable(
     mealType: mealTypeEnum("meal_type").notNull(),
 
     foodProductId: uuid("food_product_id").references(() => foodProducts.id, {
-
       onDelete: "set null",
-
     }),
 
     kassalProductId: integer("kassal_product_id"),
@@ -342,32 +303,32 @@ export const mealLogItems = pgTable(
 
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
 
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
 
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
 
   (t) => [
-
     index("meal_log_item_user_date_idx").on(t.userId, t.logDate),
 
-    index("meal_log_item_user_date_meal_idx").on(t.userId, t.logDate, t.mealType),
+    index("meal_log_item_user_date_meal_idx").on(
+      t.userId,
+      t.logDate,
+      t.mealType,
+    ),
 
     index("meal_log_item_food_product_id_idx").on(t.foodProductId),
-
   ],
-
 );
 
-
-
 export const withingsConnections = pgTable(
-
   "withings_connection",
 
   {
-
     id: uuid("id").primaryKey().defaultRandom(),
 
     userId: text("user_id").notNull().unique(),
@@ -388,23 +349,23 @@ export const withingsConnections = pgTable(
 
     webhookSubscribed: boolean("webhook_subscribed").notNull().default(false),
 
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
 
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
 
   (t) => [
-
     index("withings_connection_user_idx").on(t.userId),
 
-    uniqueIndex("withings_connection_withings_user_unique").on(t.withingsUserId),
-
+    uniqueIndex("withings_connection_withings_user_unique").on(
+      t.withingsUserId,
+    ),
   ],
-
 );
-
-
 
 export const reminders = pgTable(
   "reminder",
@@ -419,8 +380,12 @@ export const reminders = pgTable(
     targetRoute: text("target_route").notNull(),
     lastTriggeredAt: timestamp("last_triggered_at", { withTimezone: true }),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (t) => [
     index("reminder_user_idx").on(t.userId),
@@ -429,11 +394,9 @@ export const reminders = pgTable(
 );
 
 export const auditLog = pgTable(
-
   "audit_log",
 
   {
-
     id: uuid("id").primaryKey().defaultRandom(),
 
     entityType: text("entity_type").notNull(),
@@ -444,25 +407,21 @@ export const auditLog = pgTable(
 
     changedBy: text("changed_by"),
 
-    changedAt: timestamp("changed_at", { withTimezone: true }).notNull().defaultNow(),
+    changedAt: timestamp("changed_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
 
     beforeJson: jsonb("before_json"),
 
     afterJson: jsonb("after_json"),
-
   },
 
   (t) => [
-
     index("audit_log_entity_idx").on(t.entityType, t.entityId),
 
     index("audit_log_changed_at_idx").on(t.changedAt),
-
   ],
-
 );
-
-
 
 export type FoodProduct = typeof foodProducts.$inferSelect;
 
@@ -488,8 +447,6 @@ export type Reminder = typeof reminders.$inferSelect;
 export type NewReminder = typeof reminders.$inferInsert;
 export type AuditLogEntry = typeof auditLog.$inferSelect;
 export type NewAuditLogEntry = typeof auditLog.$inferInsert;
-
-
 
 export type Sex = (typeof sexEnum.enumValues)[number];
 
@@ -520,16 +477,24 @@ export const exerciseCategories = pgTable("exercise_category", {
   id: uuid("id").primaryKey().defaultRandom(),
   slug: text("slug").notNull().unique(),
   name: text("name").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export const exerciseMuscles = pgTable("exercise_muscle", {
   id: uuid("id").primaryKey().defaultRandom(),
   slug: text("slug").notNull().unique(),
   name: text("name").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export const exercises = pgTable(
@@ -542,17 +507,24 @@ export const exercises = pgTable(
     categoryId: uuid("category_id")
       .notNull()
       .references(() => exerciseCategories.id, { onDelete: "restrict" }),
-    targetMuscleId: uuid("target_muscle_id").references(() => exerciseMuscles.id, {
-      onDelete: "restrict",
-    }),
+    targetMuscleId: uuid("target_muscle_id").references(
+      () => exerciseMuscles.id,
+      {
+        onDelete: "restrict",
+      },
+    ),
     equipment: text("equipment").notNull(),
     nameNo: text("name_no"),
     imageUrl: text("image_url"),
     instructions: jsonb("instructions").notNull().$type<string[]>().default([]),
     source: text("source").notNull().default("wger"),
     sourceLicense: text("source_license"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (t) => [
     uniqueIndex("exercise_source_external_unique").on(t.source, t.externalId),
@@ -597,8 +569,12 @@ export const workoutPrograms = pgTable(
     userId: text("user_id").notNull(),
     name: text("name").notNull(),
     sortOrder: integer("sort_order").notNull().default(0),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (t) => [index("workout_program_user_idx").on(t.userId)],
 );
@@ -610,7 +586,9 @@ export const workoutSupersets = pgTable(
     programId: uuid("program_id")
       .notNull()
       .references(() => workoutPrograms.id, { onDelete: "cascade" }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (t) => [index("workout_superset_program_idx").on(t.programId)],
 );
@@ -634,8 +612,12 @@ export const workoutProgramExercises = pgTable(
     reps: integer("reps").notNull().default(8),
     restSeconds: integer("rest_seconds").notNull().default(90),
     isBodyweight: boolean("is_bodyweight").notNull().default(false),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (t) => [
     index("workout_program_exercise_program_idx").on(t.programId),
@@ -648,12 +630,20 @@ export const workoutSessions = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     userId: text("user_id").notNull(),
-    programId: uuid("program_id").references(() => workoutPrograms.id, { onDelete: "set null" }),
+    programId: uuid("program_id").references(() => workoutPrograms.id, {
+      onDelete: "set null",
+    }),
     programName: text("program_name").notNull(),
-    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    startedAt: timestamp("started_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
     endedAt: timestamp("ended_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (t) => [
     index("workout_session_user_idx").on(t.userId),
@@ -672,21 +662,28 @@ export const workoutSetLogs = pgTable(
       () => workoutProgramExercises.id,
       { onDelete: "set null" },
     ),
-    exerciseId: uuid("exercise_id").references(() => exercises.id, { onDelete: "set null" }),
+    exerciseId: uuid("exercise_id").references(() => exercises.id, {
+      onDelete: "set null",
+    }),
     exerciseName: text("exercise_name").notNull(),
     setNumber: integer("set_number").notNull(),
     isBodyweight: boolean("is_bodyweight").notNull().default(false),
     weightKg: real("weight_kg"),
     reps: integer("reps"),
-    completedAt: timestamp("completed_at", { withTimezone: true }).notNull().defaultNow(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    completedAt: timestamp("completed_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (t) => [index("workout_set_log_session_idx").on(t.sessionId)],
 );
 
 export type WorkoutProgram = typeof workoutPrograms.$inferSelect;
 export type NewWorkoutProgram = typeof workoutPrograms.$inferInsert;
-export type WorkoutProgramExercise = typeof workoutProgramExercises.$inferSelect;
+export type WorkoutProgramExercise =
+  typeof workoutProgramExercises.$inferSelect;
 export type WorkoutSession = typeof workoutSessions.$inferSelect;
 export type WorkoutSetLog = typeof workoutSetLogs.$inferSelect;
 
@@ -703,8 +700,12 @@ export const savedMeals = pgTable(
     name: text("name").notNull(),
     totalKcal: real("total_kcal").notNull(),
     totalGrams: real("total_grams").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [index("saved_meal_user_idx").on(t.userId)],
@@ -725,7 +726,9 @@ export const savedMealItems = pgTable(
     quantityGrams: real("quantity_grams").notNull(),
     kcalPer100g: real("kcal_per_100g").notNull(),
     caloriesKcal: real("calories_kcal").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (t) => [index("saved_meal_item_meal_idx").on(t.savedMealId)],
 );
@@ -735,7 +738,10 @@ export const savedMealsRelations = relations(savedMeals, ({ many }) => ({
 }));
 
 export const savedMealItemsRelations = relations(savedMealItems, ({ one }) => ({
-  meal: one(savedMeals, { fields: [savedMealItems.savedMealId], references: [savedMeals.id] }),
+  meal: one(savedMeals, {
+    fields: [savedMealItems.savedMealId],
+    references: [savedMeals.id],
+  }),
 }));
 
 export type SavedMeal = typeof savedMeals.$inferSelect;
@@ -757,10 +763,16 @@ export const recipes = pgTable(
     totalWeightG: real("total_weight_g").notNull().default(0),
     cookedWeightG: real("cooked_weight_g"),
     kcalPer100g: real("kcal_per_100g").notNull().default(0),
-    foodProductId: uuid("food_product_id").references(() => foodProducts.id, { onDelete: "set null" }),
+    foodProductId: uuid("food_product_id").references(() => foodProducts.id, {
+      onDelete: "set null",
+    }),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (t) => [index("recipe_user_idx").on(t.userId)],
 );
@@ -769,13 +781,19 @@ export const recipeIngredients = pgTable(
   "recipe_ingredient",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    recipeId: uuid("recipe_id").notNull().references(() => recipes.id, { onDelete: "cascade" }),
-    foodProductId: uuid("food_product_id").references(() => foodProducts.id, { onDelete: "set null" }),
+    recipeId: uuid("recipe_id")
+      .notNull()
+      .references(() => recipes.id, { onDelete: "cascade" }),
+    foodProductId: uuid("food_product_id").references(() => foodProducts.id, {
+      onDelete: "set null",
+    }),
     productName: text("product_name").notNull(),
     kcalPer100g: real("kcal_per_100g").notNull(),
     quantityGrams: real("quantity_grams").notNull(),
     sortOrder: integer("sort_order").notNull().default(0),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (t) => [index("recipe_ingredient_recipe_idx").on(t.recipeId)],
 );
@@ -789,8 +807,12 @@ export const foodFavorites = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     userId: text("user_id").notNull(),
-    foodProductId: uuid("food_product_id").notNull().references(() => foodProducts.id, { onDelete: "cascade" }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    foodProductId: uuid("food_product_id")
+      .notNull()
+      .references(() => foodProducts.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (t) => [
     uniqueIndex("food_favorite_user_food_unique").on(t.userId, t.foodProductId),
@@ -804,14 +826,19 @@ export const scheduledSessions = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     userId: text("user_id").notNull(),
     date: text("date").notNull(),
-    programId: uuid("program_id").references(() => workoutPrograms.id, { onDelete: "set null" }),
+    programId: uuid("program_id").references(() => workoutPrograms.id, {
+      onDelete: "set null",
+    }),
     cardioSlug: text("cardio_slug"),
     isCompleted: boolean("is_completed").notNull().default(false),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     notes: text("notes"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (t) => [index("scheduled_session_user_date_idx").on(t.userId, t.date)],
 );
-

@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft, Clock, Dumbbell } from "lucide-react";
 import { requireUserId } from "@/lib/auth/current-user";
-import { getSessionDetail } from "@/lib/training/sessions";
+import { getSessionDetail } from "@/features/training/sessions";
 
 function formatDateTime(d: Date) {
   return {

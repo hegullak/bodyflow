@@ -3,9 +3,9 @@
 import React from "react";
 import { Check, Trash2 } from "lucide-react";
 import { useT } from "@/components/providers/lang-provider";
-import type { LastSetRow } from "@/lib/training/sessions";
-import type { SetRow } from "@/lib/training/set-utils";
-import { fmtTimer } from "@/lib/training/set-utils";
+import type { LastSetRow } from "../sessions";
+import type { SetRow } from "../set-utils";
+import { fmtTimer } from "../set-utils";
 
 export interface SetRowItemProps {
   idx: number;

@@ -1,7 +1,7 @@
 import { requireUserId } from "@/lib/auth/current-user";
-import { listPrograms } from "@/lib/training/programs";
-import { getActiveSession } from "@/lib/training/sessions";
-import { ProgramsList } from "@/components/training/programs-list";
+import { listPrograms } from "@/features/training/programs";
+import { getActiveSession } from "@/features/training/sessions";
+import { ProgramsList } from "@/features/training/components/programs-list";
 
 export default async function ProgramsPage({
   searchParams,

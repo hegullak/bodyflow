@@ -3,8 +3,8 @@
 import React, { useState } from "react";
 import { Dumbbell, Minus, Play, Plus } from "lucide-react";
 import { useT } from "@/components/providers/lang-provider";
-import type { ProgramExerciseRow } from "@/lib/training/programs";
-import { fmtTimer } from "@/lib/training/set-utils";
+import type { ProgramExerciseRow } from "../programs";
+import { fmtTimer } from "../set-utils";
 
 export interface RestTimerBarProps {
   seconds: number;

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUserId } from "@/lib/auth/current-user";
-import { createSuperset, removeSuperset } from "@/lib/training/programs";
+import { createSuperset, removeSuperset } from "@/features/training/programs";
 
 type Params = { params: Promise<{ id: string }> };
 

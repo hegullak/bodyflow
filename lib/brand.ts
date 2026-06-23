@@ -14,7 +14,7 @@ export const BODYFLOW_SUPPORTING_PHILOSOPHY = [
 ];
 
 export const BODYFLOW_COMEBACK_TITLE = "Skal vi starte igjen nå?";
-export const BODYFLOW_COMEBACK_SLOGAN = "A little beats nothing. Every time.";
+export const BODYFLOW_COMEBACK_SLOGAN = BODYFLOW_SLOGAN;
 
 export const BODYFLOW_PRODUCT_PRINCIPLES = [
   "Warm and honest",

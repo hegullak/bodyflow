@@ -10,7 +10,7 @@ import {
   toggleScheduledSessionAction,
   deleteScheduledSessionAction,
 } from "@/lib/actions/schedule";
-import { CARDIO_TYPES, RUN_IMAGE_URL, type CardioSlug } from "@/lib/training/cardio";
+import { CARDIO_TYPES, RUN_IMAGE_URL, type CardioSlug } from "../cardio";
 import { cn } from "@/lib/utils";
 
 type Session = {

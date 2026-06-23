@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ConfirmSheet } from "@/components/ui/confirm-sheet";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -16,30 +17,32 @@ import {
 } from "lucide-react";
 import {
   DndContext,
-  DragEndEvent,
+  type DragEndEvent,
   PointerSensor,
   TouchSensor,
   closestCenter,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import {
-  SortableContext,
-  arrayMove,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import type { ProgramDetail, ProgramBlock, ProgramExerciseRow } from "@/lib/training/programs";
+import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import type { ProgramDetail, ProgramExerciseRow } from "../programs";
 import { useT } from "@/components/providers/lang-provider";
+import { blockDragId } from "../set-utils";
+import { SortableWorkoutBlock } from "./sortable-workout-block";
+import {
+  updateProgramNameAction,
+  deleteProgramAction,
+  duplicateProgramAction,
+  updateExerciseAction,
+  removeExerciseAction,
+  reorderExercisesAction,
+  createSupersetAction,
+  removeSupersetAction,
+} from "../actions";
 
 interface Props {
   program: ProgramDetail;
   activeSessionId: string | null;
-}
-
-function blockDragId(block: ProgramBlock) {
-  return block.exercises[0].id;
 }
 
 export function ProgramBuilder({ program: initial, activeSessionId }: Props) {
@@ -51,6 +54,7 @@ export function ProgramBuilder({ program: initial, activeSessionId }: Props) {
   const [deleting, setDeleting] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -60,20 +64,15 @@ export function ProgramBuilder({ program: initial, activeSessionId }: Props) {
   async function saveName() {
     const name = nameValue.trim();
     if (!name || name === program.name) { setEditingName(false); return; }
-    await fetch(`/api/training/programs/${program.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
-    });
+    await updateProgramNameAction(program.id, name);
     setProgram((p) => ({ ...p, name }));
     setEditingName(false);
   }
 
-  async function handleDelete() {
-    if (!confirm(t.training.deleteProgram(program.name))) return;
+  async function doDelete() {
     setDeleting(true);
     try {
-      await fetch(`/api/training/programs/${program.id}`, { method: "DELETE" });
+      await deleteProgramAction(program.id);
       router.push("/training/programs");
     } catch {
       setDeleting(false);
@@ -83,11 +82,8 @@ export function ProgramBuilder({ program: initial, activeSessionId }: Props) {
   async function handleDuplicate() {
     setDuplicating(true);
     try {
-      const res = await fetch(`/api/training/programs/${program.id}/duplicate`, { method: "POST" });
-      if (res.ok) {
-        const copy = await res.json() as { id: string };
-        router.push(`/training/programs/${copy.id}`);
-      }
+      const copy = await duplicateProgramAction(program.id);
+      router.push(`/training/programs/${copy.id}`);
     } catch {
       // fall through — duplicating resets to false below
     }
@@ -98,11 +94,7 @@ export function ProgramBuilder({ program: initial, activeSessionId }: Props) {
     exerciseId: string,
     patch: { sets?: number; reps?: number; restSeconds?: number },
   ) {
-    await fetch(`/api/training/programs/${program.id}/exercises/${exerciseId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(patch),
-    });
+    await updateExerciseAction(program.id, exerciseId, patch);
     setProgram((p) => ({
       ...p,
       blocks: p.blocks.map((b) => ({
@@ -113,9 +105,7 @@ export function ProgramBuilder({ program: initial, activeSessionId }: Props) {
   }
 
   async function handleRemoveExercise(exerciseId: string) {
-    await fetch(`/api/training/programs/${program.id}/exercises/${exerciseId}`, {
-      method: "DELETE",
-    });
+    await removeExerciseAction(program.id, exerciseId);
     setProgram((p) => {
       const blocks = p.blocks
         .map((b) => ({ ...b, exercises: b.exercises.filter((e) => e.id !== exerciseId) }))
@@ -136,41 +126,30 @@ export function ProgramBuilder({ program: initial, activeSessionId }: Props) {
     setProgram((p) => ({ ...p, blocks: newBlocks }));
 
     const orderedIds = newBlocks.flatMap((b) => b.exercises.map((e) => e.id));
-    await fetch(`/api/training/programs/${program.id}/reorder`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderedIds }),
-    });
+    await reorderExercisesAction(program.id, orderedIds);
   }
 
   async function handleCreateSuperset(ids: string[]) {
-    await fetch(`/api/training/programs/${program.id}/supersets`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ exerciseIds: ids }),
-    });
+    await createSupersetAction(program.id, ids);
     router.refresh();
   }
 
   async function handleStart() {
     setStarting(true);
     try {
-      await fetch("/api/training/sessions", {
+      const res = await fetch("/api/training/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ programId: program.id }),
       });
+      if (res.ok) router.push("/training/workout");
     } finally {
-      router.push("/training/workout");
+      setStarting(false);
     }
   }
 
   async function handleRemoveSuperset(supersetId: string) {
-    await fetch(`/api/training/programs/${program.id}/supersets`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ supersetId }),
-    });
+    await removeSupersetAction(program.id, supersetId);
     router.refresh();
   }
 
@@ -197,7 +176,7 @@ export function ProgramBuilder({ program: initial, activeSessionId }: Props) {
             <Copy className="h-4 w-4" />
           </button>
           <button
-            onClick={handleDelete}
+            onClick={() => setShowDeleteConfirm(true)}
             disabled={deleting}
             title={t.training.deleteLabel}
             className="rounded-full p-2 text-[var(--text3)] hover:bg-[var(--red-light)] hover:text-[var(--red)]"
@@ -245,7 +224,7 @@ export function ProgramBuilder({ program: initial, activeSessionId }: Props) {
           <SortableContext items={blockIds} strategy={verticalListSortingStrategy}>
             <div className="flex flex-col gap-3">
               {program.blocks.map((block, blockIdx) => (
-                <SortableBlock key={blockDragId(block)} id={blockDragId(block)}>
+                <SortableWorkoutBlock key={blockDragId(block)} id={blockDragId(block)}>
                   {block.type === "superset" ? (
                     <div>
                       <div className="flex items-center justify-between px-0 py-2">
@@ -290,7 +269,7 @@ export function ProgramBuilder({ program: initial, activeSessionId }: Props) {
                       ))}
                     </div>
                   )}
-                </SortableBlock>
+                </SortableWorkoutBlock>
               ))}
             </div>
           </SortableContext>
@@ -333,6 +312,13 @@ export function ProgramBuilder({ program: initial, activeSessionId }: Props) {
       </Link>
 
       <div className="pb-4" />
+
+      <ConfirmSheet
+        open={showDeleteConfirm}
+        message={t.training.deleteProgram(program.name)}
+        onConfirm={() => { setShowDeleteConfirm(false); void doDelete(); }}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
     </div>
   );
 }
@@ -340,26 +326,6 @@ export function ProgramBuilder({ program: initial, activeSessionId }: Props) {
 // ---------------------------------------------------------------------------
 // Sortable block wrapper
 // ---------------------------------------------------------------------------
-
-function SortableBlock({ id, children }: { id: string; children: React.ReactNode }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, position: "relative" }}
-    >
-      {/* Invisible drag handle — narrow strip on left, doesn't block content interaction */}
-      <div
-        {...attributes}
-        {...listeners}
-        className="absolute inset-y-0 left-0 z-10 w-8 cursor-grab touch-none active:cursor-grabbing"
-        aria-label="Drag to reorder"
-      />
-      {children}
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Exercise row in builder

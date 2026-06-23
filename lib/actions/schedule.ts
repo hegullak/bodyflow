@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getDb } from "@/db/client";
 import { scheduledSessions } from "@/db/schema";
 import { requireUserId } from "@/lib/auth/current-user";
-import type { CardioSlug } from "@/lib/training/cardio";
+import type { CardioSlug } from "@/features/training/cardio";
 
 export async function getScheduledSessionsForMonth(year: number, month: number) {
   const userId = await requireUserId();

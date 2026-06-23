@@ -67,10 +67,6 @@ export const WorkoutKeyboard = React.memo(function WorkoutKeyboard({
         {/* Right panel */}
         <div className="flex flex-[2] flex-col gap-1.5">
           <div className="grid flex-1 grid-cols-2 gap-1.5">
-            <button className={smBtn}>🏴</button>
-            <button className={smBtn}>RPE</button>
-            <button className={smBtn}>⏺</button>
-            <button className={smBtn}>COPY</button>
             <button onPointerDown={(e) => { e.preventDefault(); onMinus(); }} className={smBtn}>
               <Minus className="h-4 w-4" />
             </button>

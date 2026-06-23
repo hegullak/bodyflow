@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUserId } from "@/lib/auth/current-user";
-import { getActiveSession } from "@/lib/training/sessions";
+import { getActiveSession } from "@/features/training/sessions";
 
 export async function GET() {
   const userId = await requireUserId();

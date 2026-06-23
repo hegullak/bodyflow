@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { X } from "lucide-react";
-import { ExerciseLibrary } from "@/components/training/exercise-library";
+import { ExerciseLibrary } from "@/features/training/components/exercise-library";
 
 export default function ExercisesPage() {
   return (

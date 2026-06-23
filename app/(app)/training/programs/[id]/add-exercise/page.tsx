@@ -1,7 +1,7 @@
 import { requireUserId } from "@/lib/auth/current-user";
-import { getProgramMeta } from "@/lib/training/programs";
+import { getProgramMeta } from "@/features/training/programs";
 import { notFound } from "next/navigation";
-import { ExercisePicker } from "@/components/training/exercise-picker";
+import { ExercisePicker } from "@/features/training/components/exercise-picker";
 
 export default async function AddExercisePage({ params }: { params: Promise<{ id: string }> }) {
   const userId = await requireUserId();

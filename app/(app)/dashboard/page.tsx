@@ -10,7 +10,7 @@ import { getDashboardData } from "@/lib/queries/dashboard";
 import { isWithingsConfigured } from "@/lib/withings/config";
 import { getWithingsConnection, syncWithingsForUser } from "@/lib/withings/sync";
 import { getTodayScheduledSessions } from "@/lib/actions/schedule";
-import { listPrograms } from "@/lib/training/programs";
+import { listPrograms } from "@/features/training/programs";
 
 function localIsoToday() {
   const d = new Date();

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUserId } from "@/lib/auth/current-user";
-import { addExerciseToProgram } from "@/lib/training/programs";
+import { addExerciseToProgram } from "@/features/training/programs";
 
 type Params = { params: Promise<{ id: string }> };
 

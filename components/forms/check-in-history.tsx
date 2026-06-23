@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition, useRef } from "react";
+import { useState, useTransition } from "react";
+import { useSwipeReveal } from "@/hooks/use-swipe-reveal";
 import { Pencil, Trash2 } from "lucide-react";
 import type { CheckInSnapshot, CheckInDiff } from "@/lib/queries/check-in";
 import {
@@ -14,7 +15,6 @@ import { formatWeekdayDate } from "@/lib/utils";
 
 const PAGE_SIZE = 5;
 const REVEAL_W = 112;
-const SNAP = 40;
 
 function computeDiff(cur: CheckInSnapshot, prev: CheckInSnapshot | null): CheckInDiff | null {
   if (!prev) return null;
@@ -74,47 +74,11 @@ function SwipeRow({
   onEditOpen: () => void;
   onDeleted: () => void;
 }) {
-  const innerRef = useRef<HTMLDivElement>(null);
+  const { innerRef, snapTo, handlers } = useSwipeReveal();
   const [deleting, startDelete] = useTransition();
-  const sw = useRef({ startX: 0, startY: 0, tracking: false, revealed: false, dragging: false });
-
-  function snap(x: number, animate = true) {
-    const el = innerRef.current;
-    if (!el) return;
-    el.style.transition = animate ? "transform 0.25s cubic-bezier(0.4,0,0.2,1)" : "none";
-    el.style.transform = `translateX(${x}px)`;
-    sw.current.revealed = x < 0;
-  }
-
-  function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
-    sw.current = { startX: e.clientX, startY: e.clientY, tracking: true, dragging: false, revealed: sw.current.revealed };
-    e.currentTarget.setPointerCapture(e.pointerId);
-    if (innerRef.current) innerRef.current.style.transition = "none";
-  }
-
-  function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
-    if (!sw.current.tracking || !innerRef.current) return;
-    const dx = e.clientX - sw.current.startX;
-    const dy = e.clientY - sw.current.startY;
-    if (!sw.current.dragging && Math.abs(dy) > Math.abs(dx) + 5) { sw.current.tracking = false; return; }
-    if (!sw.current.dragging && Math.abs(dx) > 4) sw.current.dragging = true;
-    if (!sw.current.dragging) return;
-    const base = sw.current.revealed ? -REVEAL_W : 0;
-    const x = Math.max(-REVEAL_W, Math.min(0, base + dx));
-    innerRef.current.style.transform = `translateX(${x}px)`;
-  }
-
-  function onPointerUp(e: React.PointerEvent<HTMLDivElement>) {
-    if (!sw.current.tracking) return;
-    sw.current.tracking = false;
-    if (!sw.current.dragging) return;
-    const dx = e.clientX - sw.current.startX;
-    const base = sw.current.revealed ? -REVEAL_W : 0;
-    snap(base + dx < -SNAP ? -REVEAL_W : 0);
-  }
 
   function handleDelete() {
-    snap(0);
+    snapTo(0);
     startDelete(async () => {
       await deleteCheckInAction(entry.logDate);
       onDeleted();
@@ -122,7 +86,7 @@ function SwipeRow({
   }
 
   function handleEdit() {
-    snap(0);
+    snapTo(0);
     setTimeout(onEditOpen, 200);
   }
 
@@ -151,10 +115,7 @@ function SwipeRow({
 
       <div
         ref={innerRef}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={() => { sw.current.tracking = false; snap(sw.current.revealed ? -REVEAL_W : 0); }}
+        {...handlers}
         className="relative bg-[var(--card)] px-4 py-3 select-none"
         style={{ touchAction: "pan-y", transform: "translateX(0)" }}
       >

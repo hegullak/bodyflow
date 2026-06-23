@@ -2,9 +2,9 @@
 
 import React, { useState } from "react";
 import { Dumbbell, Link2, Plus } from "lucide-react";
-import type { ProgramExerciseRow } from "@/lib/training/programs";
-import type { LastSetRow } from "@/lib/training/sessions";
-import type { SetRow, ActiveInput } from "@/lib/training/set-utils";
+import type { ProgramExerciseRow } from "../programs";
+import type { LastSetRow } from "../sessions";
+import type { SetRow, ActiveInput } from "../set-utils";
 import { SetRowItem } from "./set-row-item";
 
 export interface ExerciseCardProps {

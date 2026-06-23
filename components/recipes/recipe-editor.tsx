@@ -7,6 +7,7 @@ import { ChevronLeft, Trash2, X, ChefHat } from "lucide-react";
 import type { RecipeDetail, RecipeIngredientRow } from "@/lib/recipes";
 import type { FoodProductSummary } from "@/lib/foods/types";
 import { FoodSearchInput } from "@/components/meals/food-search-input";
+import { ConfirmSheet } from "@/components/ui/confirm-sheet";
 
 interface Props {
   initial: RecipeDetail;
@@ -34,6 +35,7 @@ export function RecipeEditor({ initial }: Props) {
   const [adding, setAdding] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [deletingRecipe, setDeletingRecipe] = useState(false);
+  const [showDeleteRecipeConfirm, setShowDeleteRecipeConfirm] = useState(false);
   const [editingQty, setEditingQty] = useState<{ id: string; value: string } | null>(null);
   const nameRef = useRef<HTMLInputElement>(null);
 
@@ -124,8 +126,7 @@ export function RecipeEditor({ initial }: Props) {
     setEditingQty(null);
   }
 
-  async function handleDeleteRecipe() {
-    if (!confirm(`Slett "${recipe.name}"?`)) return;
+  async function doDeleteRecipe() {
     setDeletingRecipe(true);
     await fetch(`/api/recipes/${recipe.id}`, { method: "DELETE" });
     router.push("/meals/recipes");
@@ -162,7 +163,7 @@ export function RecipeEditor({ initial }: Props) {
           </button>
         )}
         <button
-          onClick={handleDeleteRecipe}
+          onClick={() => setShowDeleteRecipeConfirm(true)}
           disabled={deletingRecipe}
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--text3)] hover:bg-[var(--card2)] hover:text-[var(--red)] disabled:opacity-40"
         >
@@ -314,6 +315,13 @@ export function RecipeEditor({ initial }: Props) {
           />
         </div>
       )}
+
+      <ConfirmSheet
+        open={showDeleteRecipeConfirm}
+        message={`Slett "${recipe.name}"?`}
+        onConfirm={() => { setShowDeleteRecipeConfirm(false); void doDeleteRecipe(); }}
+        onCancel={() => setShowDeleteRecipeConfirm(false)}
+      />
     </div>
   );
 }

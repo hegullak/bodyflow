@@ -2,8 +2,8 @@ import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { requireUserId } from "@/lib/auth/current-user";
 import { getScheduledSessionsForMonth } from "@/lib/actions/schedule";
-import { listPrograms } from "@/lib/training/programs";
-import { PlannerCalendar } from "@/components/training/planner-calendar";
+import { listPrograms } from "@/features/training/programs";
+import { PlannerCalendar } from "@/features/training/components/planner-calendar";
 
 function localIsoToday() {
   const d = new Date();
