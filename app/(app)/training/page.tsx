@@ -3,24 +3,19 @@ import { Dumbbell, BookOpen, Library, History, CalendarDays } from "lucide-react
 import { requireUserId } from "@/lib/auth/current-user";
 import { getActiveSession } from "@/features/training/sessions";
 import { ActiveWorkoutBanner } from "@/features/training/components/active-workout-banner";
-import { RecoveryCard } from "@/components/dashboard/recovery-card";
 import { getT } from "@/lib/i18n/server";
-import { getDashboardData } from "@/lib/queries/dashboard";
 
 export default async function TrainingPage() {
   const userId = await requireUserId();
-  const [activeSession, t, data] = await Promise.all([
+  const [activeSession, t] = await Promise.all([
     getActiveSession(userId),
     getT(),
-    getDashboardData(userId),
   ]);
   const tr = t.training;
 
   return (
     <div className="flex flex-col gap-4">
       <h1 className="page-title">{tr.title}</h1>
-
-      <RecoveryCard data={data} />
 
       {activeSession && <ActiveWorkoutBanner programName={activeSession.programName} />}
 
