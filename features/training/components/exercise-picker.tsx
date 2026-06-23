@@ -234,26 +234,22 @@ export function ExercisePicker({ programId, programName }: Props) {
             const isTogglingFav = togglingFavorite === ex.id;
             return (
               <li key={ex.id}>
-                <div className="flex items-center gap-2 rounded-[var(--radius-sm)] border transition-colors">
+                <div className={`flex items-center gap-2 rounded-[var(--radius-sm)] ${isAdded ? "bg-[var(--green-light)]" : "bg-[var(--card)]"}`}>
                   <button
                     onClick={() => handleAdd(ex)}
                     disabled={isAdding}
-                    className={`flex flex-1 items-center gap-3 px-3 py-2 text-left transition-colors disabled:opacity-60 ${
-                      isAdded
-                        ? "border-r border-[var(--green)]/40 bg-[var(--green-light)]"
-                        : "bg-[var(--card)] active:bg-[var(--card2)]"
-                    }`}
+                    className="flex flex-1 items-center gap-3 px-3 py-2 text-left disabled:opacity-60 active:bg-[var(--card2)]"
                   >
                     <ExerciseThumb imageUrl={ex.imageUrl} name={ex.name} />
                     <span className={`flex-1 truncate text-sm font-medium ${isAdded ? "text-[var(--green)]" : "text-[var(--text1)]"}`}>
                       {ex.name}
                     </span>
                     {isAdding ? (
-                      <Loader2 className="ml-2 h-4 w-4 shrink-0 animate-spin text-[var(--accent)]" />
+                      <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[var(--accent)]" />
                     ) : isAdded ? (
-                      <Check className="ml-2 h-4 w-4 shrink-0 text-[var(--green)]" />
+                      <Check className="h-4 w-4 shrink-0 text-[var(--green)]" />
                     ) : (
-                      <span className="ml-2 shrink-0 text-xs text-[var(--accent)]">+ Add</span>
+                      <span className="shrink-0 text-xs text-[var(--accent)]">+ Legg til</span>
                     )}
                   </button>
                   <button

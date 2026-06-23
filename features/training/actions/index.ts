@@ -1,6 +1,7 @@
 "use server";
 
 import { and, eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import { getDb } from "@/db/client";
 import { exerciseFavorites } from "@/db/schema";
 import { requireUserId } from "@/lib/auth/current-user";
@@ -126,6 +127,8 @@ export async function addExerciseAction(
 ): Promise<void> {
   const userId = await requireUserId();
   await addExerciseToProgram(programId, userId, exerciseId);
+  revalidatePath("/training/workout");
+  revalidatePath(`/training/programs/${programId}`);
 }
 
 // Favorites
