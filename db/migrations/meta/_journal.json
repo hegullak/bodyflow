@@ -141,6 +141,41 @@
       "when": 1782700000000,
       "tag": "0019_food_favorites",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1782251108611,
+      "tag": "0020_dashboard_config",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1782251108612,
+      "tag": "0021_user_language",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1782251108612,
+      "tag": "0022_user_default_flow",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1782251108612,
+      "tag": "0023_scheduled_sessions",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1782251108612,
+      "tag": "0024_exercise_favorites",
+      "breakpoints": true
     }
   ]
 }
