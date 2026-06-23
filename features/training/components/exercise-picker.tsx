@@ -87,7 +87,7 @@ export function ExercisePicker({ programId, programName }: Props) {
   }
 
   function handleDone() {
-    router.push(`/training/programs/${programId}`);
+    router.back();
   }
 
   const activeFilter = bodyPart !== "";

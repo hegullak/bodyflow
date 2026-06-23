@@ -122,5 +122,5 @@ export async function addExerciseAction(
   exerciseId: string,
 ): Promise<void> {
   const userId = await requireUserId();
-  await addExerciseToProgram(userId, programId, exerciseId);
+  await addExerciseToProgram(programId, userId, exerciseId);
 }
