@@ -1,4 +1,4 @@
-import { and, eq, ilike } from "drizzle-orm";
+import { eq, ilike } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { exercises, exerciseCategories } from "@/db/schema";
 

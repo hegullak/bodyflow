@@ -45,7 +45,7 @@ export function parseGymaholicCsv(csvText: string): ParseResult {
     "weight_kg",
   ];
 
-  const headers = headerLine.split(",");
+  const headers = headerLine.split(",").map((h) => h.trim());
   for (const h of expectedHeaders) {
     if (!headers.includes(h)) {
       return {
@@ -106,8 +106,8 @@ export function parseGymaholicCsv(csvText: string): ParseResult {
       continue;
     }
 
-    if (reps! <= 0) {
-      errors.push({ rowNumber, reason: `Invalid reps (must be > 0): ${reps}` });
+    if (reps! < 0) {
+      errors.push({ rowNumber, reason: `Invalid reps (must be >= 0): ${reps}` });
       continue;
     }
 

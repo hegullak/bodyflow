@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Dumbbell, BookOpen, Library, History, CalendarDays, Upload } from "lucide-react";
+import { Dumbbell, BookOpen, Library, History, CalendarDays } from "lucide-react";
 import { requireUserId } from "@/lib/auth/current-user";
 import { getActiveSession } from "@/features/training/sessions";
 import { ActiveWorkoutBanner } from "@/features/training/components/active-workout-banner";
@@ -57,14 +57,6 @@ export default async function TrainingPage() {
           <div>
             <p className="font-medium text-[var(--text1)]">{tr.history}</p>
             <p className="text-sm text-[var(--text3)]">{tr.historyDesc}</p>
-          </div>
-        </Link>
-
-        <Link href="/training/import" className="flex items-center gap-4 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] px-5 py-4 active:bg-[var(--card2)]">
-          <Upload className="h-5 w-5 text-[var(--accent)]" />
-          <div>
-            <p className="font-medium text-[var(--text1)]">Importer</p>
-            <p className="text-sm text-[var(--text3)]">Fra Gymaholic eller annet</p>
           </div>
         </Link>
       </div>

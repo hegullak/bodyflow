@@ -1,4 +1,4 @@
-import { and, eq, ilike } from "drizzle-orm";
+import { eq, ilike } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { exercises } from "@/db/schema";
 import type { GymaholicSetRow } from "./parser";
@@ -88,8 +88,6 @@ export async function generateDryRun(
       found: false,
     });
   }
-
-  const allMatches = [...matches, ...unmatched];
 
   return {
     totalRows: rows.length,

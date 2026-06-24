@@ -38,12 +38,20 @@ describe("parseGymaholicCsv", () => {
     expect(result.errors[0].reason).toContain("workout_datetime");
   });
 
-  it("rejects invalid reps", () => {
+  it("rejects invalid reps (negative)", () => {
     const badCsv = `workout_date,workout_datetime,workout_name,exercise_name,exercise_key,set_index,reps,weight_kg
-2020-10-03,2020-10-03T10:39,Workout,Bench,barbell-bench-press,1,0,60`;
+2020-10-03,2020-10-03T10:39,Workout,Bench,barbell-bench-press,1,-1,60`;
     const result = parseGymaholicCsv(badCsv);
     expect(result.rows).toHaveLength(0);
     expect(result.errors[0].reason).toContain("reps");
+  });
+
+  it("allows zero reps (bodyweight exercises)", () => {
+    const csv = `workout_date,workout_datetime,workout_name,exercise_name,exercise_key,set_index,reps,weight_kg
+2020-10-03,2020-10-03T10:39,Workout,Pull-up,pull-up,1,0,0`;
+    const result = parseGymaholicCsv(csv);
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0].reps).toBe(0);
   });
 
   it("rejects invalid weight", () => {
