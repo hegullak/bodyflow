@@ -63,7 +63,7 @@ export default async function ProfilePage({
         <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-[var(--text3)]">
           Startside
         </p>
-        <FlowPicker current={(profile?.defaultFlow ?? "dashboard") as DefaultFlow} />
+        <FlowPicker current={(profile?.defaultFlow ?? "meals") as DefaultFlow} />
       </div>
 
       {/* Theme — accordion, collapsed by default */}

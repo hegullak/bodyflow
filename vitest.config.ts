@@ -8,6 +8,7 @@ export default defineConfig({
     environment: "node",
     globals: true,
     include: ["**/__tests__/**/*.test.ts", "**/features/**/*.test.ts"],
+    exclude: [".claude/**", "node_modules/**"],
   },
   resolve: {
     alias: {

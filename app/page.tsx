@@ -32,7 +32,6 @@ export default async function HomePage({
     const profile = await getProfileForUser(userId);
     const flow = profile?.defaultFlow ?? "meals";
     const flowRoutes: Record<string, string> = {
-      dashboard: "/dashboard",
       training: "/training",
       meals: "/meals",
       "check-in": "/check-in",

@@ -31,6 +31,7 @@ import { WorkoutKeyboard } from "./workout-keyboard";
 import { RestTimerBar } from "./rest-timer-bar";
 import { ConfirmSheet } from "@/components/ui/confirm-sheet";
 import { logSetAction, unlogSetAction, endSessionAction, removeExerciseAction } from "../actions";
+import { logger } from "@/lib/logger";
 
 export function WorkoutRunner({ session }: { session: ActiveSession }) {
   const t = useT();
@@ -139,7 +140,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
       try {
         await unlogSetAction(session.id, exId, idx + 1);
       } catch (err) {
-        console.error("Failed to remove set:", err);
+        logger.error("Training", "Failed to remove set", { err: String(err) });
       }
     }
     setSetsMap((prev) => {
@@ -172,7 +173,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
       try {
         await unlogSetAction(session.id, ex.id, setNumber);
       } catch (err) {
-        console.error("Failed to log set removal:", err);
+        logger.error("Training", "Failed to unlog set", { err: String(err) });
       }
       return;
     }
@@ -186,7 +187,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
     try {
       await logSetAction(session.id, ex.id, setNumber, ex.isBodyweight ? null : r.weightKg, r.reps);
     } catch (err) {
-      console.error("Failed to log set completion:", err);
+      logger.error("Training", "Failed to log set", { err: String(err) });
     }
 
     // Update timer hints for RestTimerBar
