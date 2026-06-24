@@ -265,12 +265,12 @@ a {
 /* ─── Layout utilities ───────────────────────────────────────────────────── */
 
 .app-shell {
-  min-height: 100lvh;
+  height: 100lvh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   max-width: 640px;
   margin: 0 auto;
-  padding-bottom: calc(6rem + env(safe-area-inset-bottom));
 }
 
 .app-header {
@@ -278,11 +278,14 @@ a {
   align-items: center;
   justify-content: flex-end;
   padding: 0.375rem 0.875rem 0;
+  flex-shrink: 0;
 }
 
 .app-content {
   flex: 1;
+  min-height: 0;
   padding: 0.5rem 0.875rem 0.75rem;
+  padding-bottom: calc(6rem + env(safe-area-inset-bottom));
   overflow-y: auto;
 }
 
