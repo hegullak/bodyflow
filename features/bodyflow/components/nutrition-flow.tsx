@@ -31,7 +31,7 @@ export function NutritionFlow({
   return (
     <div>
       <div className="mb-2 flex items-baseline justify-between">
-        <p className="text-sm font-semibold text-[var(--text1)]">Kalorier</p>
+        <p className="text-sm font-semibold text-[var(--text1)]">nutrientflow</p>
         <p className="text-xs text-[var(--text3)]">
           {avg != null ? (
             <>

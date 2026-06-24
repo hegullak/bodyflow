@@ -45,7 +45,7 @@ export function BodyflowView({ trends }: { trends: BodyflowTrends }) {
       </FlowCard>
 
       <FlowCard>
-        <MeasureFlow days={days} dense={dense} />
+        <MeasureFlow points={trends.measurementHistory} />
       </FlowCard>
 
       <FlowCard>

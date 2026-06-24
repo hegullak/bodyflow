@@ -8,7 +8,7 @@ export function TrainingFlow({ days, dense }: { days: BodyflowDay[]; dense: bool
   return (
     <div>
       <div className="mb-2 flex items-baseline justify-between">
-        <p className="text-sm font-semibold text-[var(--text1)]">Trening</p>
+        <p className="text-sm font-semibold text-[var(--text1)]">trainingflow</p>
         <p className="text-xs text-[var(--text3)]">
           <span className="font-medium text-[var(--text2)]">{workouts}</span>{" "}
           {workouts === 1 ? "økt" : "økter"}
