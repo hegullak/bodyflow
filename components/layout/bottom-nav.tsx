@@ -2,12 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardPen, Dumbbell, Utensils } from "lucide-react";
+import { Activity, ClipboardPen, Dumbbell, Utensils } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const tabs = [
-  // Dashboard hidden for now — will redesign and enable later
-  // { href: "/dashboard", label: "Home", icon: LayoutDashboard },
+  { href: "/bodyflow", label: "Bodyflow", icon: Activity },
   { href: "/check-in", label: "Check-in", icon: ClipboardPen },
   { href: "/training", label: "Trening", icon: Dumbbell },
   { href: "/meals", label: "Meals", icon: Utensils },

@@ -98,7 +98,7 @@ export async function updateLanguageAction(lang: "no" | "en"): Promise<void> {
   revalidatePath("/", "layout");
 }
 
-export type DefaultFlow = "dashboard" | "training" | "meals" | "check-in";
+export type DefaultFlow = "bodyflow" | "dashboard" | "training" | "meals" | "check-in";
 
 export async function updateDefaultFlowAction(flow: DefaultFlow): Promise<void> {
   const userId = await requireUserId();

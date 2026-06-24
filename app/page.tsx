@@ -30,13 +30,14 @@ export default async function HomePage({
       redirect("/profile?withings=connected");
     }
     const profile = await getProfileForUser(userId);
-    const flow = profile?.defaultFlow ?? "meals";
+    const flow = profile?.defaultFlow ?? "bodyflow";
     const flowRoutes: Record<string, string> = {
+      bodyflow: "/bodyflow",
       training: "/training",
       meals: "/meals",
       "check-in": "/check-in",
     };
-    redirect(flowRoutes[flow] ?? "/meals");
+    redirect(flowRoutes[flow] ?? "/bodyflow");
   }
 
   const withingsMessage = params.withings ? withingsMessages[params.withings] : null;
