@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, isNotNull, lte } from "drizzle-orm";
+import { and, eq, gte, isNotNull, lte } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import {
   bodyMeasurements,
