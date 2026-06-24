@@ -16,6 +16,13 @@ const isApiRoute = createRouteMatcher(["/api/(.*)"]);
 export default clerkMiddleware(async (auth, req) => {
   if (isPublicRoute(req)) return;
 
+  // Dev-only auth bypass for local preview/screenshot tooling, which cannot
+  // complete Clerk's hosted sign-in in a sandboxed browser. Hard-gated on a
+  // non-production build AND an explicit env var, mirroring getCurrentUserId.
+  if (process.env.NODE_ENV !== "production" && process.env.PREVIEW_USER_ID) {
+    return;
+  }
+
   const { userId } = await auth();
   if (userId) return;
 
