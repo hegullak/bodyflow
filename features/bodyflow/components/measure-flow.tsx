@@ -1,4 +1,4 @@
-import type { MeasurementPoint } from "@/lib/queries/bodyflow";
+import type { BodyflowDay } from "@/lib/queries/bodyflow";
 import {
   latestValue,
   normalizeSeries,
@@ -6,12 +6,13 @@ import {
   toPointSegments,
   type Maybe,
 } from "../lib/chart-math";
+import { FlowAxis } from "./nutrition-flow";
 
 const W = 320;
 const H = 110;
 
 interface SeriesDef {
-  key: keyof MeasurementPoint & ("weightKg" | "chestCm" | "waistCm" | "hipCm");
+  key: "weightKg" | "chestCm" | "waistCm" | "hipCm";
   label: string;
   unit: string;
   color: string;
@@ -19,14 +20,14 @@ interface SeriesDef {
 
 const SERIES: SeriesDef[] = [
   { key: "weightKg", label: "Vekt", unit: "kg", color: "var(--accent)" },
-  { key: "chestCm",  label: "Bryst", unit: "cm", color: "#8B5CF6" },
-  { key: "waistCm",  label: "Midje", unit: "cm", color: "#E0976A" },
-  { key: "hipCm",    label: "Hofte", unit: "cm", color: "#4FA88A" },
+  { key: "chestCm", label: "Bryst", unit: "cm", color: "#8B5CF6" },
+  { key: "waistCm", label: "Midje", unit: "cm", color: "#E0976A" },
+  { key: "hipCm", label: "Hofte", unit: "cm", color: "#4FA88A" },
 ];
 
-export function MeasureFlow({ points }: { points: MeasurementPoint[] }) {
+export function MeasureFlow({ days }: { days: BodyflowDay[] }) {
   const series = SERIES.map((s) => {
-    const raw: Maybe[] = points.map((p) => p[s.key] as number | null);
+    const raw: Maybe[] = days.map((d) => d[s.key] as number | null);
     return {
       ...s,
       raw,
@@ -37,15 +38,15 @@ export function MeasureFlow({ points }: { points: MeasurementPoint[] }) {
   });
 
   const hasAnyData = series.some((s) => s.latest != null);
-  const axisLabels = buildAxisLabels(points);
+  const dense = days.length > 30;
 
   return (
     <div>
-      <p className="mb-2 text-sm font-semibold text-[var(--text1)]">measurementflow</p>
+      <p className="mb-2 text-sm font-semibold text-[var(--text1)]">Measureflow</p>
 
       {hasAnyData ? (
         <>
-          <svg viewBox={`0 0 ${W} ${H}`} className="h-28 w-full overflow-visible" preserveAspectRatio="none">
+          <svg viewBox={`0 0 ${W} ${H}`} className="h-28 w-full" preserveAspectRatio="none">
             {series.map((s) => {
               const segments = toPointSegments(s.normalized, W, H);
               return segments.map((seg, si) => (
@@ -65,26 +66,11 @@ export function MeasureFlow({ points }: { points: MeasurementPoint[] }) {
                 </g>
               ));
             })}
-
-            {/* x-axis date labels */}
-            {axisLabels.map(({ pct, label }) => (
-              <text
-                key={label + pct}
-                x={pct * W}
-                y={H + 12}
-                textAnchor="middle"
-                fontSize={8}
-                fill="var(--text3)"
-              >
-                {label}
-              </text>
-            ))}
           </svg>
 
-          {/* spacer for the labels that render below the SVG viewBox */}
-          <div className="h-4" />
+          <FlowAxis days={days} dense={dense} />
 
-          <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1.5">
+          <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5">
             {series.map((s) => (
               <div key={s.key} className="flex items-center gap-1.5">
                 <span
@@ -112,40 +98,11 @@ export function MeasureFlow({ points }: { points: MeasurementPoint[] }) {
         </>
       ) : (
         <p className="py-6 text-center text-xs text-[var(--text3)]">
-          Ingen målinger registrert ennå
+          Ingen målinger i denne perioden
         </p>
       )}
     </div>
   );
-}
-
-/** Pick ≤6 evenly-spaced axis labels from the full date series. */
-function buildAxisLabels(
-  points: MeasurementPoint[],
-  maxCount = 6,
-): { pct: number; label: string }[] {
-  if (points.length === 0) return [];
-  const n = points.length;
-
-  // Indices to show: always include first and last.
-  const step = n <= maxCount ? 1 : Math.floor((n - 1) / (maxCount - 1));
-  const indices = new Set<number>([0]);
-  for (let i = step; i < n - 1; i += step) indices.add(i);
-  indices.add(n - 1);
-
-  return Array.from(indices)
-    .sort((a, b) => a - b)
-    .map((idx) => ({
-      pct: n === 1 ? 0.5 : idx / (n - 1),
-      label: formatAxisDate(points[idx].date),
-    }));
-}
-
-function formatAxisDate(iso: string): string {
-  const d = new Date(`${iso}T12:00:00`);
-  const month = d.toLocaleDateString("nb-NO", { month: "short" }).replace(".", "");
-  const year = String(d.getFullYear()).slice(2);
-  return `${month} '${year}`;
 }
 
 function round1(n: number): number {

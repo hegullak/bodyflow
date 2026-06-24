@@ -10,12 +10,12 @@ import { TrainingFlow } from "./training-flow";
 const RANGES: { value: FlowRange; label: string }[] = [
   { value: "week", label: "Uke" },
   { value: "month", label: "Måned" },
+  { value: "year", label: "År" },
 ];
 
 export function BodyflowView({ trends }: { trends: BodyflowTrends }) {
   const [range, setRange] = useState<FlowRange>("week");
-  const days = range === "week" ? trends.week : trends.month;
-  const dense = range === "month";
+  const days = trends[range];
 
   return (
     <div className="space-y-3">
@@ -41,15 +41,15 @@ export function BodyflowView({ trends }: { trends: BodyflowTrends }) {
       </div>
 
       <FlowCard>
-        <NutritionFlow days={days} target={trends.calorieTarget} dense={dense} />
+        <NutritionFlow days={days} target={trends.calorieTarget} />
       </FlowCard>
 
       <FlowCard>
-        <MeasureFlow points={trends.measurementHistory} />
+        <MeasureFlow days={days} />
       </FlowCard>
 
       <FlowCard>
-        <TrainingFlow days={days} dense={dense} />
+        <TrainingFlow days={days} />
       </FlowCard>
     </div>
   );

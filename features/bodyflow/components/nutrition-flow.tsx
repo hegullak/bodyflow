@@ -9,12 +9,11 @@ const PAD_BOTTOM = 4;
 export function NutritionFlow({
   days,
   target,
-  dense,
 }: {
   days: BodyflowDay[];
   target: number | null;
-  dense: boolean;
 }) {
+  const dense = days.length > 30;
   const values = days.map((d) => d.calorieIntake);
   const maxIntake = seriesMax(values);
   const max = Math.max(maxIntake, target ?? 0, 1) * 1.1;
@@ -31,7 +30,7 @@ export function NutritionFlow({
   return (
     <div>
       <div className="mb-2 flex items-baseline justify-between">
-        <p className="text-sm font-semibold text-[var(--text1)]">nutrientflow</p>
+        <p className="text-sm font-semibold text-[var(--text1)]">Nutrientflow</p>
         <p className="text-xs text-[var(--text3)]">
           {avg != null ? (
             <>

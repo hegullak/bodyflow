@@ -2,13 +2,14 @@ import { Dumbbell } from "lucide-react";
 import type { BodyflowDay } from "@/lib/queries/bodyflow";
 import { cn } from "@/lib/utils";
 
-export function TrainingFlow({ days, dense }: { days: BodyflowDay[]; dense: boolean }) {
+export function TrainingFlow({ days }: { days: BodyflowDay[] }) {
   const workouts = days.filter((d) => d.hasWorkout).length;
+  const dense = days.length > 30;
 
   return (
     <div>
       <div className="mb-2 flex items-baseline justify-between">
-        <p className="text-sm font-semibold text-[var(--text1)]">trainingflow</p>
+        <p className="text-sm font-semibold text-[var(--text1)]">Trainingflow</p>
         <p className="text-xs text-[var(--text3)]">
           <span className="font-medium text-[var(--text2)]">{workouts}</span>{" "}
           {workouts === 1 ? "økt" : "økter"}
