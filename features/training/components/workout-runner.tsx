@@ -483,7 +483,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
         />
       )}
 
-      <div className="flex flex-col gap-3 pb-72">
+      <div className={`flex flex-col gap-3 ${activeInput ? "pb-[80vh]" : "pb-72"}`}>
         {/* Header */}
         <div className="flex items-center gap-3">
           <button
