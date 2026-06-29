@@ -90,6 +90,8 @@ export const foodSourceEnum = pgEnum("food_source", [
   "matvaretabellen",
 
   "custom",
+
+  "openfoodfacts",
 ]);
 
 export const reminderTypeEnum = pgEnum("reminder_type", ["weigh_in"]);

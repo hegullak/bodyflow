@@ -14,6 +14,7 @@ import {
   formatCustomDisplayName,
   getFoodCustomPrefixId,
 } from "./prefix";
+import { fetchFromOpenFoodFacts } from "./openfoodfacts";
 import type { FoodProductSummary, ResolveFoodInput } from "./types";
 
 export type CustomFoodInput = {
@@ -193,6 +194,48 @@ export async function upsertFoodFromKassal(product: KassalProductSummary): Promi
   return row;
 }
 
+export async function upsertFoodFromOpenFoodFacts(ean: string, product: Awaited<ReturnType<typeof fetchFromOpenFoodFacts>>): Promise<FoodProduct> {
+  if (!product?.kcalPer100g) {
+    throw new Error("Product is missing calorie data.");
+  }
+
+  const db = getDb();
+  const values = {
+    source: "openfoodfacts" as const,
+    externalId: ean,
+    ean,
+    name: product.name,
+    brand: product.brand ?? null,
+    imageUrl: product.image ?? null,
+    kcalPer100g: product.kcalPer100g,
+    packageGrams: product.packageGrams ?? null,
+    searchText: buildSearchText([product.name, product.brand, ean]),
+    fetchedAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  const [row] = await db
+    .insert(foodProducts)
+    .values(values)
+    .onConflictDoUpdate({
+      target: [foodProducts.source, foodProducts.externalId],
+      set: {
+        ean: values.ean,
+        name: values.name,
+        brand: values.brand,
+        imageUrl: values.imageUrl,
+        kcalPer100g: values.kcalPer100g,
+        packageGrams: values.packageGrams,
+        searchText: values.searchText,
+        fetchedAt: values.fetchedAt,
+        updatedAt: values.updatedAt,
+      },
+    })
+    .returning();
+
+  return row;
+}
+
 export async function searchFoodProducts(query: string): Promise<FoodProductSummary[]> {
   const trimmed = query.trim();
   if (trimmed.length < 2) return [];
@@ -240,13 +283,27 @@ export async function lookupFoodByEan(ean: string): Promise<FoodProductSummary |
   const cached = await findLocalFoodByEan(normalized);
   if (cached) return rowToSummary(cached);
 
-  if (!isKassalConfigured()) return null;
+  // Try Kassal first if configured
+  if (isKassalConfigured()) {
+    try {
+      const remote = await findKassalProductByEan(normalized);
+      if (remote?.kcalPer100g) {
+        const saved = await upsertFoodFromKassal(remote);
+        return rowToSummary(saved);
+      }
+    } catch (error) {
+      // Continue to Open Food Facts if Kassal fails
+    }
+  }
 
-  const remote = await findKassalProductByEan(normalized);
-  if (!remote?.kcalPer100g) return null;
+  // Fall back to Open Food Facts
+  const offProduct = await fetchFromOpenFoodFacts(normalized);
+  if (offProduct) {
+    const saved = await upsertFoodFromOpenFoodFacts(normalized, offProduct);
+    return rowToSummary(saved);
+  }
 
-  const saved = await upsertFoodFromKassal(remote);
-  return rowToSummary(saved);
+  return null;
 }
 
 export async function resolveFoodProduct(input: ResolveFoodInput): Promise<FoodProduct> {
@@ -259,13 +316,21 @@ export async function resolveFoodProduct(input: ResolveFoodInput): Promise<FoodP
     const cached = await findLocalFoodByEan(input.ean);
     if (cached) return cached;
 
-    if (!isKassalConfigured()) {
-      throw new Error("Product not found locally and Kassal is not configured.");
+    if (isKassalConfigured()) {
+      try {
+        const remote = await findKassalProductByEan(input.ean);
+        if (remote) return upsertFoodFromKassal(remote);
+      } catch (error) {
+        // Continue to Open Food Facts if Kassal fails
+      }
     }
 
-    const remote = await findKassalProductByEan(input.ean);
-    if (!remote) throw new Error("Product not found.");
-    return upsertFoodFromKassal(remote);
+    const offProduct = await fetchFromOpenFoodFacts(input.ean);
+    if (offProduct) {
+      return upsertFoodFromOpenFoodFacts(input.ean, offProduct);
+    }
+
+    throw new Error("Product not found.");
   }
 
   if (input.source && input.externalId) {
@@ -285,8 +350,8 @@ export async function resolveFoodProduct(input: ResolveFoodInput): Promise<FoodP
       throw new Error("Product not found. Run npm run db:seed-matvaretabellen.");
     }
 
-    if (input.source === "custom") {
-      throw new Error("Custom product not found.");
+    if (input.source === "custom" || input.source === "openfoodfacts") {
+      throw new Error("Product not found.");
     }
   }
 

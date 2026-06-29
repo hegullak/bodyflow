@@ -89,7 +89,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
     const t0 = new Date(session.startedAt).getTime();
     const tick = () => setElapsed(Math.floor((Date.now() - t0) / 1000));
     tick();
-    const id = setInterval(tick, 10000);
+    const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [session.startedAt]);
 
