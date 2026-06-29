@@ -357,7 +357,7 @@ export function WorkoutRunner({ session }: { session: ActiveSession }) {
       (document.activeElement as HTMLElement)?.blur();
     }
     setActiveInput(null);
-    toggleSet(found.ex, setIdx, found.block);
+    setTimeout(() => toggleSet(found.ex, setIdx, found.block), 10);
 
     if (found.ex.restSeconds === 0) {
       setTimeout(() => {
