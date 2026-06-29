@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUserId } from "@/lib/auth/current-user";
-import { lookupFoodByEan } from "@/lib/foods/catalog";
+import { lookupFoodByEanWithSources } from "@/lib/foods/catalog";
 
 export async function GET(
   _req: Request,
@@ -11,11 +11,14 @@ export async function GET(
   const { ean } = await params;
 
   try {
-    const product = await lookupFoodByEan(ean);
-    if (!product) {
-      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    const result = await lookupFoodByEanWithSources(ean);
+    if (!result.product) {
+      return NextResponse.json(
+        { error: "Product not found", sources: result.sourcesTried },
+        { status: 404 },
+      );
     }
-    return NextResponse.json({ data: product });
+    return NextResponse.json({ data: result.product });
   } catch {
     return NextResponse.json({ error: "Food lookup failed" }, { status: 500 });
   }

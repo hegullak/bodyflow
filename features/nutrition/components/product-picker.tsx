@@ -54,6 +54,7 @@ export function ProductPicker({
   const [eanInput, setEanInput] = useState("");
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [eanNotFound, setEanNotFound] = useState(false);
+  const [sourcesTried, setSourcesTried] = useState<string[]>([]);
   const [photoInitialEan, setPhotoInitialEan] = useState<string | undefined>();
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [pending, startTransition] = useTransition();
@@ -165,13 +166,16 @@ export function ProductPicker({
     setLookupError(null);
     setEanNotFound(false);
     setSelected(null);
+    setSourcesTried([]);
     try {
       const res = await fetch(`/api/foods/ean/${encodeURIComponent(normalized)}`);
       if (!res.ok) {
         if (res.status === 404) {
+          const json = (await res.json()) as { sources?: string[] };
           setEanInput(normalized);
           setEanNotFound(true);
-          setLookupError("Fant ikke produkt for denne strekkoden.");
+          setSourcesTried(json.sources ?? []);
+          setLookupError("Kunne ikke finne maten.");
         } else {
           setLookupError("Oppslag feilet.");
         }
@@ -376,18 +380,47 @@ export function ProductPicker({
                   </Button>
                 </div>
                 {lookupError ? (
-                  <div className="space-y-2">
-                    <p className="text-xs text-[#9a5b45]">{lookupError}</p>
+                  <div className="space-y-3 rounded-[var(--radius-md)] border border-[#9a5b45]/20 bg-[#9a5b45]/5 p-3">
+                    <p className="text-sm font-medium text-[#9a5b45]">{lookupError}</p>
+                    {sourcesTried.length > 0 && (
+                      <div>
+                        <p className="mb-1.5 text-xs text-[var(--color-muted-foreground)]">
+                          Søkte i:
+                        </p>
+                        <ul className="space-y-1">
+                          {sourcesTried.map((source) => (
+                            <li key={source} className="flex items-center gap-2 text-xs text-[var(--color-muted-foreground)]">
+                              <span className="h-1 w-1 rounded-full bg-[var(--color-muted-foreground)]" />
+                              {source}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                     {eanNotFound ? (
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        className="w-full"
-                        onClick={() => openCustomAdd(eanInput.replace(/\D/g, "") || undefined)}
-                      >
-                        Legg til selv med bilde →
-                      </Button>
+                      <div className="flex flex-col gap-2 pt-2">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => openCustomAdd(eanInput.replace(/\D/g, "") || undefined)}
+                        >
+                          Legg til manuelt
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => {
+                            setMode("photo");
+                            setPhotoInitialEan(eanInput.replace(/\D/g, "") || undefined);
+                          }}
+                        >
+                          Fotografer etiketten
+                        </Button>
+                      </div>
                     ) : null}
                   </div>
                 ) : null}

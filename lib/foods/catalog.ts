@@ -277,19 +277,31 @@ export async function searchFoodProducts(query: string): Promise<FoodProductSumm
 }
 
 export async function lookupFoodByEan(ean: string): Promise<FoodProductSummary | null> {
+  const result = await lookupFoodByEanWithSources(ean);
+  return result.product;
+}
+
+export async function lookupFoodByEanWithSources(
+  ean: string,
+): Promise<{ product: FoodProductSummary | null; sourcesTried: string[] }> {
   const normalized = ean.replace(/\D/g, "");
-  if (!normalized) return null;
+  if (!normalized) return { product: null, sourcesTried: [] };
 
+  const sourcesTried: string[] = [];
+
+  // Check local database first
+  sourcesTried.push("Lokalt lager");
   const cached = await findLocalFoodByEan(normalized);
-  if (cached) return rowToSummary(cached);
+  if (cached) return { product: rowToSummary(cached), sourcesTried };
 
-  // Try Kassal first if configured
+  // Try Kassal if configured
   if (isKassalConfigured()) {
+    sourcesTried.push("Kassal");
     try {
       const remote = await findKassalProductByEan(normalized);
       if (remote?.kcalPer100g) {
         const saved = await upsertFoodFromKassal(remote);
-        return rowToSummary(saved);
+        return { product: rowToSummary(saved), sourcesTried };
       }
     } catch (error) {
       // Continue to Open Food Facts if Kassal fails
@@ -297,13 +309,14 @@ export async function lookupFoodByEan(ean: string): Promise<FoodProductSummary |
   }
 
   // Fall back to Open Food Facts
+  sourcesTried.push("Open Food Facts");
   const offProduct = await fetchFromOpenFoodFacts(normalized);
   if (offProduct) {
     const saved = await upsertFoodFromOpenFoodFacts(normalized, offProduct);
-    return rowToSummary(saved);
+    return { product: rowToSummary(saved), sourcesTried };
   }
 
-  return null;
+  return { product: null, sourcesTried };
 }
 
 export async function resolveFoodProduct(input: ResolveFoodInput): Promise<FoodProduct> {
