@@ -1,9 +1,10 @@
 import type { FoodProductSummary } from "@/lib/foods/types";
 
-const SOURCE_ORDER = { matvaretabellen: 0, kassal: 1, custom: 2 } as const;
+const SOURCE_ORDER = { matvaretabellen: 0, kassal: 1, openfoodfacts: 2, custom: 3 } as const;
 
 export function sourceLabel(p: FoodProductSummary): string {
   if (p.source === "matvaretabellen") return "Matvaretabellen";
+  if (p.source === "openfoodfacts") return "Open Food Facts";
   if (p.source === "custom") return p.name.split(":")[0]?.trim() ?? "Egendefinert";
   return p.brand ? `Kassal.app · ${p.brand}` : "Kassal.app";
 }
@@ -17,6 +18,7 @@ export function groupResults(products: FoodProductSummary[]): Array<{ title: str
     const title =
       p.source === "kassal" ? "Kassal.app"
       : p.source === "matvaretabellen" ? "Matvaretabellen"
+      : p.source === "openfoodfacts" ? "Open Food Facts"
       : "Egne produkter";
     const last = groups[groups.length - 1];
     if (last?.title === title) last.items.push(p);

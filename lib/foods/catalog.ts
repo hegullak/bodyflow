@@ -262,7 +262,7 @@ export async function searchFoodProducts(query: string): Promise<FoodProductSumm
     }
   }
 
-  const sourceOrder = { matvaretabellen: 0, kassal: 1, custom: 2 } as const;
+  const sourceOrder = { matvaretabellen: 0, kassal: 1, openfoodfacts: 2, custom: 3 } as const;
   const q = trimmed.toLowerCase();
   merged.sort((a, b) => {
     const sa = sourceOrder[a.source] ?? 9;
@@ -303,7 +303,7 @@ export async function lookupFoodByEanWithSources(
         const saved = await upsertFoodFromKassal(remote);
         return { product: rowToSummary(saved), sourcesTried };
       }
-    } catch (error) {
+    } catch {
       // Continue to Open Food Facts if Kassal fails
     }
   }
@@ -333,7 +333,7 @@ export async function resolveFoodProduct(input: ResolveFoodInput): Promise<FoodP
       try {
         const remote = await findKassalProductByEan(input.ean);
         if (remote) return upsertFoodFromKassal(remote);
-      } catch (error) {
+      } catch {
         // Continue to Open Food Facts if Kassal fails
       }
     }
