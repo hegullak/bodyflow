@@ -3,9 +3,9 @@
  * Run: npx tsx --env-file=.env.local scripts/mark-all-sessions-completed.ts
  */
 
-import { eq, isNull } from "drizzle-orm";
+import { isNull } from "drizzle-orm";
 import { getDb } from "../db/client";
-import { trainingSessions } from "../db/schema";
+import { workoutSessions } from "../db/schema";
 
 async function main() {
   console.log("[mark-sessions] Starting...");
@@ -13,9 +13,9 @@ async function main() {
 
   // Find all active sessions (endedAt is null)
   const activeSessions = await db
-    .select({ id: trainingSessions.id, programName: trainingSessions.programName })
-    .from(trainingSessions)
-    .where(isNull(trainingSessions.endedAt));
+    .select({ id: workoutSessions.id, programName: workoutSessions.programName })
+    .from(workoutSessions)
+    .where(isNull(workoutSessions.endedAt));
 
   console.log(`[mark-sessions] Found ${activeSessions.length} active sessions`);
 
@@ -27,9 +27,9 @@ async function main() {
   // Mark all as completed (set endedAt to now)
   const now = new Date();
   const updated = await db
-    .update(trainingSessions)
+    .update(workoutSessions)
     .set({ endedAt: now })
-    .where(isNull(trainingSessions.endedAt));
+    .where(isNull(workoutSessions.endedAt));
 
   console.log(`[mark-sessions] Marked all sessions as completed`);
   activeSessions.forEach((s) => {
