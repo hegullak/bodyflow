@@ -27,7 +27,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-semibold text-[var(--text1)] mb-3">3. Ansvar og ansvarsbegrensning</h2>
             <p>
-              bodyflow tilbys "som det er" uten noen garantier. Vi er ikke ansvarlig for:
+              bodyflow tilbys &ldquo;som det er&rdquo; uten noen garantier. Vi er ikke ansvarlig for:
             </p>
             <ul className="list-disc pl-6 space-y-2">
               <li>Tap eller skade som oppstår fra bruk av appen</li>

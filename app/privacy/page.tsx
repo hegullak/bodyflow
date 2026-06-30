@@ -68,7 +68,7 @@ export default function PrivacyPage() {
             <ul className="list-disc pl-6 space-y-2">
               <li><strong>Tilgang:</strong> Be om kopi av dine data</li>
               <li><strong>Retting:</strong> Endre unøyaktige data</li>
-              <li><strong>Sletting:</strong> Be om at dine data slettes ("retten til å bli glemt")</li>
+              <li><strong>Sletting:</strong> Be om at dine data slettes (&ldquo;retten til å bli glemt&rdquo;)</li>
               <li><strong>Dataportabilitet:</strong> Få dine data i maskinlesbar format</li>
               <li><strong>Objeksjon:</strong> Objisere mot viss databehandling</li>
             </ul>

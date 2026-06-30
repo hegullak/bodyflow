@@ -26,7 +26,7 @@ async function main() {
 
   // Mark all as completed (set endedAt to now)
   const now = new Date();
-  const updated = await db
+  await db
     .update(workoutSessions)
     .set({ endedAt: now })
     .where(isNull(workoutSessions.endedAt));
