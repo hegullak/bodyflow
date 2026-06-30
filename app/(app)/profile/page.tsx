@@ -41,7 +41,12 @@ export default async function ProfilePage({
       {/* Title row with language picker on the right */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="page-title">{t.profile.title}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="page-title">{t.profile.title}</h1>
+            <span className="inline-flex items-center rounded-full bg-[var(--accent)]/20 px-2.5 py-0.5 text-xs font-semibold text-[var(--accent)]">
+              Beta
+            </span>
+          </div>
           {displayName ? <p className="page-subtitle">{displayName}</p> : null}
         </div>
         <LanguagePicker current={lang as Lang} />

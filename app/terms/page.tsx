@@ -52,7 +52,14 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold text-[var(--text1)] mb-3">6. Kontakt</h2>
+            <h2 className="text-2xl font-semibold text-[var(--text1)] mb-3">6. Tredjepartsleverandører</h2>
+            <p>
+              Vi bruker <a href="https://clerk.com" target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">Clerk</a> for autentisering og kontobehandling. <a href="https://clerk.com" target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">Clerk</a> sine vilkår gjelder for autentisering.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-semibold text-[var(--text1)] mb-3">7. Kontakt</h2>
             <p>
               Har du spørsmål om disse vilkårene? Kontakt oss på henning.gullaksen@icloud.com
             </p>
